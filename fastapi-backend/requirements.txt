@@ -1,0 +1,21 @@
+# Keep existing ML dependencies
+openai-whisper>=20231117
+easynmt>=2.0.0
+transformers>=4.30.0
+torch>=2.0.0
+sentencepiece>=0.1.99
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Service framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+python-multipart>=0.0.6
+
+# Translation fallback
+deep-translator>=1.11.4
+googletrans==4.0.0rc1
+
+# Audio file handling
+soundfile>=0.12.0
