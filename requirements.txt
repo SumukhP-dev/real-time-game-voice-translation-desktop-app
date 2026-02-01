@@ -1,0 +1,39 @@
+# Audio capture
+pyaudio>=0.2.14
+sounddevice>=0.4.6  # FREE: Used for WASAPI loopback in free version
+
+# Speech recognition
+openai-whisper>=20231117
+
+# Translation
+deep-translator>=1.11.4  # Fallback option
+googletrans==4.0.0rc1
+easynmt>=2.0.0  # Local translation model (primary)
+transformers>=4.30.0  # Required by EasyNMT
+torch>=2.0.0  # Required by EasyNMT
+sentencepiece>=0.1.99  # Required by EasyNMT
+
+# Text-to-speech
+pyttsx3>=2.90
+gtts>=2.5.0
+pydub>=0.25.1  # For MP3 to audio data conversion
+
+# Audio processing
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Utilities
+python-dotenv>=1.0.0
+Pillow>=10.0.0  # For icon generation
+
+# License system
+cryptography>=41.0.0
+psutil>=5.9.0  # For hardware fingerprinting
+
+# ML Service dependencies
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+python-multipart>=0.0.6
+soundfile>=0.12.0
+

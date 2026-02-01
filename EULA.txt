@@ -1,0 +1,92 @@
+END USER LICENSE AGREEMENT (EULA)
+Real-Time Game Voice Translation
+Version 1.0.0
+
+IMPORTANT - READ CAREFULLY: This End User License Agreement ("Agreement") is a legal agreement between you (either an individual or a single entity) ("Licensee") and the software developer ("Licensor") for the Real-Time Game Voice Translation software product, which includes computer software and may include associated media, printed materials, and "online" or electronic documentation ("Software").
+
+By installing, copying, or otherwise using the Software, you agree to be bound by the terms of this Agreement. If you do not agree to the terms of this Agreement, do not install or use the Software.
+
+1. GRANT OF LICENSE
+
+Subject to the terms and conditions of this Agreement, Licensor hereby grants to Licensee a limited, non-exclusive, non-transferable license to:
+(a) Install and use the Software on a single computer;
+(b) Use the Software in accordance with the documentation provided;
+(c) Make one backup copy of the Software for archival purposes only.
+
+2. RESTRICTIONS
+
+Licensee shall NOT:
+(a) Copy, reproduce, or duplicate the Software except as specified in Section 1;
+(b) Modify, adapt, alter, translate, or create derivative works of the Software;
+(c) Reverse engineer, decompile, disassemble, or otherwise attempt to derive the source code of the Software;
+(d) Rent, lease, lend, sell, sublicense, or otherwise transfer the Software to any third party;
+(e) Remove or alter any copyright, trademark, or other proprietary notices on the Software;
+(f) Use the Software in any manner that violates any applicable law or regulation;
+(g) Use the Software to infringe upon the rights of any third party;
+(h) Share, distribute, or publish license keys or activation codes.
+
+3. LICENSE KEY
+
+The Software requires a valid license key to operate. Each license key:
+(a) Is valid for use on a single computer only;
+(b) Is hardware-bound and cannot be transferred to another computer without authorization;
+(c) Remains the property of Licensor;
+(d) Must be kept confidential and secure.
+
+4. INTELLECTUAL PROPERTY
+
+The Software is protected by copyright laws and international copyright treaties, as well as other intellectual property laws and treaties. The Software is licensed, not sold. Licensor retains all right, title, and interest in and to the Software, including all copyrights, patents, trade secrets, trademarks, and other intellectual property rights.
+
+5. TERM AND TERMINATION
+
+This Agreement is effective until terminated. Licensee may terminate this Agreement at any time by destroying all copies of the Software. This Agreement will terminate automatically without notice if Licensee fails to comply with any provision of this Agreement. Upon termination, Licensee must destroy all copies of the Software and license keys.
+
+6. NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. LICENSOR DOES NOT WARRANT THAT THE SOFTWARE WILL MEET LICENSEE'S REQUIREMENTS, THAT THE OPERATION OF THE SOFTWARE WILL BE UNINTERRUPTED OR ERROR-FREE, OR THAT DEFECTS IN THE SOFTWARE WILL BE CORRECTED.
+
+7. LIMITATION OF LIABILITY
+
+IN NO EVENT SHALL LICENSOR BE LIABLE FOR ANY SPECIAL, INCIDENTAL, INDIRECT, OR CONSEQUENTIAL DAMAGES WHATSOEVER (INCLUDING, WITHOUT LIMITATION, DAMAGES FOR LOSS OF BUSINESS PROFITS, BUSINESS INTERRUPTION, LOSS OF BUSINESS INFORMATION, OR ANY OTHER PECUNIARY LOSS) ARISING OUT OF THE USE OF OR INABILITY TO USE THE SOFTWARE, EVEN IF LICENSOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+8. REFUND POLICY
+
+All sales are final. Refunds will only be provided in the following circumstances:
+(a) The Software is defective and cannot be fixed within 30 days;
+(b) The Software does not function as described in the documentation;
+(c) Refund request is made within 7 days of purchase.
+
+To request a refund, contact support with your purchase information.
+
+9. THIRD-PARTY SOFTWARE
+
+The Software may include third-party software components that are subject to separate license terms. Licensee agrees to comply with all applicable third-party license terms.
+
+10. UPDATES AND SUPPORT
+
+Licensor may, but is not obligated to, provide updates, upgrades, or support for the Software. Licensee is not entitled to any updates or upgrades unless otherwise specified.
+
+11. EXPORT RESTRICTIONS
+
+Licensee agrees to comply with all applicable international and national laws that apply to the Software, including export control laws and regulations.
+
+12. GOVERNING LAW
+
+This Agreement shall be governed by and construed in accordance with the laws of [Your Jurisdiction], without regard to its conflict of law provisions.
+
+13. ENTIRE AGREEMENT
+
+This Agreement constitutes the entire agreement between Licensee and Licensor regarding the Software and supersedes all prior or contemporaneous communications, proposals, and agreements.
+
+14. SEVERABILITY
+
+If any provision of this Agreement is held to be unenforceable, such provision shall be reformed only to the extent necessary to make it enforceable.
+
+15. CONTACT INFORMATION
+
+For questions about this Agreement or the Software, contact:
+Email: 1-9438889487_112@zohomail.com
+Website: [Your website]
+
+By installing or using the Software, you acknowledge that you have read this Agreement, understand it, and agree to be bound by its terms and conditions.
+
