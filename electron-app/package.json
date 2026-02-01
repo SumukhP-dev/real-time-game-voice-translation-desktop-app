@@ -1,0 +1,113 @@
+{
+  "name": "csgo2-translation-electron",
+  "version": "1.0.0",
+  "description": "CS:GO 2 Live Voice Translation Mod - Electron Edition",
+  "main": "main.js",
+  "homepage": "./",
+  "scripts": {
+    "start": "electron .",
+    "dev": "concurrently \"npm run dev:react\" \"wait-on http://localhost:3000 && electron .\"",
+    "dev:react": "cd ../tauri-app && npm run dev",
+    "build": "npm run build:react && npm run build:electron",
+    "build:react": "cd ../tauri-app && npm run build",
+    "build:electron": "electron-builder",
+    "dist": "npm run build && electron-builder --publish=never",
+    "pack": "npm run build && electron-builder --dir",
+    "clean": "rimraf dist build"
+  },
+  "dependencies": {
+    "electron-is-dev": "^2.0.0",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "concurrently": "^8.2.2",
+    "wait-on": "^7.2.0",
+    "rimraf": "^5.0.5"
+  },
+  "build": {
+    "appId": "com.csgo2.translation",
+    "productName": "CSGO2 Voice Translation",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "../tauri-app/build/**/*",
+      "../tauri-app/ml-service/**/*",
+      "../app_icon.*",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/*.d.ts",
+      "!**/node_modules/.bin",
+      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!.editorconfig",
+      "!**/._*",
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}",
+      "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}",
+      "!**/{appveyor.yml,.travis.yml,circle.yml}",
+      "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
+    ],
+    "extraResources": [
+      {
+        "from": "../tauri-app/ml-service",
+        "to": "ml-service",
+        "filter": ["**/*", "!**/node_modules", "!**/.venv*", "!**/__pycache__"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "../app_icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CSGO2 Voice Translation"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "../app_icon.icns",
+      "category": "public.app-category.utilities"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "../app_icon.png",
+      "category": "Utility"
+    }
+  },
+  "author": {
+    "name": "CSGO2 Voice Translation Team",
+    "email": "support@csgo2-translation.com"
+  },
+  "license": "Commercial"
+}
