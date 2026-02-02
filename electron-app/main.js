@@ -1,4 +1,6 @@
-const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
+const electron = require('electron');
+const { BrowserWindow, ipcMain, shell, dialog } = electron;
+const app = electron.app;
 const path = require('path');
 const { spawn } = require('child_process');
 const isDev = process.env.NODE_ENV === 'development';
@@ -21,18 +23,19 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      webSecurity: false, // Disable for development
+      additionalArguments: ['--disable-web-security', '--disable-features=VizDisplayCompositor']
     },
     icon: path.join(__dirname, '../app_icon.png'),
     title: 'CSGO2 Voice Translation',
     show: false, // Don't show until ready-to-show
-    autoHideMenuBar: true,
-    webSecurity: !isDev
+    autoHideMenuBar: true
   });
 
   // Load the app
   const startUrl = isDev 
-    ? 'http://localhost:1420' 
+    ? 'http://localhost:3010' 
     : `file://${path.join(__dirname, 'react-frontend/build/index.html')}`;
   
   mainWindow.loadURL(startUrl);
