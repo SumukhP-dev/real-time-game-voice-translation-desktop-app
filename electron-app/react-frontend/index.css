@@ -21,3 +21,87 @@ body {
   height: 100vh;
   background-color: #111827; /* bg-gray-900 equivalent */
 }
+
+/* Fix for input/select field visibility */
+select, input {
+  color: #ffffff !important;
+  background-color: #374151 !important;
+  border: 1px solid #4b5563 !important;
+}
+
+select option {
+  color: #ffffff !important;
+  background-color: #374151 !important;
+}
+
+/* Fix for checkbox visibility */
+input[type="checkbox"] {
+  accent-color: #3b82f6 !important;
+}
+
+/* Fix for scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Custom slider styling */
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #8b5cf6;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #8b5cf6;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.slider::-webkit-slider-thumb:hover {
+  background: #a78bfa;
+  transform: scale(1.1);
+}
+
+.slider::-moz-range-thumb:hover {
+  background: #a78bfa;
+  transform: scale(1.1);
+}
+
+/* Animation utilities */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Glassmorphism effect */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
