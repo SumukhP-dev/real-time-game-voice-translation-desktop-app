@@ -8,8 +8,7 @@ import { useConfig } from "../hooks/useConfig";
 import { useAudio } from "../hooks/useAudio";
 import { useI18n } from "../hooks/useI18n";
 import { I18N_KEYS } from "../i18n/keys";
-import * as tauri from "../services/tauri";
-import { invoke } from "@tauri-apps/api/tauri";
+import electronService from "../services/electron";
 import { StatsDashboard } from "./StatsDashboard";
 import { Benchmark } from "./Benchmark";
 import { SetupWizard } from "./SetupWizard";
@@ -84,7 +83,7 @@ export function MainWindow() {
   // Log device selection changes
   useEffect(() => {
     if (selectedDevice !== null && devices.length > 0) {
-      const device = devices.find((d) => d.index === selectedDevice);
+      const device = devices.find((d: any) => d.index === selectedDevice);
       if (device) {
         addLog(`Device selected: ${device.name}`);
       }
@@ -134,20 +133,20 @@ export function MainWindow() {
     let lastBufferLogTime = Date.now();
 
     // Listen to audio chunks
-    const unlisten = tauri.listenToAudioChunk(async (event) => {
+    const unlisten = electronService.listenToAudioChunk(async (event) => {
       audioChunkCount++;
       const now = Date.now();
 
       // Log first audio chunk received (only once per session)
       if (audioChunkCount === 1 && !firstChunkLoggedRef.current) {
         firstChunkLoggedRef.current = true;
-        addLog("✓ First audio chunk received - capture is working!");
+        addLog("✁EFirst audio chunk received - capture is working!");
       }
 
       // Log audio chunk details every 50 chunks
       if (audioChunkCount % 50 === 0 && audioChunkCount > 0) {
         const rms = Math.sqrt(
-          event.data.reduce((sum, val) => sum + val * val, 0) /
+          event.data.reduce((sum: number, val: number) => sum + val * val, 0) /
             event.data.length
         );
         const peak = Math.max(...event.data.map(Math.abs));
@@ -188,7 +187,7 @@ export function MainWindow() {
       // Use a lower threshold for better sensitivity
       const AUDIO_THRESHOLD = 0.001; // Very low threshold - let Whisper decide if there's speech
       const audioLevel = Math.sqrt(
-        event.data.reduce((sum, val) => sum + val * val, 0) / event.data.length
+        event.data.reduce((sum: number, val: number) => sum + val * val, 0) / event.data.length
       );
 
       // Also check peak level (max absolute value) for better detection
@@ -493,7 +492,7 @@ export function MainWindow() {
         try {
           // Transcribe audio
           const avgLevel = Math.sqrt(
-            combinedAudio.reduce((sum, val) => sum + val * val, 0) /
+            combinedAudio.reduce((sum: number, val: number) => sum + val * val, 0) /
               combinedAudio.length
           );
           const peakLevel = Math.max(
@@ -609,7 +608,7 @@ export function MainWindow() {
 
             // Add timeout wrapper to prevent hanging
             addLog(`[DEBUG] Creating transcription promise...`);
-            const transcriptionPromise = tauri.transcribeAudio(
+            const transcriptionPromise = electronService.transcribeAudio(
               Array.from(combinedAudio),
               event.sample_rate
             );
@@ -752,15 +751,15 @@ export function MainWindow() {
             transcription.text &&
             transcription.text.trim().length > 0
           ) {
-            const transcribeSuccess = `✓ Transcription: "${transcription.text}" (${transcription.language})`;
-            console.log("✓ Transcription successful:", transcription.text);
+            const transcribeSuccess = `✁ETranscription: "${transcription.text}" (${transcription.language})`;
+            console.log("✁ETranscription successful:", transcription.text);
             addLog(transcribeSuccess);
             setStatus(`Transcribed: ${transcription.text}`);
 
             // Auto-detect teammate language from transcription
             // This automatically creates/updates teammates based on detected languages
             try {
-              const detectedTeammate = await tauri.autoDetectTeammateLanguage(
+              const detectedTeammate = await electronService.autoDetectTeammateLanguage(
                 transcription.language,
                 undefined // Auto-generate teammate name based on language
               );
@@ -768,7 +767,7 @@ export function MainWindow() {
                 `Auto-detected language ${transcription.language} for teammate: ${detectedTeammate}`
               );
               addLog(
-                `✓ Auto-detected teammate: ${detectedTeammate} (${transcription.language})`
+                `✁EAuto-detected teammate: ${detectedTeammate} (${transcription.language})`
               );
             } catch (error) {
               console.warn("Failed to auto-detect teammate language:", error);
@@ -824,7 +823,7 @@ export function MainWindow() {
                 error instanceof Error
                   ? error.message
                   : String(error) || "Unknown error";
-              addLog(`✗ Translation failed: ${errorMsg}`);
+              addLog(`✁ETranslation failed: ${errorMsg}`);
               addLog(
                 `[DEBUG] Translation error details: ${JSON.stringify(
                   error,
@@ -838,7 +837,7 @@ export function MainWindow() {
 
             if (translation) {
               addLog(`[DEBUG] Translation exists, checking overlay display...`);
-              const translateLog = `✓ Translation: "${transcription.text}" → "${translation.translated}" (${translation.sourceLanguage}→${translation.targetLanguage})`;
+              const translateLog = `✁ETranslation: "${transcription.text}" ↁE"${translation.translated}" (${translation.sourceLanguage}ↁE{translation.targetLanguage})`;
               console.log("=== TRANSLATION SUCCESS ===", {
                 original: transcription.text,
                 translated: translation.translated,
@@ -857,7 +856,7 @@ export function MainWindow() {
                   source_lang: transcription.language,
                   target_lang: translation.targetLanguage,
                 });
-                console.log("✓ Translation recorded in history");
+                console.log("✁ETranslation recorded in history");
               } catch (recordError) {
                 console.warn("Failed to record translation:", recordError);
               }
@@ -891,7 +890,7 @@ export function MainWindow() {
                   Object.entries(t.detected_languages || {}).forEach(
                     ([lang, count]) => {
                       languageCounts[lang] =
-                        (languageCounts[lang] || 0) + (count as number);
+                        (languageCounts[lang] || 0) + (count as unknown as number);
                     }
                   );
                 });
@@ -935,7 +934,7 @@ export function MainWindow() {
                         text: teamTranslation.translated,
                       });
                       addLog(
-                        `→ Team (${effectiveTeamLanguage}${
+                        `ↁETeam (${effectiveTeamLanguage}${
                           useAutoDetect ? " [auto]" : ""
                         }): "${teamTranslation.translated}"`
                       );
@@ -962,10 +961,7 @@ export function MainWindow() {
                     teammateTranslations: teammateTranslations.length,
                   });
                   addLog(overlayLog);
-                  addLog(
-                    `[DEBUG] Calling show_overlay_text with: "${overlayText}"`
-                  );
-
+                  
                   // Combine main translation with teammate translations
                   // Team translations are always shown in overlay when available
                   let overlayText = translation.translated;
@@ -976,22 +972,24 @@ export function MainWindow() {
                     overlayText = `${translation.translated}\n${teammateTexts}`;
                   }
 
-                  addLog(`[DEBUG] About to invoke show_overlay_text...`);
-                  const result = await invoke("show_overlay_text", {
-                    text: overlayText,
-                  });
-                  console.log("✓ Overlay command succeeded:", result);
                   addLog(
-                    `✓ Overlay displayed successfully. Result: ${JSON.stringify(
+                    `[DEBUG] Calling show_overlay_text with: "${overlayText}"`
+                  );
+
+                  addLog(`[DEBUG] About to invoke show_overlay_text...`);
+                  const result = await electronService.showOverlayText(overlayText);
+                  console.log("✁EOverlay command succeeded:", result);
+                  addLog(
+                    `✁EOverlay displayed successfully. Result: ${JSON.stringify(
                       result
                     )}`
                   );
                   addLog(`[DEBUG] Overlay invoke completed without error`);
                 } catch (error) {
-                  const errorMsg = `✗ Failed to show overlay: ${
+                  const errorMsg = `✁EFailed to show overlay: ${
                     error instanceof Error ? error.message : "Unknown error"
                   }`;
-                  console.error("✗ Failed to show overlay:", error);
+                  console.error("✁EFailed to show overlay:", error);
                   console.error(
                     "Error details:",
                     JSON.stringify(error, null, 2)
@@ -1011,7 +1009,7 @@ export function MainWindow() {
                     ? "same language"
                     : "overlay disabled"
                 }`;
-                console.log("✗ Overlay not shown - reasons:", {
+                console.log("✁EOverlay not shown - reasons:", {
                   overlayEnabled,
                   shouldShowOverlay,
                   sourceLang: translation.sourceLanguage,
@@ -1038,7 +1036,7 @@ export function MainWindow() {
                   target_lang: translation.targetLanguage || "",
                   teammate: undefined,
                 });
-                console.log("✓ Translation recorded in history successfully");
+                console.log("✁ETranslation recorded in history successfully");
               } catch (error) {
                 console.error("Failed to record translation:", error);
                 addLog(
@@ -1049,11 +1047,11 @@ export function MainWindow() {
               }
             }
           } else {
-            const noSpeechLog = `✗ No speech detected (RMS=${avgLevel.toFixed(
+            const noSpeechLog = `✁ENo speech detected (RMS=${avgLevel.toFixed(
               6
             )})`;
             console.log(
-              "✗ No text in transcription - empty or whitespace only. Transcription object:",
+              "✁ENo text in transcription - empty or whitespace only. Transcription object:",
               transcription
             );
             console.log("Transcription details:", {
@@ -1092,7 +1090,7 @@ export function MainWindow() {
               JSON.stringify(error);
           }
 
-          const errorLog = `✗ Error: ${errorMessage}`;
+          const errorLog = `✁EError: ${errorMessage}`;
           addLog(errorLog);
           setStatus(`Error: ${errorMessage}`);
         } finally {
@@ -1104,14 +1102,12 @@ export function MainWindow() {
 
     return () => {
       console.log("Cleaning up audio listener...");
-      unlisten
-        .then((fn) => {
-          fn();
-          console.log("Audio listener cleaned up");
-        })
-        .catch((err) => {
-          console.error("Error cleaning up audio listener:", err);
-        });
+      try {
+        unlisten();
+        console.log("Audio listener cleaned up");
+      } catch (err) {
+        console.error("Error cleaning up audio listener:", err);
+      }
     };
   }, [
     translate,
@@ -1164,36 +1160,54 @@ export function MainWindow() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div 
+      className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white"
+      style={{
+        background: 'linear-gradient(135deg, #111827 0%, #1f2937 50%, #111827 100%)',
+        minHeight: '100vh',
+        color: '#ffffff'
+      }}
+    >
       {testOverlayText && (
         <div className="fixed top-4 inset-x-0 flex justify-center z-50 pointer-events-none">
-          <div className="px-4 py-2 bg-black bg-opacity-80 rounded-lg border border-white/30 shadow-xl text-white text-lg pointer-events-auto">
+          <div className="px-6 py-3 bg-black bg-opacity-90 rounded-xl border border-white/20 shadow-2xl text-white text-lg font-medium pointer-events-auto backdrop-blur-sm">
             {testOverlayText}
           </div>
         </div>
       )}
-      <div className="max-w-6xl mx-auto">
-        <header className="mb-6">
-          <div className="flex justify-between items-start mb-2">
+      <div className="max-w-7xl mx-auto p-6">
+        <header className="mb-8">
+          <div className="flex justify-between items-start mb-4">
             <div>
-              <h1 className="text-3xl font-bold mb-2">
+              <h1 
+                className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent"
+                style={{
+                  fontSize: '2.5rem',
+                  fontWeight: 'bold',
+                  marginBottom: '0.5rem',
+                  background: 'linear-gradient(90deg, #60a5fa 0%, #a855f7 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}
+              >
                 CS:GO 2 Voice Translation
               </h1>
-              <p className="text-gray-400">
+              <p className="text-gray-300 text-lg">
                 Real-time voice translation for gaming
               </p>
             </div>
-            <div className="flex gap-2 items-center flex-shrink-0">
+            <div className="flex gap-3 items-center flex-shrink-0">
               <button
                 onClick={() => setShowHelpCenter(true)}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium transition-colors whitespace-nowrap"
+                className="px-5 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                 title="Open Help Center"
               >
                 Help
               </button>
               <button
                 onClick={() => setShowSetupWizard(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors whitespace-nowrap"
+                className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                 title="Open Setup Wizard"
               >
                 Setup Wizard
@@ -1207,55 +1221,55 @@ export function MainWindow() {
                     console.log("=== TEST OVERLAY BUTTON CLICKED (PYTHON) ===");
 
                     // Directly call Python overlay (no ML service needed)
-                    const result = await tauri.showPythonOverlay(testText);
+                    const result = await electronService.showPythonOverlay(testText);
                     console.log("Python overlay result:", result);
 
                     // Also show the in-app banner so you get instant feedback
                     setTestOverlayText(testText);
                     setTimeout(() => setTestOverlayText(null), 4000);
 
-                    addLog(`✓ ${result}`);
+                    addLog(`✁E${result}`);
                   } catch (err) {
                     console.error("Test overlay error:", err);
                     const errorMsg =
                       err instanceof Error
                         ? err.message
                         : String(err) || "Unknown error";
-                    addLog(`✗ Test overlay failed: ${errorMsg}`);
+                    addLog(`✁ETest overlay failed: ${errorMsg}`);
 
                     // Show error details in console for debugging
                     console.error("Full error object:", err);
                   }
                 }}
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-medium transition-colors whitespace-nowrap"
+                className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                 title="Test Overlay"
               >
                 Test Overlay
               </button>
             </div>
           </div>
-          <div className="mt-2 p-2 bg-gray-800 rounded">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-3">
-                <span className="text-sm">
-                  {t(I18N_KEYS.MAIN_STATUS)}: {status}
+          <div className="p-4 bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-medium">
+                  {t(I18N_KEYS.MAIN_STATUS)}: <span className="text-blue-400">{status}</span>
                 </span>
                 {!isTranslationActive && (
-                  <span className="ml-2 text-sm text-yellow-400">
-                    (Translation paused)
+                  <span className="px-2 py-1 bg-yellow-500/20 text-yellow-300 rounded text-xs font-medium">
+                    Translation paused
                   </span>
                 )}
                 <GameDetectionBadge />
               </div>
               <div className="flex gap-2">
                 {isCapturing && (
-                  <span className="px-3 py-2 bg-green-900 text-green-200 rounded text-sm">
+                  <span className="px-4 py-2 bg-green-500/20 text-green-300 rounded-lg text-sm font-medium border border-green-500/30">
                     ● Capturing
                   </span>
                 )}
                 {!isCapturing && (
-                  <span className="px-3 py-2 bg-gray-700 text-gray-300 rounded text-sm">
-                    ○ Not Capturing
+                  <span className="px-4 py-2 bg-gray-600/20 text-gray-400 rounded-lg text-sm font-medium border border-gray-600/30">
+                    ● Not Capturing
                   </span>
                 )}
               </div>
@@ -1263,7 +1277,7 @@ export function MainWindow() {
             {isCapturing &&
               (status.includes("very quiet") ||
                 status.includes("RMS=0.000000")) && (
-                <div className="mt-2 p-2 bg-yellow-900 text-yellow-200 rounded text-xs">
+                <div className="p-3 bg-yellow-500/20 border border-yellow-500/30 text-yellow-200 rounded-lg text-sm">
                   ⚠ Audio is silent (RMS=0). Set Windows Playback Device to
                   "CABLE Input (VB-Audio Virtual Cable)" and play audio to test.
                 </div>
@@ -1271,7 +1285,7 @@ export function MainWindow() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-6">
             <AudioSettings />
             <TranslationSettings />
@@ -1281,11 +1295,11 @@ export function MainWindow() {
           <div className="space-y-6">
             <TranslationLog />
             {/* Status Logs Panel */}
-            <div className="p-4 bg-gray-800 rounded-lg">
+            <div className="p-5 bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700">
               <h2 className="text-xl font-bold mb-4 text-white">
-                {t(I18N_KEYS.MAIN_STATUS)} Logs
+                Status Logs
               </h2>
-              <div className="bg-gray-900 rounded p-3 max-h-64 overflow-y-auto font-mono text-xs">
+              <div className="bg-gray-900/50 rounded-lg p-4 max-h-64 overflow-y-auto font-mono text-xs border border-gray-600">
                 {statusLogs.length === 0 ? (
                   <p className="text-gray-500">No logs yet...</p>
                 ) : (
@@ -1298,9 +1312,9 @@ export function MainWindow() {
               </div>
               <button
                 onClick={() => setStatusLogs([])}
-                className="mt-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
+                className="mt-3 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors"
               >
-                {t(I18N_KEYS.COMMON_CLEAR)} Logs
+                Clear Logs
               </button>
             </div>
             <StatsDashboard />
@@ -1331,7 +1345,7 @@ export function MainWindow() {
                 onClick={() => setShowHelpCenter(false)}
                 className="text-gray-400 hover:text-white text-2xl"
               >
-                ×
+                ÁE
               </button>
             </div>
             <HelpCenter />
@@ -1341,3 +1355,4 @@ export function MainWindow() {
     </div>
   );
 }
+
