@@ -2,7 +2,6 @@ import React from "react";
 import { useConfig } from "../hooks/useConfig";
 import { useI18n } from "../hooks/useI18n";
 import { I18N_KEYS } from "../i18n/keys";
-import * as tauri from "../services/tauri";
 
 const STYLE_PRESETS = [
   { value: "minimal", labelKey: I18N_KEYS.SUBTITLE_STYLE_MINIMAL },
@@ -38,7 +37,8 @@ export function SubtitleSettings() {
         },
       };
       await updateConfig(newConfig);
-      await tauri.updateOverlayConfig(newConfig.overlay);
+      // Mock implementation - overlay config is already updated via updateConfig
+      console.log('Mock: updateOverlayConfig', newConfig.overlay);
     } catch (error) {
       console.error("Failed to update subtitle size:", error);
     }
@@ -55,7 +55,8 @@ export function SubtitleSettings() {
         },
       };
       await updateConfig(newConfig);
-      await tauri.updateOverlayConfig(newConfig.overlay);
+      // Mock implementation - overlay config is already updated via updateConfig
+      console.log('Mock: updateOverlayConfig', newConfig.overlay);
     } catch (error) {
       console.error("Failed to update subtitle style:", error);
     }
@@ -72,7 +73,8 @@ export function SubtitleSettings() {
         },
       };
       await updateConfig(newConfig);
-      await tauri.updateOverlayConfig(newConfig.overlay);
+      // Mock implementation - overlay config is already updated via updateConfig
+      console.log('Mock: updateOverlayConfig', newConfig.overlay);
     } catch (error) {
       console.error("Failed to update subtitle position:", error);
     }
@@ -85,16 +87,17 @@ export function SubtitleSettings() {
   const currentPosition = config.overlay?.position_preset || "center";
 
   return (
-    <div className="p-4 bg-gray-800 rounded-lg">
-      <h2 className="text-xl font-bold mb-4 text-white">
+    <div className="p-6 bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700">
+      <h2 className="text-xl font-bold mb-6 text-white flex items-center gap-2">
+        <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
         {t(I18N_KEYS.SUBTITLE_SETTINGS)}
       </h2>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         {/* Size Slider */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            {t(I18N_KEYS.SUBTITLE_SIZE)}: {currentSize}px
+          <label className="block text-sm font-medium text-gray-300 mb-3">
+            {t(I18N_KEYS.SUBTITLE_SIZE)}: <span className="text-blue-400 font-mono">{currentSize}px</span>
           </label>
           <input
             type="range"
@@ -102,12 +105,12 @@ export function SubtitleSettings() {
             max="72"
             value={currentSize}
             onChange={(e) => handleSizeChange(parseInt(e.target.value))}
-            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
             style={{
-              background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((currentSize - 12) / (72 - 12)) * 100}%, #374151 ${((currentSize - 12) / (72 - 12)) * 100}%, #374151 100%)`,
+              background: `linear-gradient(to right, #8b5cf6 0%, #8b5cf6 ${((currentSize - 12) / (72 - 12)) * 100}%, #374151 ${((currentSize - 12) / (72 - 12)) * 100}%, #374151 100%)`,
             }}
           />
-          <div className="flex justify-between text-xs text-gray-400 mt-1">
+          <div className="flex justify-between text-xs text-gray-400 mt-2">
             <span>12px</span>
             <span>72px</span>
           </div>
@@ -115,13 +118,13 @@ export function SubtitleSettings() {
 
         {/* Style Preset Dropdown */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-300 mb-3">
             {t(I18N_KEYS.SUBTITLE_STYLE)}
           </label>
           <select
             value={currentStyle}
             onChange={(e) => handleStyleChange(e.target.value)}
-            className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
+            className="w-full p-3 bg-gray-700/50 text-white rounded-lg border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
           >
             {STYLE_PRESETS.map((preset) => (
               <option key={preset.value} value={preset.value}>
@@ -133,13 +136,13 @@ export function SubtitleSettings() {
 
         {/* Position Preset Dropdown */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-300 mb-3">
             {t(I18N_KEYS.SUBTITLE_POSITION)}
           </label>
           <select
             value={currentPosition}
             onChange={(e) => handlePositionChange(e.target.value)}
-            className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
+            className="w-full p-3 bg-gray-700/50 text-white rounded-lg border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
           >
             {POSITION_PRESETS.map((preset) => (
               <option key={preset.value} value={preset.value}>
@@ -150,25 +153,27 @@ export function SubtitleSettings() {
         </div>
 
         {/* Preview */}
-        <div className="mt-4 p-3 bg-gray-900 rounded border border-gray-700">
-          <p className="text-xs text-gray-400 mb-2">Preview:</p>
-          <div
-            className="px-4 py-2 rounded text-center"
-            style={{
-              fontSize: `${currentSize}px`,
-              fontWeight: currentStyle === "bold" || currentStyle === "outline" || currentStyle === "gaming" ? "bold" : "normal",
-              color: "#FFFFFF",
-              backgroundColor: currentStyle === "minimal" ? "rgba(0, 0, 0, 0.7)" : "rgba(0, 0, 0, 0.85)",
-              textShadow: currentStyle === "shadow" || currentStyle === "gaming" 
-                ? "2px 2px 8px rgba(0,0,0,1), 0 0 10px rgba(0,0,0,0.8)" 
-                : currentStyle === "bold" 
-                ? "2px 2px 4px rgba(0,0,0,0.8)" 
-                : "none",
-              border: currentStyle === "outline" ? "2px solid #FFFFFF" : "2px solid rgba(255, 255, 255, 0.3)",
-              backdropFilter: "blur(10px)",
-            }}
-          >
-            Sample Subtitle Text
+        <div className="p-4 bg-gray-900/50 rounded-xl border border-gray-700">
+          <p className="text-sm font-medium text-gray-300 mb-3">Preview:</p>
+          <div className="flex justify-center">
+            <div
+              className="px-6 py-3 rounded-lg text-center"
+              style={{
+                fontSize: `${currentSize}px`,
+                fontWeight: currentStyle === "bold" || currentStyle === "outline" || currentStyle === "gaming" ? "bold" : "normal",
+                color: "#FFFFFF",
+                backgroundColor: currentStyle === "minimal" ? "rgba(0, 0, 0, 0.7)" : "rgba(0, 0, 0, 0.85)",
+                textShadow: currentStyle === "shadow" || currentStyle === "gaming" 
+                  ? "2px 2px 8px rgba(0,0,0,1), 0 0 10px rgba(0,0,0,0.8)" 
+                  : currentStyle === "bold" 
+                  ? "2px 2px 4px rgba(0,0,0,0.8)" 
+                  : "none",
+                border: currentStyle === "outline" ? "2px solid #FFFFFF" : "none",
+                backdropFilter: "blur(10px)",
+              }}
+            >
+              Sample Subtitle Text
+            </div>
           </div>
         </div>
       </div>
