@@ -31,7 +31,7 @@ The translation service is **running** but producing **incorrect translations**.
 
 ### Solution 1: Install Missing Dependencies
 ```powershell
-cd tauri-app\ml-service
+cd -app\ml-service
 pip install deep-translator
 ```
 

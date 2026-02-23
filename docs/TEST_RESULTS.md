@@ -5,7 +5,7 @@
 
 ---
 
-## Test Suite 1: Basic Integration Tests (`test_tauri_integration.py`)
+## Test Suite 1: Basic Integration Tests (`test__integration.py`)
 
 **Status**: ✅ **6/6 PASSED** (1 Warning)
 
@@ -40,7 +40,7 @@
 
 ---
 
-## Test Suite 3: Comprehensive Tests (`test_comprehensive_tauri.py`)
+## Test Suite 3: Comprehensive Tests (`test_comprehensive_.py`)
 
 **Status**: ✅ **8/9 PASSED** (1 Warning)
 
@@ -123,8 +123,8 @@ The following features **cannot be tested automatically** and require manual tes
 - [ ] Window management
 - [ ] Real-time audio processing
 
-### Tauri Commands:
-- [ ] All 20+ Tauri commands (require app to be running)
+###  Commands:
+- [ ] All 20+  commands (require app to be running)
 - [ ] Window close event handling
 - [ ] Overlay window creation
 - [ ] Audio capture start/stop
@@ -154,13 +154,13 @@ cd "C:\Users\sumuk\OneDrive - Georgia Institute of Technology\Projects\CSGO2_Liv
 $pythonPath = ".\.venv311\Scripts\python.exe"
 
 # Basic tests
-& $pythonPath test_tauri_integration.py
+& $pythonPath test__integration.py
 
 # Overlay tests
 & $pythonPath test_overlay_debug.py
 
 # Comprehensive tests
-& $pythonPath test_comprehensive_tauri.py
+& $pythonPath test_comprehensive_.py
 ```
 
 ---

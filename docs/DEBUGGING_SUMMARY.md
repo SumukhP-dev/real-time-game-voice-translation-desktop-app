@@ -55,14 +55,14 @@ All Rust compilation warnings and error handling issues have been resolved:
    ```powershell
    cd "C:\Users\sumuk\OneDrive - Georgia Institute of Technology\Projects\CSGO2_Live_Voice_Translation_Mod"
    .\activate_venv311.ps1
-   cd tauri-app\ml-service
+   cd -app\ml-service
    python -m uvicorn main:app --host 127.0.0.1 --port 8000
    ```
 
-2. **Start Tauri App:**
+2. **Start  App:**
    ```powershell
-   cd "C:\Users\sumuk\OneDrive - Georgia Institute of Technology\Projects\CSGO2_Live_Voice_Translation_Mod\tauri-app"
-   npm run tauri dev
+   cd "C:\Users\sumuk\OneDrive - Georgia Institute of Technology\Projects\CSGO2_Live_Voice_Translation_Mod\-app"
+   npm run  dev
    ```
 
 ## Troubleshooting

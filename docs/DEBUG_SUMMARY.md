@@ -1,4 +1,4 @@
-# Debug Summary - Tauri App Issues
+# Debug Summary -  App Issues
 
 ## Tests Run
 ✅ **All Integration Tests Passed (4/4)**
@@ -18,7 +18,7 @@
 ### 2. ✅ Close Button / Window Close
 - **Status**: FIXED  
 - **Changes**: 
-  - Added Tauri window close event handler in `main.rs`
+  - Added  window close event handler in `main.rs`
   - Added frontend cleanup handler in `MainWindow.tsx`
 - **How to Test**: Close the app window - should close cleanly without hanging
 
@@ -55,7 +55,7 @@ Open browser console (F12) and look for:
 Run this in browser console:
 ```javascript
 // Test overlay directly
-await window.__TAURI__.invoke('show_overlay_text', { text: 'Test subtitle' });
+await window.____.invoke('show_overlay_text', { text: 'Test subtitle' });
 ```
 
 ## Known Issues
@@ -79,16 +79,16 @@ await window.__TAURI__.invoke('show_overlay_text', { text: 'Test subtitle' });
 
 ## Files Modified
 
-1. `tauri-app/src/components/MainWindow.tsx`:
+1. `-app/src/components/MainWindow.tsx`:
    - Added Stop/Start Translation button
    - Added window close handler
    - Added comprehensive logging
    - Added `isTranslationActive` state
 
-2. `tauri-app/src-tauri/src/main.rs`:
+2. `-app/src-/src/main.rs`:
    - Added window close event handler
 
-3. `test_tauri_integration.py`:
+3. `test__integration.py`:
    - Created integration test suite
 
 4. `test_overlay_debug.py`:

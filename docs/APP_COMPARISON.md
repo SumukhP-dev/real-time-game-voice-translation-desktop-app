@@ -1,11 +1,11 @@
-# PyQt6 App vs Tauri/React App - Complete Comparison
+# PyQt6 App vs /React App - Complete Comparison
 
 ## Overview
 
 You have two implementations of the CS:GO 2 Live Voice Translation Mod:
 
 1. **PyQt6 App** (`main.py`) - Simple, standalone Python application
-2. **Tauri/React App** (`tauri-app/`) - Modern hybrid application with React frontend and Rust backend
+2. **/React App** (`-app/`) - Modern hybrid application with React frontend and Rust backend
 
 ---
 
@@ -36,7 +36,7 @@ You have two implementations of the CS:GO 2 Live Voice Translation Mod:
 - **Dependencies:** PyQt6, PyAudio, OpenAI Whisper, transformers, etc.
 - **Architecture:** Monolithic Python application
 
-### Tauri/React App
+### /React App
 ```
 ┌─────────────────────────────────┐
 │   React Frontend (TypeScript)    │
@@ -44,9 +44,9 @@ You have two implementations of the CS:GO 2 Live Voice Translation Mod:
 │   ├── Hooks                      │
 │   └── Services                   │
 └──────────────┬───────────────────┘
-               │ Tauri IPC
+               │  IPC
 ┌──────────────▼───────────────────┐
-│   Rust Backend (Tauri)           │
+│   Rust Backend ()           │
 │   ├── Audio Capture (cpal)       │
 │   ├── Config Management          │
 │   ├── Window Management           │
@@ -62,21 +62,21 @@ You have two implementations of the CS:GO 2 Live Voice Translation Mod:
 
 **Stack:**
 - **Frontend:** React 18 + TypeScript + Tailwind CSS
-- **Backend:** Rust (Tauri) + Python (FastAPI)
+- **Backend:** Rust () + Python (FastAPI)
 - **Architecture:** Hybrid (React UI, Rust system ops, Python ML)
 
 ---
 
 ## Feature Comparison
 
-| Feature | PyQt6 App | Tauri/React App |
+| Feature | PyQt6 App | /React App |
 |---------|-----------|-----------------|
 | **Core Features** |
 | Audio Capture | ✅ PyAudio | ✅ Rust (cpal) |
 | Speech Recognition | ✅ Whisper | ✅ ✅ ML Service |
 | Translation | ✅ Local/API | ✅ ✅ ML Service |
 | Text-to-Speech | ✅ pyttsx3/gTTS | ✅ Rust (tts crate) |
-| Overlay Display | ✅ PyQt6 | ✅ Tauri Window |
+| Overlay Display | ✅ PyQt6 | ✅  Window |
 | **UI Features** |
 | Audio Device Selection | ✅ Basic | ✅ ✅ Advanced |
 | Language Selection | ✅ Basic | ✅ ✅ Advanced |
@@ -107,21 +107,21 @@ You have two implementations of the CS:GO 2 Live Voice Translation Mod:
 - **Lines of Code:** ~2,000-3,000
 - **Dependencies:** ~15 Python packages
 
-### Tauri/React App
+### /React App
 - **Frontend:** 20+ React components, 10+ hooks
-- **Backend:** 10+ Rust modules, 39+ Tauri commands
+- **Backend:** 10+ Rust modules, 39+  commands
 - **ML Service:** 3 Python services
 - **Total Lines:** ~10,000+ (across all languages)
 - **Dependencies:** 
   - Frontend: React, TypeScript, Tailwind
-  - Backend: Tauri, Rust crates (cpal, tts, etc.)
+  - Backend: , Rust crates (cpal, tts, etc.)
   - ML: FastAPI, Whisper, transformers
 
 ---
 
 ## Performance Comparison
 
-| Aspect | PyQt6 App | Tauri/React App |
+| Aspect | PyQt6 App | /React App |
 |--------|-----------|-----------------|
 | **Startup Time** | Fast (~2-3s) | Slower (~5-10s first run, ~3-5s cached) |
 | **Memory Usage** | Moderate (~200-300MB) | Higher (~300-500MB) |
@@ -148,7 +148,7 @@ You have two implementations of the CS:GO 2 Live Voice Translation Mod:
 - ❌ Harder to scale
 - ❌ Limited modern tooling
 
-### Tauri/React App
+### /React App
 **Pros:**
 - ✅ Modern development experience
 - ✅ Type safety (TypeScript)
@@ -182,12 +182,12 @@ python main.py
 - Virtual environment
 - ~15 Python packages
 
-### Tauri/React App
+### /React App
 ```bash
 # Multi-step setup
 # 1. Install Rust
 # 2. Install Node.js dependencies
-cd tauri-app
+cd -app
 npm install
 
 # 3. Install Python ML service
@@ -197,16 +197,16 @@ pip install -r requirements.txt
 # 4. Start ML service
 python -m uvicorn main:app --port 8000
 
-# 5. Start Tauri app
-cd tauri-app
-npm run tauri dev
+# 5. Start  app
+cd -app
+npm run  dev
 ```
 
 **Requirements:**
 - Rust (latest stable)
 - Node.js 18+
 - Python 3.11+
-- Tauri CLI
+-  CLI
 - Multiple build tools
 
 ---
@@ -219,8 +219,8 @@ npm run tauri dev
 - Single executable file
 - Easy distribution
 
-### Tauri/React App
-- Tauri bundler
+### /React App
+-  bundler
 - Smaller binaries (uses system WebView)
 - Cross-platform builds
 - More complex build process
@@ -237,7 +237,7 @@ npm run tauri dev
 - ✅ You want minimal setup complexity
 - ✅ You're prototyping or testing
 
-### Choose Tauri/React App If:
+### Choose /React App If:
 - ✅ You need advanced features (stats, integrations)
 - ✅ You want modern UI/UX
 - ✅ You need better performance
@@ -249,7 +249,7 @@ npm run tauri dev
 
 ## Migration Path
 
-If you want to migrate from PyQt6 to Tauri/React:
+If you want to migrate from PyQt6 to /React:
 
 1. **Core functionality** - Already migrated ✅
 2. **UI components** - Already created ✅
@@ -266,7 +266,7 @@ If you want to migrate from PyQt6 to Tauri/React:
 - Easier debugging
 - Simpler setup
 
-**For Production/Full Features:** Use **Tauri/React App**
+**For Production/Full Features:** Use **/React App**
 - More features
 - Better architecture
 - Modern UI
@@ -281,7 +281,7 @@ If you want to migrate from PyQt6 to Tauri/React:
 - ✅ **Features:** Core translation features working
 - ✅ **Stability:** Stable
 
-### Tauri/React App
+### /React App
 - ⚠️ **Status:** Partially complete
 - ✅ **Core:** Audio, translation, overlay working
 - ⚠️ **Integrations:** UI exists, backend needs testing
@@ -293,16 +293,16 @@ If you want to migrate from PyQt6 to Tauri/React:
 
 1. **Decide which app to focus on:**
    - Keep PyQt6 for simplicity
-   - Complete Tauri/React for full features
+   - Complete /React for full features
 
-2. **If choosing Tauri/React:**
+2. **If choosing /React:**
    - Complete integration testing
    - Set up build pipeline
    - Add missing features
    - Create installer
 
 3. **If keeping PyQt6:**
-   - Add missing features from Tauri app
+   - Add missing features from  app
    - Improve UI
    - Add integrations if needed
 

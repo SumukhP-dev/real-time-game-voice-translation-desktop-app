@@ -22,9 +22,9 @@ This project includes both automated and manual testing to ensure all features w
 - **`MANUAL_TESTING_GUIDE.md`** - Comprehensive step-by-step testing guide
 
 ### Automated Testing
-- **`test_tauri_integration.py`** - Basic integration tests (6 tests)
+- **`test__integration.py`** - Basic integration tests (6 tests)
 - **`test_overlay_debug.py`** - Overlay logic tests (2 tests)
-- **`test_comprehensive_tauri.py`** - Comprehensive test suite (10+ tests)
+- **`test_comprehensive_.py`** - Comprehensive test suite (10+ tests)
 
 ### Documentation
 - **`TEST_COVERAGE.md`** - Test coverage analysis and recommendations
@@ -60,18 +60,18 @@ This project includes both automated and manual testing to ensure all features w
 ### Automated Tests (Python)
 ```bash
 # Basic tests
-python test_tauri_integration.py
+python test__integration.py
 
 # Overlay logic tests
 python test_overlay_debug.py
 
 # Comprehensive tests
-python test_comprehensive_tauri.py
+python test_comprehensive_.py
 ```
 
 ### Manual Tests
 1. Start ML service: `.\start_ml_service.ps1`
-2. Start Tauri app: `.\start_app.ps1`
+2. Start  app: `.\start_app.ps1`
 3. Follow `QUICK_TEST_CHECKLIST.md` or `MANUAL_TESTING_GUIDE.md`
 
 ---
@@ -81,13 +81,13 @@ python test_comprehensive_tauri.py
 ### Console Commands (Browser F12)
 ```javascript
 // Test overlay directly
-await window.__TAURI__.invoke('show_overlay_text', { text: 'Test subtitle' });
+await window.____.invoke('show_overlay_text', { text: 'Test subtitle' });
 
 // Check audio capture
-await window.__TAURI__.invoke('is_capturing');
+await window.____.invoke('is_capturing');
 
 // Get config
-const config = await window.__TAURI__.invoke('get_config');
+const config = await window.____.invoke('get_config');
 console.log(config);
 ```
 

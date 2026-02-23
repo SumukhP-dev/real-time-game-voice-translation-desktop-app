@@ -2,7 +2,7 @@
 
 ## Current Test Status
 
-### ✅ Basic Tests (`test_tauri_integration.py`)
+### ✅ Basic Tests (`test__integration.py`)
 
 **Coverage: 6 tests**
 
@@ -20,7 +20,7 @@
 - ✅ Overlay Display Logic Scenarios
 - ✅ Translation with Overlay
 
-### ✅ Comprehensive Tests (`test_comprehensive_tauri.py`)
+### ✅ Comprehensive Tests (`test_comprehensive_.py`)
 
 **Coverage: 10+ tests**
 
@@ -36,9 +36,9 @@
 
 ## Missing Test Coverage
 
-### ❌ Tauri Command Tests (Cannot test from Python)
+### ❌  Command Tests (Cannot test from Python)
 
-These require the Tauri app to be running and can only be tested manually or with E2E tests:
+These require the  app to be running and can only be tested manually or with E2E tests:
 
 1. **Audio Capture Commands**:
 
@@ -124,7 +124,7 @@ These require the Tauri app to be running and can only be tested manually or wit
 
 2. **E2E Test Framework**:
    - Consider using Playwright or similar for browser-based E2E tests
-   - Test Tauri commands through the frontend
+   - Test  commands through the frontend
    - Test window management and close events
 
 ### Medium Priority
@@ -160,7 +160,7 @@ These require the Tauri app to be running and can only be tested manually or wit
 #### Run Basic Tests
 
 ```bash
-python test_tauri_integration.py
+python test__integration.py
 ```
 
 #### Run Overlay Debug Tests
@@ -172,13 +172,13 @@ python test_overlay_debug.py
 #### Run Comprehensive Tests
 
 ```bash
-python test_comprehensive_tauri.py
+python test_comprehensive_.py
 ```
 
 #### Run All Automated Tests
 
 ```bash
-python test_tauri_integration.py && python test_overlay_debug.py && python test_comprehensive_tauri.py
+python test__integration.py && python test_overlay_debug.py && python test_comprehensive_.py
 ```
 
 ### Manual Tests
@@ -203,7 +203,7 @@ See `MANUAL_TESTING_GUIDE.md` for detailed step-by-step testing instructions cov
 
 - ✅ ML Service endpoints: Well tested
 - ✅ Overlay logic: Well tested
-- ❌ Tauri commands: Not testable from Python (need E2E)
+- ❌  commands: Not testable from Python (need E2E)
 - ❌ Frontend/UI: Not tested (need E2E)
 - ❌ User flows: Not tested (need E2E)
 

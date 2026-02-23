@@ -9,13 +9,13 @@ This guide provides step-by-step instructions for manually testing all applicati
    # Terminal 1: Start ML Service
    .\start_ml_service.ps1
    
-   # Terminal 2: Start Tauri App
+   # Terminal 2: Start  App
    .\start_app.ps1
    ```
 
 2. **Verify Services Running**:
    - ML Service: http://127.0.0.1:8000/health should return 200
-   - Tauri App: Window should open
+   -  App: Window should open
 
 3. **Audio Setup**:
    - VB-Audio Virtual Cable should be installed
@@ -30,7 +30,7 @@ This guide provides step-by-step instructions for manually testing all applicati
 
 **Steps**:
 1. Start ML service
-2. Start Tauri app
+2. Start  app
 3. Wait for app window to appear
 
 **Expected Results**:
@@ -173,7 +173,7 @@ This guide provides step-by-step instructions for manually testing all applicati
 **Test Overlay Directly**:
 ```javascript
 // In browser console (F12):
-await window.__TAURI__.invoke('show_overlay_text', { text: 'Test subtitle' });
+await window.____.invoke('show_overlay_text', { text: 'Test subtitle' });
 ```
 - [ ] Overlay window appears with "Test subtitle"
 - [ ] Overlay fades out after 5 seconds
@@ -386,23 +386,23 @@ When reporting issues, include:
 ### Test Overlay Directly
 ```javascript
 // In browser console (F12)
-await window.__TAURI__.invoke('show_overlay_text', { text: 'Test subtitle' });
+await window.____.invoke('show_overlay_text', { text: 'Test subtitle' });
 ```
 
 ### Check Audio Capture Status
 ```javascript
-await window.__TAURI__.invoke('is_capturing');
+await window.____.invoke('is_capturing');
 ```
 
 ### Check Config
 ```javascript
-const config = await window.__TAURI__.invoke('get_config');
+const config = await window.____.invoke('get_config');
 console.log(config);
 ```
 
 ### Test Translation
 ```javascript
-await window.__TAURI__.invoke('translate_text', {
+await window.____.invoke('translate_text', {
   text: 'Hello',
   sourceLanguage: 'en',
   targetLanguage: 'es'

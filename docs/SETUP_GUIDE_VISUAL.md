@@ -87,21 +87,21 @@ After restarting:
    ```
 4. Start ML service:
    ```powershell
-   cd tauri-app\ml-service
+   cd -app\ml-service
    python -m uvicorn main:app --host 127.0.0.1 --port 8000
    ```
 5. Keep this window open - the service must stay running
 
-### Start Tauri App
+### Start  App
 
 1. Open a **new** PowerShell window
-2. Navigate to tauri-app directory:
+2. Navigate to -app directory:
    ```powershell
-   cd "C:\Users\sumuk\OneDrive - Georgia Institute of Technology\Projects\CSGO2_Live_Voice_Translation_Mod\tauri-app"
+   cd "C:\Users\sumuk\OneDrive - Georgia Institute of Technology\Projects\CSGO2_Live_Voice_Translation_Mod\-app"
    ```
 3. Start the app:
    ```powershell
-   npm run tauri dev
+   npm run  dev
    ```
 
 ---

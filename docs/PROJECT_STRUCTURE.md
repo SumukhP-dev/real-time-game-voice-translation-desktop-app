@@ -58,9 +58,9 @@ CSGO2_Live_Voice_Translation_Mod/
 │   ├── *.md                          # Various documentation files
 │   └── README.md                     # Main documentation
 │
-├── tauri-app/                        # Tauri frontend application
+├── -app/                        #  frontend application
 │   ├── src/                          # Frontend source code
-│   ├── src-tauri/                    # Rust backend
+│   ├── src-/                    # Rust backend
 │   ├── package.json                  # Node.js dependencies
 │   └── various frontend files
 │
@@ -99,8 +99,8 @@ CSGO2_Live_Voice_Translation_Mod/
 - Complete documentation including setup guides, troubleshooting, and API reference
 - Project structure and development guidelines
 
-### Frontend (`tauri-app/`)
-- Modern web-based frontend using Tauri framework
+### Frontend (`-app/`)
+- Modern web-based frontend using  framework
 - Rust backend for performance-critical operations
 - Web-based overlay system
 
@@ -129,5 +129,5 @@ pyinstaller build.spec
 
 - The `audio/` directory is excluded from git due to `.gitignore` rules (line 42)
 - Model files, build artifacts, and large binary files are excluded from version control
-- The project supports both Python backend (traditional) and Tauri frontend (modern)
+- The project supports both Python backend (traditional) and  frontend (modern)
 - Configuration files are generated at runtime and should not be committed to version control

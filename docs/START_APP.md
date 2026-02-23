@@ -1,4 +1,4 @@
-# How to Start the Tauri App
+# How to Start the  App
 
 ## Prerequisites Check
 
@@ -20,7 +20,7 @@ cd "C:\Users\sumuk\OneDrive - Georgia Institute of Technology\Projects\CSGO2_Liv
 .\.venv311\Scripts\Activate.ps1
 
 # Navigate to ML service
-cd tauri-app\ml-service
+cd -app\ml-service
 
 # Start the ML service
 python -m uvicorn main:app --host 127.0.0.1 --port 8000
@@ -36,16 +36,16 @@ INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
 
 **Keep this terminal open!**
 
-### Step 2: Start Tauri App
+### Step 2: Start  App
 
 Open a **NEW PowerShell terminal** and run:
 
 ```powershell
-# Navigate to tauri-app directory
-cd "C:\Users\sumuk\OneDrive - Georgia Institute of Technology\Projects\CSGO2_Live_Voice_Translation_Mod\tauri-app"
+# Navigate to -app directory
+cd "C:\Users\sumuk\OneDrive - Georgia Institute of Technology\Projects\CSGO2_Live_Voice_Translation_Mod\-app"
 
-# Start Tauri in dev mode
-npm run tauri dev
+# Start  in dev mode
+npm run  dev
 ```
 
 **Expected output:**
@@ -60,7 +60,7 @@ npm run tauri dev
 **Error: Module not found**
 ```powershell
 # Install ML service dependencies
-cd tauri-app\ml-service
+cd -app\ml-service
 pip install -r requirements.txt
 ```
 
@@ -80,7 +80,7 @@ python -m uvicorn main:app --host 127.0.0.1 --port 8001
 pip install uvicorn fastapi
 ```
 
-### Tauri App Won't Start
+###  App Won't Start
 
 **Error: cargo not found**
 - Install Rust from https://rustup.rs/
@@ -93,9 +93,9 @@ pip install uvicorn fastapi
 **Error: Build failed**
 ```powershell
 # Clean and rebuild
-cd tauri-app
-npm run tauri clean
-npm run tauri dev
+cd -app
+npm run  clean
+npm run  dev
 ```
 
 **Error: ML service connection failed**
@@ -122,14 +122,14 @@ Create a file `start-app.ps1`:
 
 ```powershell
 # Start ML Service
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd 'C:\Users\sumuk\OneDrive - Georgia Institute of Technology\Projects\CSGO2_Live_Voice_Translation_Mod'; .\.venv311\Scripts\Activate.ps1; cd tauri-app\ml-service; python -m uvicorn main:app --host 127.0.0.1 --port 8000"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd 'C:\Users\sumuk\OneDrive - Georgia Institute of Technology\Projects\CSGO2_Live_Voice_Translation_Mod'; .\.venv311\Scripts\Activate.ps1; cd -app\ml-service; python -m uvicorn main:app --host 127.0.0.1 --port 8000"
 
 # Wait a bit
 Start-Sleep -Seconds 5
 
-# Start Tauri App
-cd "C:\Users\sumuk\OneDrive - Georgia Institute of Technology\Projects\CSGO2_Live_Voice_Translation_Mod\tauri-app"
-npm run tauri dev
+# Start  App
+cd "C:\Users\sumuk\OneDrive - Georgia Institute of Technology\Projects\CSGO2_Live_Voice_Translation_Mod\-app"
+npm run  dev
 ```
 
 Then run:

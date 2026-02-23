@@ -61,7 +61,7 @@
      - Audio level information
 
 3. **Check Rust logs:**
-   - Look at the Tauri app terminal window
+   - Look at the  app terminal window
    - Should see:
      - "Found X audio input devices"
      - "Using audio device: [name]"

@@ -31,6 +31,6 @@ Look for these messages:
 
 1. Check console for errors
 2. Verify settings (overlay enabled, languages set)
-3. Test overlay directly: `await window.__TAURI__.invoke('show_overlay_text', { text: 'Test' });`
+3. Test overlay directly: `await window.____.invoke('show_overlay_text', { text: 'Test' });`
 4. Report with console logs and steps to reproduce
 
