@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { learnPreference, getPreference } from "../services/tauri";
 
 export function LearningSettings() {
   const [context, setContext] = useState("");
@@ -60,3 +59,4 @@ export function LearningSettings() {
     </div>
   );
 }
+

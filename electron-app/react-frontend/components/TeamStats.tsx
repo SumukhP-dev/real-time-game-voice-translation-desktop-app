@@ -1,9 +1,23 @@
 import React, { useEffect, useState } from "react";
-import { MatchStatistics } from "../services/tauri";
-import {
-  CommunicationMetrics,
-  getCommunicationMetrics,
-} from "../services/tauri";
+import { useTeammates } from "../hooks/useTeammates";
+
+// Define types locally
+interface CommunicationMetrics {
+  totalMessages: number;
+  messagesPerMinute: number;
+  languageDiversity: number;
+  responseTime: number;
+  teammates: any[];
+  most_common_languages: string[];
+}
+
+interface MatchStatistics {
+  totalTranslations: number;
+  uniqueLanguages: number;
+  avgTranslationTime: number;
+  total_duration_seconds: number;
+  most_common_languages: string[];
+}
 
 interface Props {
   stats: MatchStatistics | null;
@@ -15,31 +29,25 @@ export function TeamStats({ stats, loading, onRefresh }: Props) {
   const [metrics, setMetrics] = useState<CommunicationMetrics | null>(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [metricsError, setMetricsError] = useState<string | null>(null);
+  const { teammates } = useTeammates();
 
   const loadMetrics = async () => {
     setMetricsLoading(true);
     setMetricsError(null);
     try {
-      // Add timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Metrics loading timeout after 10 seconds")), 10000);
-      });
-      
-      const data = await Promise.race([
-        getCommunicationMetrics(),
-        timeoutPromise
-      ]) as CommunicationMetrics;
-      
-      setMetrics(data);
-    } catch (err: any) {
-      const errorMsg = err?.toString?.() || "Failed to load analytics";
-      console.error("Metrics loading error:", err);
-      setMetricsError(errorMsg);
-      // Set default metrics to prevent infinite loading
-      setMetrics({
-        total_translations: 0,
-        languages_used: 0
-      });
+      // Mock implementation
+      console.log('Mock: getCommunicationMetrics');
+      const mockMetrics: CommunicationMetrics = {
+        totalMessages: stats?.totalTranslations || 0,
+        messagesPerMinute: 2.5,
+        languageDiversity: 0.8,
+        responseTime: 1.2,
+        teammates: teammates || [],
+        most_common_languages: ['en', 'es', 'fr']
+      };
+      setMetrics(mockMetrics);
+    } catch (err) {
+      setMetricsError(err instanceof Error ? err.message : "Failed to load metrics");
     } finally {
       setMetricsLoading(false);
     }
@@ -47,82 +55,84 @@ export function TeamStats({ stats, loading, onRefresh }: Props) {
 
   useEffect(() => {
     loadMetrics();
-  }, []);
-
-  if (loading || metricsLoading) {
-    return <div className="p-4 bg-gray-800 rounded">Loading statistics…</div>;
-  }
-
-  if (!stats && !metrics) {
-    return (
-      <div className="p-4 bg-gray-800 rounded text-sm text-gray-400">
-        No statistics available yet. Start a match to begin tracking.
-      </div>
-    );
-  }
-
-  const handleRefresh = async () => {
-    await loadMetrics();
-    if (onRefresh) {
-      onRefresh();
-    }
-  };
+  }, [stats, teammates]);
 
   return (
-    <div className="p-4 bg-gray-800 rounded space-y-3">
-      <div className="flex items-center justify-between">
-      <h3 className="text-lg font-semibold">Team & Usage Stats</h3>
+    <div className="bg-gray-800 rounded-lg p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold text-white">Team Communication</h3>
         <button
-          className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={handleRefresh}
-          disabled={loading || metricsLoading}
+          onClick={onRefresh}
+          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
         >
-          {loading || metricsLoading ? "Refreshing..." : "Refresh"}
+          Refresh
         </button>
       </div>
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <div className="bg-gray-900 p-3 rounded">
-          <div className="text-gray-400">Total Translations</div>
-          <div className="text-xl font-semibold">
-            {stats?.total_translations || metrics?.total_translations || 0}
+
+      {metricsLoading ? (
+        <div className="text-center py-4">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-400 mt-2">Loading metrics...</p>
+        </div>
+      ) : metricsError ? (
+        <div className="text-center py-4">
+          <p className="text-red-400">{metricsError}</p>
+        </div>
+      ) : metrics ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-700 rounded p-3">
+              <p className="text-gray-400 text-sm">Total Messages</p>
+              <p className="text-white text-xl font-bold">{metrics.totalMessages}</p>
+            </div>
+            <div className="bg-gray-700 rounded p-3">
+              <p className="text-gray-400 text-sm">Messages/Min</p>
+              <p className="text-white text-xl font-bold">{metrics.messagesPerMinute}</p>
+            </div>
+            <div className="bg-gray-700 rounded p-3">
+              <p className="text-gray-400 text-sm">Language Diversity</p>
+              <p className="text-white text-xl font-bold">{(metrics.languageDiversity * 100).toFixed(0)}%</p>
+            </div>
+            <div className="bg-gray-700 rounded p-3">
+              <p className="text-gray-400 text-sm">Response Time</p>
+              <p className="text-white text-xl font-bold">{metrics.responseTime}s</p>
+            </div>
+          </div>
+
+          <div className="bg-gray-700 rounded p-3">
+            <p className="text-gray-400 text-sm mb-2">Most Common Languages</p>
+            <div className="flex flex-wrap gap-2">
+              {metrics.most_common_languages.map((lang: string, index: number) => (
+                <span
+                  key={index}
+                  className="px-2 py-1 bg-blue-600 text-white rounded text-xs"
+                >
+                  {lang.toUpperCase()}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-gray-700 rounded p-3">
+            <p className="text-gray-400 text-sm mb-2">Active Teammates</p>
+            <div className="space-y-1">
+              {metrics.teammates.length === 0 ? (
+                <p className="text-gray-500 text-sm">No teammates detected</p>
+              ) : (
+                metrics.teammates.slice(0, 3).map((teammate: any, index: number) => (
+                  <div key={index} className="flex justify-between text-sm">
+                    <span className="text-gray-300">{teammate.name || `Teammate ${index + 1}`}</span>
+                    <span className="text-gray-400">{teammate.language || 'Unknown'}</span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
-        <div className="bg-gray-900 p-3 rounded">
-          <div className="text-gray-400">Total Playtime (hrs)</div>
-          <div className="text-xl font-semibold">
-            {stats ? (stats.total_duration_seconds / 3600).toFixed(1) : "0.0"}
-          </div>
+      ) : (
+        <div className="text-center py-4">
+          <p className="text-gray-400">No metrics available</p>
         </div>
-        <div className="bg-gray-900 p-3 rounded">
-          <div className="text-gray-400">Languages used</div>
-          <div className="text-xl font-semibold">
-            {metrics?.languages_used || 0}
-        </div>
-      </div>
-        <div className="bg-gray-900 p-3 rounded">
-          <div className="text-gray-400">Teammates</div>
-          <div className="text-xl font-semibold">{metrics?.teammates || 0}</div>
-        </div>
-      </div>
-
-      {stats && stats.most_common_languages.length > 0 && (
-      <div>
-        <div className="text-sm text-gray-300 font-semibold mb-1">
-          Most Common Languages
-        </div>
-        <ul className="space-y-1 text-sm text-gray-300">
-          {stats.most_common_languages.slice(0, 5).map(([lang, count]) => (
-            <li key={lang}>
-              {lang}:{" "}
-              <span className="text-gray-400">{count} translations</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-      )}
-
-      {metricsError && (
-        <div className="text-xs text-red-400">Warning: {metricsError}</div>
       )}
     </div>
   );

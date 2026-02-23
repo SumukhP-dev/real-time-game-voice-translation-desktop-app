@@ -93,11 +93,15 @@ export function MainWindow() {
   // Log capture status changes
   useEffect(() => {
     if (isCapturing) {
-      addLog("Audio capture started");
+      const device = devices.find((d: any) => d.index === selectedDevice);
+      const deviceName = device ? device.name : `Device ${selectedDevice}`;
+      addLog(`Audio capture started - ${deviceName}`);
+      setStatus(`Capturing audio from ${deviceName}`);
     } else {
       addLog("Audio capture stopped");
+      setStatus("Audio capture stopped");
     }
-  }, [isCapturing, addLog]);
+  }, [isCapturing, addLog, selectedDevice, devices]);
 
   useEffect(() => {
     // Start a default match session for tracking
@@ -1191,7 +1195,7 @@ export function MainWindow() {
                   backgroundClip: 'text'
                 }}
               >
-                CS:GO 2 Voice Translation
+                {t(I18N_KEYS.MAIN_TITLE)}
               </h1>
               <p className="text-gray-300 text-lg">
                 Real-time voice translation for gaming
@@ -1228,7 +1232,7 @@ export function MainWindow() {
                     setTestOverlayText(testText);
                     setTimeout(() => setTestOverlayText(null), 4000);
 
-                    addLog(`✁E${result}`);
+                    addLog(`Overlay test result: ${result}`);
                   } catch (err) {
                     console.error("Test overlay error:", err);
                     const errorMsg =

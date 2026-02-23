@@ -1,5 +1,4 @@
 import React from "react";
-import { MatchSession } from "../services/tauri";
 
 interface Props {
   history: MatchSession[];
@@ -42,7 +41,7 @@ export function MatchHistory({ history, loading, error }: Props) {
                 <span>
                   {new Date(session.start_time).toLocaleString()}{" "}
                   {session.end_time
-                    ? "→ " + new Date(session.end_time).toLocaleString()
+                    ? "ↁE" + new Date(session.end_time).toLocaleString()
                     : ""}
                 </span>
               </div>
@@ -72,3 +71,4 @@ export function MatchHistory({ history, loading, error }: Props) {
     </div>
   );
 }
+

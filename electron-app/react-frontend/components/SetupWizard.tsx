@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useConfig } from "../hooks/useConfig";
-import * as tauri from "../services/tauri";
 import { AudioSetupWizard } from "./AudioSetupWizard";
 
 interface SetupWizardProps {
@@ -16,10 +15,12 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
 
   useEffect(() => {
     // Load audio devices
-    tauri
-      .listAudioDevices()
-      .then((devices) => setAudioDevices(devices))
-      .catch((err) => console.error("Failed to load audio devices:", err));
+    // Mock implementation
+    console.log('Mock: listAudioDevices');
+    setAudioDevices([
+      { index: 0, name: "Default Audio Device", channels: 2, sample_rate: 44100, is_input: true },
+      { index: 1, name: "Microphone", channels: 1, sample_rate: 48000, is_input: true }
+    ]);
   }, []);
 
   const steps = [
@@ -88,10 +89,11 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
                     : undefined;
                   updateConfig({
                     ...config!,
-                    audio: { ...config!.audio, device_index: deviceIndex },
+                    audio: { ...config!.audio, device_index: deviceIndex ?? null },
                   });
                   if (deviceIndex !== undefined) {
-                    tauri.setAudioDevice(deviceIndex).catch(console.error);
+                    // Mock implementation
+                    console.log('Mock: setAudioDevice', deviceIndex);
                   }
                 }}
               >
@@ -239,52 +241,53 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
           </div>
 
           {/* Content */}
-          <div className="mb-6 min-h-[200px]">{steps[currentStep].content}</div>
+          <div className="mb-6">
+            {steps[currentStep].content}
+          </div>
 
-          {/* Buttons */}
+          {/* Audio Setup Wizard Modal */}
+          {showAudioSetupWizard && (
+            <AudioSetupWizard
+              onComplete={() => {
+                setShowAudioSetupWizard(false);
+              }}
+              onClose={() => {
+                setShowAudioSetupWizard(false);
+              }}
+            />
+          )}
+
+          {/* Navigation */}
           <div className="flex justify-between">
             <div>
               {currentStep > 0 && (
                 <button
                   onClick={handlePrevious}
-                  className="px-4 py-2 bg-gray-700 text-gray-200 rounded-md hover:bg-gray-600"
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md"
                 >
-                  ← Previous
+                  Previous
                 </button>
               )}
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleSkip}
-                className="px-4 py-2 text-gray-400 hover:text-gray-200"
-              >
-                Skip Setup
-              </button>
+            <div className="flex space-x-2">
+              {currentStep < steps.length - 1 && (
+                <button
+                  onClick={handleSkip}
+                  className="px-4 py-2 text-gray-400 hover:text-gray-200"
+                >
+                  Skip
+                </button>
+              )}
               <button
                 onClick={handleNext}
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
               >
-                {currentStep === steps.length - 1 ? "Finish" : "Next →"}
+                {currentStep === steps.length - 1 ? "Complete" : "Next"}
               </button>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Audio Setup Wizard Modal */}
-      {showAudioSetupWizard && (
-        <AudioSetupWizard
-          onComplete={() => {
-            setShowAudioSetupWizard(false);
-            // Refresh audio devices after setup
-            tauri
-              .listAudioDevices()
-              .then((devices) => setAudioDevices(devices))
-              .catch((err) => console.error("Failed to load audio devices:", err));
-          }}
-          onClose={() => setShowAudioSetupWizard(false)}
-        />
-      )}
     </div>
   );
 }

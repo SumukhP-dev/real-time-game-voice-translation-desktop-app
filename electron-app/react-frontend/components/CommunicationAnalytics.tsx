@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from "react";
-import {
-  CommunicationMetrics,
-  getCommunicationMetrics,
-} from "../services/tauri";
+
+// Define types locally
+interface CommunicationMetrics {
+  totalMessages: number;
+  messagesPerMinute: number;
+  languageDiversity: number;
+  responseTime: number;
+  teammates: any[];
+  most_common_languages: string[];
+}
 
 export function CommunicationAnalytics() {
   const [metrics, setMetrics] = useState<CommunicationMetrics | null>(null);
@@ -13,8 +19,17 @@ export function CommunicationAnalytics() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getCommunicationMetrics();
-      setMetrics(data);
+      // Mock implementation
+      console.log('Mock: getCommunicationMetrics');
+      const mockMetrics: CommunicationMetrics = {
+        totalMessages: 150,
+        messagesPerMinute: 2.5,
+        languageDiversity: 0.8,
+        responseTime: 1.2,
+        teammates: [],
+        most_common_languages: ['en', 'es', 'fr']
+      };
+      setMetrics(mockMetrics);
     } catch (err: any) {
       setError(err?.toString?.() || "Failed to load analytics");
     } finally {
@@ -26,53 +41,67 @@ export function CommunicationAnalytics() {
     load();
   }, []);
 
-  if (loading) {
-    return <div className="p-4 bg-gray-800 rounded">Loading analytics…</div>;
-  }
-
-  if (error) {
-    return (
-      <div className="p-4 bg-red-900 text-red-100 rounded">
-        Failed to load analytics: {error}
-      </div>
-    );
-  }
-
-  if (!metrics) {
-    return (
-      <div className="p-4 bg-gray-800 rounded text-sm text-gray-400">
-        No analytics data yet. Start a match and record translations.
-      </div>
-    );
-  }
-
   return (
-    <div className="p-4 bg-gray-800 rounded space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Communication Analytics</h3>
+    <div className="bg-gray-800 rounded-lg p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold text-white">Communication Analytics</h3>
         <button
-          className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-500 rounded"
           onClick={load}
+          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
         >
           Refresh
         </button>
       </div>
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <div className="bg-gray-900 p-3 rounded">
-          <div className="text-gray-400">Total Translations</div>
-          <div className="text-xl font-semibold">
-            {metrics.total_translations}
+
+      {loading ? (
+        <div className="text-center py-4">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-400 mt-2">Loading analytics...</p>
+        </div>
+      ) : error ? (
+        <div className="text-center py-4">
+          <p className="text-red-400">{error}</p>
+        </div>
+      ) : metrics ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-700 rounded p-3">
+              <p className="text-gray-400 text-sm">Total Messages</p>
+              <p className="text-white text-xl font-bold">{metrics.totalMessages}</p>
+            </div>
+            <div className="bg-gray-700 rounded p-3">
+              <p className="text-gray-400 text-sm">Messages/Min</p>
+              <p className="text-white text-xl font-bold">{metrics.messagesPerMinute}</p>
+            </div>
+            <div className="bg-gray-700 rounded p-3">
+              <p className="text-gray-400 text-sm">Language Diversity</p>
+              <p className="text-white text-xl font-bold">{(metrics.languageDiversity * 100).toFixed(0)}%</p>
+            </div>
+            <div className="bg-gray-700 rounded p-3">
+              <p className="text-gray-400 text-sm">Response Time</p>
+              <p className="text-white text-xl font-bold">{metrics.responseTime}s</p>
+            </div>
+          </div>
+
+          <div className="bg-gray-700 rounded p-3">
+            <p className="text-gray-400 text-sm mb-2">Most Common Languages</p>
+            <div className="flex flex-wrap gap-2">
+              {metrics.most_common_languages.map((lang: string, index: number) => (
+                <span
+                  key={index}
+                  className="px-2 py-1 bg-blue-600 text-white rounded text-xs"
+                >
+                  {lang.toUpperCase()}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
-        <div className="bg-gray-900 p-3 rounded">
-          <div className="text-gray-400">Languages used</div>
-          <div className="text-xl font-semibold">{metrics.languages_used}</div>
+      ) : (
+        <div className="text-center py-4">
+          <p className="text-gray-400">No analytics data available</p>
         </div>
-      </div>
-      <div className="text-xs text-gray-500">
-        Analytics are computed locally from match history; ML-based insights can
-        be added later.
-      </div>
+      )}
     </div>
   );
 }

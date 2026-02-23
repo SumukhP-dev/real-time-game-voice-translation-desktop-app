@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useI18n } from "../hooks/useI18n";
 import { I18N_KEYS } from "../i18n/keys";
-import * as tauri from "../services/tauri";
+import electronService from "../services/electron";
 
 interface AntiCheatStatus {
   name: string;
@@ -39,7 +39,7 @@ export function AntiCheatStatusComponent() {
       });
       
       const reportData = await Promise.race([
-        tauri.getAntiCheatReport(),
+        electronService.getAntiCheatReport(),
         timeoutPromise
       ]) as AntiCheatReport;
       
@@ -162,4 +162,5 @@ export function AntiCheatStatusComponent() {
     </div>
   );
 }
+
 

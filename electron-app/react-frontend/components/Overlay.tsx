@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
 import "../index.css";
 
 interface OverlayText {
@@ -202,3 +201,4 @@ export function Overlay() {
     </div>
   );
 }
+

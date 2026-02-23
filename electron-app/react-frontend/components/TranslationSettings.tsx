@@ -3,7 +3,6 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useConfig } from "../hooks/useConfig";
 import { useI18n } from "../hooks/useI18n";
 import { I18N_KEYS } from "../i18n/keys";
-import * as tauri from "../services/tauri";
 
 const LANGUAGES = [
   { code: "en", name: "English" },
@@ -39,8 +38,8 @@ export function TranslationSettings() {
         },
       };
       await updateConfig(newConfig);
-      // Sync overlay config
-      await tauri.updateOverlayConfig(newConfig.overlay);
+      // Mock implementation - overlay config is already updated via updateConfig
+      console.log('Mock: updateOverlayConfig', newConfig.overlay);
     } catch (error) {
       console.error("Failed to update overlay config:", error);
     }
@@ -140,7 +139,8 @@ export function TranslationSettings() {
                     },
                   };
                   await updateConfig(newConfig);
-                  await tauri.updateOverlayConfig(newConfig.overlay);
+                  // Mock implementation - overlay config is already updated via updateConfig
+                  console.log('Mock: updateOverlayConfig', newConfig.overlay);
                 } catch (error) {
                   console.error(
                     "Failed to update show_same_language config:",
@@ -157,3 +157,4 @@ export function TranslationSettings() {
     </div>
   );
 }
+

@@ -3,7 +3,6 @@ import { useConfig } from "../hooks/useConfig";
 import { useTeammates } from "../hooks/useTeammates";
 import { useI18n } from "../hooks/useI18n";
 import { I18N_KEYS } from "../i18n/keys";
-import * as tauri from "../services/tauri";
 
 const LANGUAGES = [
   { code: "en", name: "English" },
@@ -215,3 +214,4 @@ export function TranslationToTeam() {
     </div>
   );
 }
+

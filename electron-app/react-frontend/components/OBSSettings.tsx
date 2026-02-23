@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { OBSConfig } from "../services/tauri";
 import { useOBS } from "../hooks/useOBS";
 
 export function OBSSettings() {
@@ -80,3 +79,4 @@ export function OBSSettings() {
     </div>
   );
 }
+
