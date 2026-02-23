@@ -1,5 +1,5 @@
 // Electron API service for React frontend
-// Replaces Tauri API calls with Electron equivalents
+// Replaces  API calls with Electron equivalents
 
 class ElectronService {
   constructor() {

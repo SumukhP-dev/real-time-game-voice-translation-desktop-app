@@ -3,7 +3,7 @@ const { BrowserWindow, ipcMain, shell, dialog } = electron;
 const app = electron.app;
 const path = require('path');
 const { spawn } = require('child_process');
-const isDev = process.env.NODE_ENV === 'development';
+const isDev = true; // Force development mode for now
 
 let mainWindow;
 let mlServiceProcess;
@@ -28,14 +28,14 @@ function createWindow() {
       additionalArguments: ['--disable-web-security', '--disable-features=VizDisplayCompositor']
     },
     icon: path.join(__dirname, '../app_icon.png'),
-    title: 'CSGO2 Voice Translation',
+    title: 'Real-Time Voice Translation Tool',
     show: false, // Don't show until ready-to-show
     autoHideMenuBar: true
   });
 
   // Load the app
   const startUrl = isDev 
-    ? 'http://localhost:3010' 
+    ? 'http://localhost:3013'  // Updated to match the running React dev server
     : `file://${path.join(__dirname, 'react-frontend/build/index.html')}`;
   
   mainWindow.loadURL(startUrl);
