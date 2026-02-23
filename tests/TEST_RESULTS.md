@@ -29,7 +29,7 @@
 - ✅ Invalid Audio Handling
 - ✅ Invalid Translation Request
 
-### Placeholder Tests (2 tests - require Tauri app)
+### Placeholder Tests (2 tests - require  app)
 
 - ✅ Configuration Management
 - ✅ Audio Device Listing
@@ -105,7 +105,7 @@ python run_integration_tests.py
 .\.venv311\Scripts\Activate.ps1
 
 # Navigate to ML service
-cd tauri-app\ml-service
+cd -app\ml-service
 
 # Start service
 python -m uvicorn main:app --host 127.0.0.1 --port 8000
@@ -121,12 +121,12 @@ python -m uvicorn main:app --host 127.0.0.1 --port 8000
 
 - Tests use synthetic audio (sine wave) which may not produce speech transcription
 - Empty transcription results are considered valid for non-speech audio
-- Some tests are placeholders for features that require the Tauri app to be running
+- Some tests are placeholders for features that require the  app to be running
 - Performance tests measure end-to-end latency including network overhead
 
 ## Future Enhancements
 
-1. Add tests for Tauri backend commands (requires app to be running)
+1. Add tests for  backend commands (requires app to be running)
 2. Add tests for overlay functionality
 3. Add tests for match history and statistics
 4. Add tests for teammate management
