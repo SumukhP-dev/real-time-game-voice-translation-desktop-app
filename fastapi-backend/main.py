@@ -18,7 +18,7 @@ app = FastAPI(title="CS:GO 2 Translation ML Service")
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict to Tauri app
+    allow_origins=["*"],  # In production, restrict to  app
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -28,13 +28,30 @@ app.add_middleware(
 whisper_service: Optional[WhisperService] = None
 translation_service: Optional[TranslationService] = None
 
+# Audio capture state
+audio_capture_active = False
+selected_device_index = None
+
+# Audio device models
+class AudioDevice(BaseModel):
+    index: int
+    name: str
+    channels: int
+    sample_rate: int
+    is_input: bool
+
+class AudioStartRequest(BaseModel):
+    device_index: int
+
 # Request/Response models
 class TranscribeRequest(BaseModel):
+
     model_name: Optional[str] = "tiny"
     language: Optional[str] = None
     min_audio_threshold: Optional[float] = 0.001  # Lower default threshold
 
 class TranscribeResponse(BaseModel):
+
     text: str
     language: str
     segments: List[dict]
@@ -42,11 +59,13 @@ class TranscribeResponse(BaseModel):
     rms_level: float
 
 class TranslateRequest(BaseModel):
+
     text: str
     source_language: Optional[str] = None
     target_language: Optional[str] = "en"
 
 class TranslateResponse(BaseModel):
+
     translated_text: str
     source_language: str
     target_language: str
@@ -55,15 +74,15 @@ class TranslateResponse(BaseModel):
 async def startup_event():
     """Initialize services on startup"""
     global whisper_service, translation_service
-    
+
     print("[STARTUP] ========================================", flush=True)
     print("[STARTUP] Initializing ML Services...", flush=True)
     print("[STARTUP] ========================================", flush=True)
-    
+
     # Initialize Whisper service
     print("[STARTUP] Creating WhisperService instance...", flush=True)
     whisper_service = WhisperService(model_name="tiny")
-    
+
     # Pre-load the model (this may take time on first run)
     print("[STARTUP] Loading Whisper model (may take 30-60 seconds if downloading)...", flush=True)
     try:
@@ -78,7 +97,7 @@ async def startup_event():
         print("[STARTUP] Traceback:", flush=True)
         traceback.print_exc()
         print("[STARTUP] Model will be loaded on first transcription request", flush=True)
-    
+
     # Initialize Translation service
     print("[STARTUP] Initializing Translation service...", flush=True)
     try:
@@ -92,7 +111,7 @@ async def startup_event():
         print(f"[STARTUP] ERROR initializing Translation service: {e}", flush=True)
         import traceback
         traceback.print_exc()
-    
+
     print("[STARTUP] ========================================", flush=True)
     print("[STARTUP] Startup complete", flush=True)
     print("[STARTUP] ========================================", flush=True)
@@ -106,6 +125,66 @@ async def health_check():
         "translation_loaded": translation_service._model_loaded if translation_service else False
     }
 
+# Audio device endpoints
+@app.get("/audio/devices", response_model=List[AudioDevice])
+async def get_audio_devices():
+    """Get available audio devices"""
+    # Return mock devices for now - in a real implementation, you'd use pyaudio or sounddevice
+    return [
+        {
+            "index": 0,
+            "name": "Default Audio Device",
+            "channels": 2,
+            "sample_rate": 44100,
+            "is_input": True
+        },
+        {
+            "index": 1,
+            "name": "CABLE Input (VB-Audio Virtual Cable)",
+            "channels": 2,
+            "sample_rate": 48000,
+            "is_input": True
+        },
+        {
+            "index": 2,
+            "name": "Microphone",
+            "channels": 1,
+            "sample_rate": 48000,
+            "is_input": True
+        }
+    ]
+
+@app.post("/audio/start")
+async def start_audio_capture(request: AudioStartRequest):
+    """Start audio capture from specified device"""
+    global audio_capture_active, selected_device_index
+    
+    if audio_capture_active:
+        raise HTTPException(status_code=400, detail="Audio capture is already active")
+    
+    audio_capture_active = True
+    selected_device_index = request.device_index
+    
+    print(f"[AUDIO] Starting capture for device {request.device_index}")
+    
+    return {"status": "success", "message": f"Audio capture started for device {request.device_index}"}
+
+@app.post("/audio/stop")
+async def stop_audio_capture():
+    """Stop audio capture"""
+    global audio_capture_active, selected_device_index
+    
+    if not audio_capture_active:
+        raise HTTPException(status_code=400, detail="Audio capture is not active")
+    
+    device_index = selected_device_index
+    audio_capture_active = False
+    selected_device_index = None
+    
+    print(f"[AUDIO] Stopped capture for device {device_index}")
+    
+    return {"status": "success", "message": f"Audio capture stopped for device {device_index}"}
+
 @app.post("/transcribe", response_model=TranscribeResponse)
 async def transcribe_audio(
     audio_file: UploadFile = File(...),
@@ -115,32 +194,32 @@ async def transcribe_audio(
 ):
     """
     Transcribe audio file to text
-    
+
     Args:
         audio_file: Audio file (WAV, MP3, etc.)
         model_name: Whisper model name
         language: Language code (None for auto-detect)
         min_audio_threshold: Minimum RMS level for valid speech
-    
+
     Returns:
         Transcription result
     """
     global whisper_service
-    
+
     try:
         # Load model if needed or if model name changed
         if whisper_service is None or whisper_service.model_name != model_name:
             whisper_service = WhisperService(model_name=model_name)
-        
+
         # Read audio file
         audio_bytes = await audio_file.read()
-        
+
         # Convert to numpy array
         # For now, assume it's a WAV file or raw PCM
         # In production, use librosa or soundfile to handle various formats
         import wave
         import struct
-        
+
         # Try to parse as WAV
         try:
             wav_io = io.BytesIO(audio_bytes)
@@ -148,14 +227,14 @@ async def transcribe_audio(
                 sample_rate = wav_file.getframerate()
                 n_frames = wav_file.getnframes()
                 audio_data = wav_file.readframes(n_frames)
-                
+
                 # Convert to numpy array (assuming 16-bit PCM)
                 audio_array = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
         except Exception:
             # Fallback: assume raw float32 PCM at 16kHz
             audio_array = np.frombuffer(audio_bytes, dtype=np.float32)
             sample_rate = 16000
-        
+
         # Transcribe
         result = whisper_service.transcribe(
             audio_array,
@@ -163,7 +242,7 @@ async def transcribe_audio(
             language=language,
             min_audio_threshold=min_audio_threshold
         )
-        
+
         return TranscribeResponse(
             text=result["text"],
             language=result["language"],
@@ -171,7 +250,7 @@ async def transcribe_audio(
             confidence=result.get("confidence", 0.0),
             rms_level=result.get("rms_level", 0.0)
         )
-    
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Transcription error: {str(e)}")
 
@@ -185,74 +264,74 @@ async def transcribe_audio_bytes(
 ):
     """
     Transcribe raw audio bytes (float32 PCM)
-    
+
     Args:
         audio_data: Raw audio bytes (float32 PCM)
         sample_rate: Sample rate
         model_name: Whisper model name
         language: Language code
         min_audio_threshold: Minimum RMS level
-    
+
     Returns:
         Transcription result
     """
     global whisper_service
-    
+
     try:
         if whisper_service is None or whisper_service.model_name != model_name:
             whisper_service = WhisperService(model_name=model_name)
-        
+
         # Validate input
         if not audio_data or len(audio_data) == 0:
             raise HTTPException(status_code=400, detail="Empty audio data received")
-        
+
         if sample_rate <= 0:
             raise HTTPException(status_code=400, detail=f"Invalid sample rate: {sample_rate}")
-        
+
         # Check minimum bytes (at least 4 bytes for one float32 sample)
         if len(audio_data) < 4:
             raise HTTPException(status_code=400, detail=f"Audio data too short: {len(audio_data)} bytes (need at least 4 for one float32 sample)")
-        
+
         # Ensure the byte length is a multiple of 4 (float32 = 4 bytes)
         if len(audio_data) % 4 != 0:
             # Truncate to multiple of 4
             audio_data = audio_data[:len(audio_data) - (len(audio_data) % 4)]
             print(f"[WARN] Truncated audio data to {len(audio_data)} bytes (multiple of 4)")
-        
+
         # Convert bytes to numpy array (float32)
         try:
             audio_array = np.frombuffer(audio_data, dtype=np.float32)
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Failed to convert bytes to float32 array: {e}")
-        
+
         print(f"[DEBUG] Received audio: {len(audio_data)} bytes, {len(audio_array)} samples, sample_rate={sample_rate}, duration={len(audio_array)/sample_rate:.2f}s")
         print(f"[DEBUG] Audio stats: min={np.min(audio_array):.6f}, max={np.max(audio_array):.6f}, mean={np.mean(audio_array):.6f}, rms={np.sqrt(np.mean(audio_array**2)):.6f}")
-        
+
         # Validate audio array
         if len(audio_array) == 0:
             raise HTTPException(status_code=400, detail="Audio array is empty after conversion")
-        
+
         # Check for invalid values
         if np.any(np.isnan(audio_array)) or np.any(np.isinf(audio_array)):
             nan_count = np.sum(np.isnan(audio_array))
             inf_count = np.sum(np.isinf(audio_array))
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail=f"Audio data contains invalid values: {nan_count} NaN, {inf_count} Inf"
             )
-        
+
         # Check minimum duration (at least 0.1 seconds)
         min_samples = int(sample_rate * 0.1)
         if len(audio_array) < min_samples:
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail=f"Audio too short: {len(audio_array)} samples (need at least {min_samples} for {sample_rate}Hz, duration={len(audio_array)/sample_rate:.3f}s)"
             )
-        
+
         try:
             import time
             start_time = time.time()
-            
+
             # Ensure model is loaded before transcription
             if not whisper_service.model_loaded:
                 print("[DEBUG] Model not loaded, loading now (this may take 10-30 seconds)...")
@@ -260,7 +339,7 @@ async def transcribe_audio_bytes(
                 whisper_service.load_model()
                 load_time = time.time() - load_start
                 print(f"[DEBUG] Model loaded in {load_time:.2f} seconds")
-            
+
             print(f"[DEBUG] Starting transcription: {len(audio_array)} samples, {len(audio_array)/sample_rate:.3f}s, threshold={min_audio_threshold}")
             print(f"[DEBUG] Transcription start time: {time.strftime('%H:%M:%S')}")
             result = whisper_service.transcribe(
@@ -317,7 +396,7 @@ async def transcribe_audio_bytes(
             print(f"[ERROR] Transcription exception: {e}")
             print(f"[ERROR] Full traceback:\n{error_trace}")
             raise HTTPException(status_code=500, detail=f"Transcription error: {str(e)}")
-    
+
     except HTTPException:
         # Re-raise HTTP exceptions
         raise
@@ -333,15 +412,15 @@ async def transcribe_audio_bytes(
 async def translate_text(request: TranslateRequest):
     """
     Translate text to target language
-    
+
     Args:
         request: Translation request with text and language info
-    
+
     Returns:
         Translation result
     """
     global translation_service
-    
+
     try:
         if translation_service is None:
             translation_service = TranslationService(
@@ -351,7 +430,7 @@ async def translate_text(request: TranslateRequest):
             )
         elif translation_service.target_language != request.target_language:
             translation_service.set_target_language(request.target_language)
-        
+
         result = translation_service.translate(
             request.text,
             source_language=request.source_language
@@ -389,13 +468,13 @@ async def translate_text(request: TranslateRequest):
         # Log if there was an error in translation
         if "error" in result:
             print(f"[WARN] Translation had error: {result['error']}")
-        
+
         return TranslateResponse(
             translated_text=result["translated_text"],
             source_language=result["source_language"],
             target_language=result["target_language"]
         )
-    
+
     except Exception as e:
         import traceback
         print(f"[ERROR] Translation exception: {e}")
@@ -435,6 +514,74 @@ async def get_personalized_translation_api(context: str = Form(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Preference error: {str(e)}")
 
+# Config endpoints for Electron app
+@app.get("/config/get")
+async def get_config():
+    """Get current configuration"""
+    # Return a mock config since we don't have persistent storage
+    return {
+        "audio": {
+            "device_index": None,
+            "chunk_size": 4096,
+            "sample_rate": 16000,
+            "channels": 1
+        },
+        "whisper": {
+            "model": "tiny",
+            "language": None,
+            "min_buffer_duration": 1.0,
+            "min_transcription_interval": 2.0
+        },
+        "translation": {
+            "target_language": "en",
+            "auto_detect": True,
+            "provider": "local",
+            "model_type": "nllb",
+            "model_name": "facebook/nllb-200-distilled-600M",
+            "use_fallback": False,
+            "show_same_language": False,
+            "ui_language": "en",
+            "enable_overlay": True,
+            "enable_tts": False
+        },
+        "tts": {
+            "enabled": False,
+            "engine": "default",
+            "rate": 1.0,
+            "volume": 1.0
+        },
+        "overlay": {
+            "enabled": True,
+            "position_x": 100,
+            "position_y": 100,
+            "font_size": 24,
+            "text_color": "#FFFFFF",
+            "background_color": "#000000",
+            "max_width": 800,
+            "max_lines": 3,
+            "fade_duration": 5.0,
+            "show_same_language": False
+        },
+        "ui": {
+            "theme": "dark",
+            "language": "en",
+            "auto_start": False,
+            "minimize_to_tray": True,
+            "show_notifications": True
+        },
+        "app": {
+            "setup_complete": False,
+            "ui_language": "en"
+        }
+    }
+
+@app.post("/config/save")
+async def save_config(config: dict):
+    """Save configuration (mock implementation)"""
+    # In a real implementation, this would save to a file or database
+    print(f"[CONFIG] Received config: {config}")
+    return {"status": "success", "message": "Configuration saved"}
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8001)
