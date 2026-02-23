@@ -1,24 +1,38 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  getPerformanceMetrics,
-  runPerformanceBenchmark,
-  PerformanceMetrics,
-  BenchmarkResult,
-} from "../services/tauri";
+import electronService from "../services/electron";
+
+// Define types locally
+interface PerformanceMetrics {
+  cpuUsage: number;
+  memoryUsage: number;
+  translationLatency: number;
+  audioLatency: number;
+}
+
+interface BenchmarkResult {
+  operation: string;
+  averageTime: number;
+  samples: number;
+  timestamp: Date;
+}
 
 export function usePerformance() {
   const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
-  const [benchmark, setBenchmark] = useState<BenchmarkResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [benchmarkLoading, setBenchmarkLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getPerformanceMetrics();
-      setMetrics(data);
+      // Mock implementation
+      const mockMetrics: PerformanceMetrics = {
+        cpuUsage: 0,
+        memoryUsage: 0,
+        translationLatency: 0,
+        audioLatency: 0
+      };
+      setMetrics(mockMetrics);
     } catch (err: any) {
       setError(err?.toString?.() || "Failed to load performance metrics");
     } finally {
@@ -26,30 +40,29 @@ export function usePerformance() {
     }
   }, []);
 
+  const runBenchmark = useCallback(
+    async (operation: string, samples: number = 100) => {
+      try {
+        // Mock implementation
+        console.log('Mock: runBenchmark', { operation, samples });
+        const result: BenchmarkResult = {
+          operation,
+          averageTime: 0,
+          samples,
+          timestamp: new Date()
+        };
+        return result;
+      } catch (err: any) {
+        setError(err?.toString?.() || "Failed to run benchmark");
+        throw err;
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     refresh();
   }, [refresh]);
 
-  const runBenchmark = useCallback(async () => {
-    setBenchmarkLoading(true);
-    setError(null);
-    try {
-      const result = await runPerformanceBenchmark();
-      setBenchmark(result);
-    } catch (err: any) {
-      setError(err?.toString?.() || "Failed to run benchmark");
-    } finally {
-      setBenchmarkLoading(false);
-    }
-  }, []);
-
-  return {
-    metrics,
-    benchmark,
-    loading,
-    benchmarkLoading,
-    error,
-    refresh,
-    runBenchmark,
-  };
+  return { metrics, loading, error, refresh, runBenchmark };
 }

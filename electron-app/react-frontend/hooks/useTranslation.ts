@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import * as tauri from "../services/tauri";
+import electronService from "../services/electron";
 
 export interface Translation {
   original: string;
@@ -45,10 +45,10 @@ export function useTranslation() {
         }).catch(() => {});
         // #endregion
 
-        const result = await tauri.translateText(
+        const result = await electronService.translateText(
           text,
-          sourceLanguage,
-          targetLang
+          targetLang,
+          sourceLanguage || undefined
         );
 
         const translation: Translation = {

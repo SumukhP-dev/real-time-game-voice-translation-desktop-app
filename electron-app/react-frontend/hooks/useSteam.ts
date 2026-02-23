@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
-import { SteamConfig, SteamFriend, detectSteam, getSteamFriends, setSteamFriendLanguage } from "../services/tauri";
+import electronService from "../services/electron";
+
+// Define types locally
+interface SteamFriend {
+  id: string;
+  name: string;
+  language?: string;
+}
+
+interface SteamConfig {
+  detected: boolean;
+  friends?: SteamFriend[];
+}
 
 export function useSteam() {
   const [config, setConfig] = useState<SteamConfig>({ detected: false });
@@ -11,9 +23,10 @@ export function useSteam() {
     setLoading(true);
     setError(null);
     try {
-      const cfg = await detectSteam();
+      // Mock implementation
+      const cfg = { detected: false, friends: [] };
       setConfig(cfg);
-      const fr = await getSteamFriends();
+      const fr: SteamFriend[] = [];
       setFriends(fr);
     } catch (err: any) {
       setError(err?.toString?.() || "Failed to load Steam data");
@@ -29,7 +42,8 @@ export function useSteam() {
   const updateFriendLanguage = useCallback(
     async (name: string, language: string) => {
       try {
-        await setSteamFriendLanguage(name, language);
+        // Mock implementation
+        console.log('Mock: updateFriendLanguage', { name, language });
         await refresh();
       } catch (err: any) {
         setError(err?.toString?.() || "Failed to update friend language");

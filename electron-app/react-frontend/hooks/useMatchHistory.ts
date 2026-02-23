@@ -1,17 +1,28 @@
-import { useEffect, useState, useCallback } from "react";
-import {
-  addMatchTranslation,
-  getMatchHistory,
-  getMatchStatistics,
-  MatchSession,
-  MatchStatistics,
-  startMatchSession,
-  endMatchSession,
-} from "../services/tauri";
+import { useCallback, useEffect, useState } from "react";
+import electronService from "../services/electron";
+
+// Define types locally
+interface MatchSession {
+  id: string;
+  gameMode: string;
+  start_time: Date;
+  end_time?: Date;
+  total_translations: number;
+  translations: Array<{
+    original: string;
+    translated: string;
+    timestamp: Date;
+  }>;
+}
+
+interface MatchStatistics {
+  totalTranslations: number;
+  uniqueLanguages: number;
+  avgTranslationTime: number;
+}
 
 export function useMatchHistory() {
   const [history, setHistory] = useState<MatchSession[]>([]);
-  const [stats, setStats] = useState<MatchStatistics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,64 +30,108 @@ export function useMatchHistory() {
     setLoading(true);
     setError(null);
     try {
-      // Add timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Match history loading timeout after 5 seconds")), 5000);
-      });
-      
-      const [hist, stat] = await Promise.race([
-        Promise.all([
-          getMatchHistory(),
-          getMatchStatistics(),
-        ]),
-        timeoutPromise
-      ]) as [any, any];
-      
-      setHistory(hist);
-      setStats(stat);
-    } catch (err: any) {
-      const errorMsg = err?.toString?.() || "Failed to load match history";
-      console.error("Match history loading error:", err);
-      setError(errorMsg);
-      // Set empty defaults to prevent infinite loading
+      // Mock implementation
       setHistory([]);
-      setStats(null);
+    } catch (err: any) {
+      setError(err?.toString?.() || "Failed to load match history");
     } finally {
       setLoading(false);
     }
   }, []);
 
+  const startMatchSession = useCallback(
+    async (gameMode: string) => {
+      try {
+        // Mock implementation
+        console.log('Mock: startMatchSession', gameMode);
+        const newSession: MatchSession = {
+          id: Date.now().toString(),
+          gameMode,
+          start_time: new Date(),
+          total_translations: 0,
+          translations: []
+        };
+        setHistory(prev => [newSession, ...prev]);
+      } catch (err: any) {
+        setError(err?.toString?.() || "Failed to start match session");
+        throw err;
+      }
+    },
+    []
+  );
+
+  const endMatchSession = useCallback(async () => {
+    try {
+      // Mock implementation
+      console.log('Mock: endMatchSession');
+      setHistory(prev => 
+        prev.map(session => 
+          session.id === prev[0]?.id 
+            ? { ...session, end_time: new Date() }
+            : session
+        )
+      );
+    } catch (err: any) {
+      setError(err?.toString?.() || "Failed to end match session");
+      throw err;
+    }
+  },
+    []
+  );
+
+  const recordTranslation = useCallback(
+    async (translation: any) => {
+      try {
+        // Mock implementation
+        console.log('Mock: recordTranslation', translation);
+        setHistory(prev => 
+          prev.map(session => 
+            session.id === prev[0]?.id 
+              ? { 
+                  ...session, 
+                  total_translations: session.total_translations + 1,
+                  translations: [...session.translations, {
+                    original: translation.original,
+                    translated: translation.translated,
+                    timestamp: new Date()
+                  }]
+                }
+              : session
+          )
+        );
+      } catch (err: any) {
+        setError(err?.toString?.() || "Failed to record translation");
+        throw err;
+      }
+    },
+    []
+  );
+
+  const clearHistory = useCallback(async () => {
+    try {
+      // Mock implementation
+      console.log('Mock: clearMatchHistory');
+      setHistory([]);
+    } catch (err: any) {
+      setError(err?.toString?.() || "Failed to clear match history");
+      throw err;
+    }
+  },
+    []
+  );
+
   useEffect(() => {
     refresh();
   }, [refresh]);
 
-  const recordTranslation = useCallback(
-    async (params: {
-      original: string;
-      translated: string;
-      source_lang: string;
-      target_lang: string;
-      teammate?: string | null;
-    }) => {
-      try {
-        await addMatchTranslation(params);
-        await refresh();
-      } catch (err: any) {
-        console.error("Failed to record translation", err);
-        setError(err?.toString?.() || "Failed to record translation");
-      }
-    },
-    [refresh]
-  );
-
-  return {
-    history,
-    stats,
-    loading,
-    error,
-    startMatchSession,
-    endMatchSession,
+  return { 
+    history, 
+    loading, 
+    error, 
+    refresh, 
+    startMatchSession, 
+    endMatchSession, 
     recordTranslation,
-    refresh,
+    clearHistory 
   };
 }

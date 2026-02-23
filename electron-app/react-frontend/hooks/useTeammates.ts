@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  TeammateProfile,
-  getTeammates,
-  upsertTeammate,
-  updateTeammateLanguage,
-  recordTeammateTranslation,
-} from "../services/tauri";
+import electronService from "../services/electron";
+
+// Define types locally since they're not exported from electron service
+interface TeammateProfile {
+  id: string;
+  name: string;
+  language: string;
+  detected_language?: string;
+  primary_language?: string;
+  detected_languages?: Record<string, number>;
+  translations: Array<{
+    text: string;
+    timestamp: Date;
+    source_language: string;
+    target_language: string;
+  }>;
+}
 
 export function useTeammates() {
   const [teammates, setTeammates] = useState<TeammateProfile[]>([]);
@@ -16,7 +26,8 @@ export function useTeammates() {
     setLoading(true);
     setError(null);
     try {
-      const list = await getTeammates();
+      // Mock implementation - return empty array for now
+      const list: TeammateProfile[] = [];
       setTeammates(list);
     } catch (err: any) {
       setError(err?.toString?.() || "Failed to load teammates");
@@ -31,7 +42,8 @@ export function useTeammates() {
 
   const saveProfile = useCallback(
     async (profile: TeammateProfile) => {
-      await upsertTeammate(profile);
+      // Mock implementation
+      console.log('Mock: saveProfile', profile);
       await refresh();
     },
     [refresh]
@@ -39,7 +51,8 @@ export function useTeammates() {
 
   const setLanguage = useCallback(
     async (name: string, language: string) => {
-      await updateTeammateLanguage(name, language);
+      // Mock implementation
+      console.log('Mock: setLanguage', { name, language });
       await refresh();
     },
     [refresh]
@@ -47,7 +60,8 @@ export function useTeammates() {
 
   const recordTranslation = useCallback(
     async (name: string) => {
-      await recordTeammateTranslation(name);
+      // Mock implementation
+      console.log('Mock: recordTranslation', name);
       await refresh();
     },
     [refresh]

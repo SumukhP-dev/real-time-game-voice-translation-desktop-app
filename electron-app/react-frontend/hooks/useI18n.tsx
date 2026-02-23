@@ -32,7 +32,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       const newConfig = {
         ...config,
         app: {
-          ...config.app,
+          setup_complete: config.app?.setup_complete || false,
           ui_language: lang,
         },
       };

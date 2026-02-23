@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import { OBSConfig, connectOBS, disconnectOBS, getOBSConfig } from "../services/tauri";
+import electronService from "../services/electron";
+
+// Define types locally
+interface OBSConfig {
+  connected: boolean;
+  scene?: string;
+}
 
 export function useOBS() {
-  const [config, setConfig] = useState<OBSConfig>({
-    host: "localhost",
-    port: 4455,
-    password: null,
-    connected: false,
-  });
+  const [config, setConfig] = useState<OBSConfig>({ connected: false });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,7 +16,8 @@ export function useOBS() {
     setLoading(true);
     setError(null);
     try {
-      const cfg = await getOBSConfig();
+      // Mock implementation
+      const cfg = { connected: false };
       setConfig(cfg);
     } catch (err: any) {
       setError(err?.toString?.() || "Failed to load OBS config");
@@ -24,38 +26,34 @@ export function useOBS() {
     }
   }, []);
 
+  const connect = useCallback(
+    async (obsConfig: any) => {
+      try {
+        // Mock implementation
+        console.log('Mock: connectOBS', obsConfig);
+        await refresh();
+      } catch (err: any) {
+        setError(err?.toString?.() || "Failed to connect to OBS");
+        throw err;
+      }
+    },
+    [refresh]
+  );
+
+  const disconnect = useCallback(async () => {
+    try {
+      // Mock implementation
+      console.log('Mock: disconnectOBS');
+      setConfig({ connected: false });
+    } catch (err: any) {
+      setError(err?.toString?.() || "Failed to disconnect from OBS");
+      throw err;
+    }
+  }, []);
+
   useEffect(() => {
     refresh();
   }, [refresh]);
 
-  const connect = useCallback(
-    async (cfg: OBSConfig) => {
-      setLoading(true);
-      setError(null);
-      try {
-        await connectOBS(cfg);
-        setConfig({ ...cfg, connected: true });
-      } catch (err: any) {
-        setError(err?.toString?.() || "Failed to connect to OBS");
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
-
-  const disconnect = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      await disconnectOBS();
-      setConfig((prev) => ({ ...prev, connected: false }));
-    } catch (err: any) {
-      setError(err?.toString?.() || "Failed to disconnect OBS");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  return { config, setConfig, loading, error, refresh, connect, disconnect };
+  return { config, loading, error, refresh, connect, disconnect };
 }
