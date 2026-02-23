@@ -37,9 +37,9 @@ python batch_convert_audio_to_mp4.py
 ```
 
 This will:
-- Find all `.f32pcm` files in `tauri-app/audio_captures/`
+- Find all `.f32pcm` files in `-app/audio_captures/`
 - Convert them to MP4 files
-- Save MP4 files to `tauri-app/audio_captures/mp4_output/`
+- Save MP4 files to `-app/audio_captures/mp4_output/`
 
 ### Auto-Watching (Optional)
 
@@ -58,8 +58,8 @@ This will:
 
 ## Output
 
-- **Input**: `tauri-app/audio_captures/capture_*.f32pcm`
-- **Output**: `tauri-app/audio_captures/mp4_output/capture_*.mp4`
+- **Input**: `-app/audio_captures/capture_*.f32pcm`
+- **Output**: `-app/audio_captures/mp4_output/capture_*.mp4`
 
 MP4 files use AAC audio codec at 192kbps bitrate.
 

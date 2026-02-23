@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 def _resolve_models_dir():
+
     """Resolve models dir with priority: env -> project models/translation -> user cache."""
     env_dir = os.environ.get("TRANSLATION_MODELS_DIR")
     project_dir = Path(__file__).resolve().parent.parent / "models" / "translation"
@@ -16,11 +17,11 @@ def _resolve_models_dir():
         return project_dir
     return user_cache_dir
 
-
 def download_translation_model(target_language="es"):
+
     """
     Download translation model for target language
-    
+
     Args:
         target_language: Target language code (es, fr, de, ru, etc.)
     """
@@ -31,7 +32,7 @@ def download_translation_model(target_language="es"):
         print("[ERROR] transformers library not installed.")
         print("[ERROR] Install with: pip install transformers torch")
         return False
-    
+
     # Model mapping
     model_map = {
         "en": "Helsinki-NLP/opus-mt-mul-en",  # Multi-lingual to English
@@ -50,18 +51,18 @@ def download_translation_model(target_language="es"):
         "pl": "Helsinki-NLP/opus-mt-en-pl",  # English to Polish
         "uk": "Helsinki-NLP/opus-mt-en-uk"   # English to Ukrainian
     }
-    
+
     if target_language not in model_map:
         print(f"[ERROR] Unsupported target language: {target_language}")
         print(f"[INFO] Supported languages: {', '.join(model_map.keys())}")
         return False
-    
+
     model_name = model_map[target_language]
-    
+
     # Models directory (same as used by Translator)
     models_dir = _resolve_models_dir()
     models_dir.mkdir(parents=True, exist_ok=True)
-    
+
     print("=" * 60)
     print("Translation Model Downloader")
     print("=" * 60)
@@ -70,12 +71,12 @@ def download_translation_model(target_language="es"):
     print(f"Cache directory: {models_dir}")
     print("=" * 60)
     print()
-    
+
     try:
         print(f"[INFO] Downloading model '{model_name}'...")
         print(f"[INFO] This may take several minutes depending on your internet connection...")
         print()
-        
+
         # Download model (will be cached automatically)
         print("[INFO] Downloading model weights...")
         model = MarianMTModel.from_pretrained(
@@ -84,7 +85,7 @@ def download_translation_model(target_language="es"):
             local_files_only=False
         )
         print("[OK] Model downloaded successfully")
-        
+
         print("[INFO] Downloading tokenizer...")
         tokenizer = MarianTokenizer.from_pretrained(
             model_name,
@@ -92,30 +93,30 @@ def download_translation_model(target_language="es"):
             local_files_only=False
         )
         print("[OK] Tokenizer downloaded successfully")
-        
+
         # Test the model
         print("[INFO] Testing model...")
         device = "cuda" if torch.cuda.is_available() else "cpu"
         model = model.to(device)
-        
+
         # Simple test translation
         test_text = "Hello, how are you?"
         inputs = tokenizer(test_text, return_tensors="pt", padding=True).to(device)
         translated = model.generate(**inputs)
         translated_text = tokenizer.decode(translated[0], skip_special_tokens=True)
-        
+
         print(f"[OK] Test translation: '{test_text}' -> '{translated_text}'")
         print()
-        
+
         print("=" * 60)
         print("[SUCCESS] Model download and test complete!")
         print("=" * 60)
         print(f"[INFO] Model cached at: {models_dir}")
         print(f"[INFO] The model will be automatically loaded when needed")
         print("=" * 60)
-        
+
         return True
-        
+
     except Exception as e:
         print()
         print("=" * 60)
@@ -126,6 +127,7 @@ def download_translation_model(target_language="es"):
         return False
 
 def download_all_models():
+
     """Download all available translation models"""
     model_map = {
         "es": "Helsinki-NLP/opus-mt-en-es",
@@ -138,7 +140,7 @@ def download_all_models():
         "pt": "Helsinki-NLP/opus-mt-tc-big-en-pt",
         "it": "Helsinki-NLP/opus-mt-en-it",
     }
-    
+
     print("=" * 60)
     print("Downloading All Translation Models")
     print("=" * 60)
@@ -146,14 +148,14 @@ def download_all_models():
     print("This may take a long time depending on your internet connection.")
     print("=" * 60)
     print()
-    
+
     success_count = 0
     for lang_code in model_map.keys():
         print(f"\n[{success_count + 1}/{len(model_map)}] Downloading {lang_code}...")
         if download_translation_model(lang_code):
             success_count += 1
         print()
-    
+
     print("=" * 60)
     print(f"[COMPLETE] Downloaded {success_count}/{len(model_map)} models")
     print("=" * 60)

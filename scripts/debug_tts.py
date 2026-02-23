@@ -21,11 +21,14 @@ print()
 
 # Filter to show TTS messages prominently
 class TTSFilter:
+
     def __init__(self, original):
+
         self.original = original
         self.buffer = ""
-    
+
     def write(self, text):
+
         self.buffer += text
         if '\n' in self.buffer:
             lines = self.buffer.split('\n')
@@ -37,8 +40,9 @@ class TTSFilter:
                 else:
                     print(line)
         self.original.write(text)
-    
+
     def flush(self):
+
         self.original.flush()
 
 # Apply filter on Windows (PowerShell/CMD)
@@ -51,15 +55,15 @@ try:
     print("Starting application...")
     print("-" * 80)
     print()
-    
+
     from main_tkinter import main
-    
+
     print("Application started. Watch for [TTS] messages below.")
     print("=" * 80)
     print()
-    
+
     main()
-    
+
 except KeyboardInterrupt:
     print("\n" + "=" * 80)
     print("Application interrupted by user (Ctrl+C)")
@@ -72,4 +76,3 @@ except Exception as e:
     traceback.print_exc()
     print("=" * 80)
     input("\nPress Enter to exit...")
-

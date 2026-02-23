@@ -8,7 +8,7 @@ Write-Host "Activating virtual environment..." -ForegroundColor Cyan
 & "$projectRoot\activate_venv311.ps1"
 
 # Navigate to ML service directory
-Set-Location "$projectRoot\tauri-app\ml-service"
+Set-Location "$projectRoot\-app\ml-service"
 
 # Start the service
 Write-Host "Starting ML Service on port 8000..." -ForegroundColor Cyan

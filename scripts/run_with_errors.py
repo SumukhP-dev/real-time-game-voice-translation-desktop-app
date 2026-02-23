@@ -24,44 +24,44 @@ try:
     from utils.safe_print import setup_utf8_encoding, safe_print
     setup_utf8_encoding()
     safe_print("   [OK] OK")
-    
+
     print("\n[2/6] Importing tkinter...")
     import tkinter as tk
     safe_print("   [OK] OK")
-    
+
     print("\n[3/6] Creating root window...")
     root = tk.Tk()
     root.title("CS:GO 2 Translation - DEBUG")
     root.geometry("720x900+100+100")
     safe_print("   [OK] Root created")
-    
+
     print("\n[4/6] Importing TranslationApp...")
     from ui.main_window import TranslationApp
     safe_print("   [OK] Imported")
-    
+
     print("\n[5/6] Creating TranslationApp instance...")
     print("   (This may take a moment...)")
     app = TranslationApp(root)
     safe_print("   [OK] App created")
-    
+
     print("\n[6/6] Setting up and showing window...")
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
-    
+
     root.deiconify()
     root.lift()
     root.focus_force()
     root.update()
-    
+
     print("\n" + "=" * 70)
     print("WINDOW SHOULD BE VISIBLE NOW!")
     print("Starting mainloop - Python will stay running...")
     print("=" * 70)
     print()
-    
+
     root.mainloop()
-    
+
     print("\nMainloop exited - application closed")
-    
+
 except KeyboardInterrupt:
     print("\n\nInterrupted by user (Ctrl+C)")
 except Exception as e:

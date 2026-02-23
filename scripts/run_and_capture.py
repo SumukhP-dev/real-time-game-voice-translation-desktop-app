@@ -28,13 +28,13 @@ try:
     setup_utf8_encoding()
     safe_print("   [OK] Encoding setup complete")
     sys.stdout.flush()
-    
+
     print("\n[2/7] Importing tkinter...")
     sys.stdout.flush()
     import tkinter as tk
     safe_print("   [OK] Tkinter imported")
     sys.stdout.flush()
-    
+
     print("\n[3/7] Creating root window...")
     sys.stdout.flush()
     root = tk.Tk()
@@ -42,13 +42,13 @@ try:
     root.geometry("720x900+100+100")
     safe_print("   [OK] Root window created")
     sys.stdout.flush()
-    
+
     print("\n[4/7] Importing TranslationApp...")
     sys.stdout.flush()
     from ui.main_window import TranslationApp
     safe_print("   [OK] TranslationApp imported")
     sys.stdout.flush()
-    
+
     print("\n[5/7] Creating TranslationApp instance...")
     print("   (This may take a moment - initializing components...)")
     sys.stdout.flush()
@@ -62,7 +62,7 @@ try:
         traceback.print_exc()
         sys.stdout.flush()
         raise
-    
+
     print("\n[6/7] Setting up window...")
     sys.stdout.flush()
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
@@ -72,7 +72,7 @@ try:
     root.update()
     safe_print("   [OK] Window setup complete")
     sys.stdout.flush()
-    
+
     print("\n[7/7] Starting mainloop...")
     print("=" * 70)
     print("APPLICATION READY - Window should be visible now!")
@@ -80,11 +80,11 @@ try:
     print("=" * 70)
     print()
     sys.stdout.flush()
-    
+
     root.mainloop()
-    
+
     print("\nMainloop exited - application closed")
-    
+
 except KeyboardInterrupt:
     print("\n\nApplication interrupted by user (Ctrl+C)")
 except Exception as e:

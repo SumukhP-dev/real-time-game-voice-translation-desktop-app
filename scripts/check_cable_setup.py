@@ -19,7 +19,7 @@ for i, device in enumerate(devices):
     if device['max_input_channels'] > 0:
         name = device['name']
         print(f"Index {i:2d}: {name}")
-        
+
         name_lower = name.lower()
         if 'cable' in name_lower and 'output' in name_lower:
             cable_output_found = True
@@ -63,4 +63,3 @@ if cable_output_found and cable_input_found:
     print("  Make sure Windows settings are configured as shown above.")
 else:
     print("\n⚠ Some devices missing. Check installation and restart computer.")
-

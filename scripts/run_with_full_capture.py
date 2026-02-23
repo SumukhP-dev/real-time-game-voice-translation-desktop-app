@@ -11,6 +11,7 @@ log_path = 'full_capture.log'
 log_file = open(log_path, 'w', encoding='utf-8')
 
 def log(msg):
+
     timestamp = datetime.now().strftime('%H:%M:%S.%f')[:-3]
     log_file.write(f"[{timestamp}] {msg}\n")
     log_file.flush()
@@ -36,21 +37,21 @@ try:
     from utils.safe_print import setup_utf8_encoding, safe_print
     setup_utf8_encoding()
     log("   [OK] Complete")
-    
+
     log("\n[STEP 2] Importing tkinter...")
     import tkinter as tk
     log("   [OK] Complete")
-    
+
     log("\n[STEP 3] Creating root window...")
     root = tk.Tk()
     root.title("CS:GO 2 Translation")
     root.geometry("720x900+100+100")
     log("   [OK] Root created")
-    
+
     log("\n[STEP 4] Importing TranslationApp...")
     from ui.main_window import TranslationApp
     log("   [OK] Imported")
-    
+
     log("\n[STEP 5] Creating TranslationApp instance...")
     log("   (This may take time - initializing all components...)")
     try:
@@ -63,29 +64,29 @@ try:
         for line in tb.split('\n'):
             log(f"      {line}")
         raise
-    
+
     log("\n[STEP 6] Setting up window handlers...")
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
     log("   [OK] Close handler set")
-    
+
     log("\n[STEP 7] Making window visible...")
     root.deiconify()
     root.lift()
     root.focus_force()
     root.update()
     log("   [OK] Window should be visible now")
-    
+
     log("\n" + "=" * 70)
     log("APPLICATION READY")
     log("Window should be visible on your screen")
     log("Starting mainloop - application will stay running...")
     log("=" * 70)
     log("")
-    
+
     root.mainloop()
-    
+
     log("\nMainloop exited - application closed")
-    
+
 except KeyboardInterrupt:
     log("\n\nInterrupted by user (Ctrl+C)")
 except Exception as e:

@@ -65,4 +65,3 @@ print("DEBUG: All tests completed")
 print("=" * 60)
 print("\nIf you see any ❌ errors above, those need to be fixed.")
 print("If all tests passed, the app should work correctly.")
-

@@ -23,20 +23,20 @@ try:
     from utils.safe_print import setup_utf8_encoding, safe_print
     setup_utf8_encoding()
     print("   ✓ OK")
-    
+
     print("\nStep 2: Importing TranslationApp...")
     from ui.main_window import TranslationApp
     print("   ✓ OK")
-    
+
     print("\nStep 3: Importing tkinter...")
     import tkinter as tk
     print("   ✓ OK")
-    
+
     print("\nStep 4: Creating Tk root...")
     root = tk.Tk()
     root.title("CS:GO 2 Translation - DEBUG MODE")
     print("   ✓ Root created")
-    
+
     print("\nStep 5: Creating TranslationApp (this might take a moment)...")
     try:
         app = TranslationApp(root)
@@ -45,11 +45,11 @@ try:
         print(f"   ✗ ERROR creating TranslationApp: {e}")
         traceback.print_exc()
         raise
-    
+
     print("\nStep 6: Setting window properties...")
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
     print("   ✓ Close handler set")
-    
+
     print("\nStep 7: Forcing window visibility...")
     try:
         root.deiconify()
@@ -60,17 +60,17 @@ try:
         print("   ✓ Window forced visible")
     except Exception as e:
         print(f"   ⚠ Warning: {e}")
-    
+
     print("\n" + "=" * 70)
     print("APP INITIALIZED - Starting mainloop...")
     print("Window should be visible now!")
     print("=" * 70)
     print()
-    
+
     root.mainloop()
-    
+
     print("\nMainloop exited")
-    
+
 except KeyboardInterrupt:
     print("\n\nInterrupted by user")
 except Exception as e:

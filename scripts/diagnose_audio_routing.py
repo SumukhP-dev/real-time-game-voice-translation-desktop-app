@@ -38,8 +38,9 @@ print("   → We'll measure the audio levels...")
 try:
     audio_samples = []
     sample_rate = 44100
-    
+
     def audio_callback(indata, frames, time_info, status):
+
         if status:
             print(f"   ⚠ Audio status: {status}")
         # Get audio level
@@ -47,7 +48,7 @@ try:
         rms = np.sqrt(np.mean(audio_data**2))
         max_val = np.max(np.abs(audio_data))
         audio_samples.append((rms, max_val))
-    
+
     with sd.InputStream(
         device=cable_output_index,
         channels=1,
@@ -57,18 +58,18 @@ try:
         dtype=np.float32
     ):
         time.sleep(5)  # Capture for 5 seconds
-    
+
     # Analyze results
     if audio_samples:
         avg_rms = np.mean([s[0] for s in audio_samples])
         max_rms = np.max([s[0] for s in audio_samples])
         avg_max = np.mean([s[1] for s in audio_samples])
-        
+
         print(f"\n3. Audio Level Analysis:")
         print(f"   Average RMS: {avg_rms:.6f}")
         print(f"   Maximum RMS: {max_rms:.6f}")
         print(f"   Average Peak: {avg_max:.6f}")
-        
+
         # Determine if we're getting real audio or static
         if avg_rms < 0.001:
             print(f"\n   ✗ PROBLEM: Very low audio levels (almost silence)")
@@ -92,7 +93,7 @@ try:
     else:
         print(f"\n   ✗ PROBLEM: No audio samples captured")
         print(f"   → Device might not be accessible")
-    
+
 except Exception as e:
     print(f"\n   ✗ ERROR: Failed to capture audio: {e}")
     import traceback
@@ -113,4 +114,3 @@ print("3. Is audio actually playing?")
 print("   → Play a YouTube video or music")
 print("   → You should hear it through headphones (via Listen)")
 print("="*70)
-

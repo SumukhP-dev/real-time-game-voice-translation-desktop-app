@@ -9,6 +9,7 @@ import traceback
 log_file = open('error_capture.log', 'w', encoding='utf-8')
 
 def log(msg):
+
     """Log to both file and console"""
     print(msg)
     log_file.write(msg + '\n')
@@ -31,21 +32,21 @@ try:
     from utils.safe_print import setup_utf8_encoding, safe_print
     setup_utf8_encoding()
     log("   ✓ OK")
-    
+
     log("\n[2] Importing tkinter...")
     import tkinter as tk
     log("   ✓ OK")
-    
+
     log("\n[3] Creating root window...")
     root = tk.Tk()
     root.title("CS:GO 2 Translation - ERROR CAPTURE")
     root.geometry("720x900+100+100")
     log("   ✓ Root created")
-    
+
     log("\n[4] Importing TranslationApp...")
     from ui.main_window import TranslationApp
     log("   ✓ Imported")
-    
+
     log("\n[5] Creating TranslationApp instance...")
     log("   (This may take a moment - checking for errors...)")
     try:
@@ -57,7 +58,7 @@ try:
         tb = traceback.format_exc()
         log(tb)
         raise
-    
+
     log("\n[6] Setting up window...")
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
     root.deiconify()
@@ -65,17 +66,17 @@ try:
     root.focus_force()
     root.update()
     log("   ✓ Window setup complete")
-    
+
     log("\n" + "=" * 70)
     log("APPLICATION READY - Starting mainloop")
     log("Window should be visible now!")
     log("=" * 70)
     log("")
-    
+
     root.mainloop()
-    
+
     log("\nMainloop exited - application closed")
-    
+
 except KeyboardInterrupt:
     log("\n\nInterrupted by user")
 except Exception as e:

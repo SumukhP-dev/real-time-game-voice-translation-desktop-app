@@ -20,10 +20,11 @@ except ImportError:
     print("[WARN] Will use ffmpeg directly (may be slower)")
 
 def read_f32pcm(file_path):
+
     """Read raw float32 PCM file (little-endian)"""
     with open(file_path, 'rb') as f:
         data = f.read()
-    
+
     # Convert bytes to float32 array
     num_samples = len(data) // 4
     if num_samples == 0:
@@ -32,6 +33,7 @@ def read_f32pcm(file_path):
     return np.array(audio_data, dtype=np.float32)
 
 def convert_to_wav(audio_data, output_path, sample_rate=48000):
+
     """Convert float32 audio array to WAV file"""
     if HAS_SOUNDFILE:
         # Convert float32 (-1 to 1) to int16 for WAV
@@ -42,7 +44,7 @@ def convert_to_wav(audio_data, output_path, sample_rate=48000):
         temp_pcm = output_path.with_suffix('.raw')
         audio_int16 = np.clip(audio_data * 32767, -32768, 32767).astype(np.int16)
         audio_int16.tofile(str(temp_pcm))
-        
+
         cmd = [
             'ffmpeg',
             '-f', 's16le',
@@ -61,6 +63,7 @@ def convert_to_wav(audio_data, output_path, sample_rate=48000):
             raise
 
 def convert_to_mp4(wav_path, mp4_path):
+
     """Convert WAV file to MP4 using ffmpeg"""
     cmd = [
         'ffmpeg',
@@ -70,7 +73,7 @@ def convert_to_mp4(wav_path, mp4_path):
         '-y',
         str(mp4_path)
     ]
-    
+
     try:
         subprocess.run(cmd, capture_output=True, text=True, check=True)
         return True
@@ -85,57 +88,58 @@ def convert_to_mp4(wav_path, mp4_path):
         return False
 
 def main():
+
     # Determine paths
     script_dir = Path(__file__).parent
     project_root = script_dir.parent
-    audio_captures_dir = project_root / "tauri-app" / "audio_captures"
-    
+    audio_captures_dir = project_root / "-app" / "audio_captures"
+
     if not audio_captures_dir.exists():
         print(f"[ERROR] Audio captures directory not found: {audio_captures_dir}")
         return 1
-    
+
     # Create output directory
     output_dir = audio_captures_dir / "mp4_output"
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Find all .f32pcm files
     pcm_files = sorted(audio_captures_dir.glob("*.f32pcm"))
-    
+
     if not pcm_files:
         print(f"[INFO] No .f32pcm files found in {audio_captures_dir}")
         return 0
-    
+
     print(f"[INFO] Found {len(pcm_files)} file(s) to convert.")
     print(f"[INFO] Output directory: {output_dir}\n")
-    
+
     converted = 0
     failed = 0
-    
+
     for file_path in pcm_files:
         print(f"[CONVERT] Processing {file_path.name}...")
-        
+
         try:
             # Read raw PCM data
             audio_data = read_f32pcm(file_path)
-            
+
             if audio_data is None or len(audio_data) == 0:
                 print(f"  [SKIP] Empty file")
                 continue
-            
+
             # Create output filenames
             base_name = file_path.stem
             wav_path = output_dir / f"{base_name}.wav"
             mp4_path = output_dir / f"{base_name}.mp4"
-            
+
             # Skip if already converted
             if mp4_path.exists():
                 print(f"  [SKIP] Already converted: {mp4_path.name}")
                 continue
-            
+
             # Convert to WAV first
             print(f"  -> Converting to WAV...")
             convert_to_wav(audio_data, wav_path, sample_rate=48000)
-            
+
             # Convert WAV to MP4
             print(f"  -> Converting to MP4...")
             if convert_to_mp4(wav_path, mp4_path):
@@ -145,22 +149,21 @@ def main():
                 # wav_path.unlink()
             else:
                 failed += 1
-        
+
         except Exception as e:
             print(f"  [ERROR] Failed: {e}")
             failed += 1
             import traceback
             traceback.print_exc()
-        
+
         print()
-    
+
     print(f"[INFO] Conversion complete!")
     print(f"  Converted: {converted}")
     print(f"  Failed: {failed}")
     print(f"  Output directory: {output_dir}")
-    
+
     return 0 if failed == 0 else 1
 
 if __name__ == "__main__":
     sys.exit(main())
-

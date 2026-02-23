@@ -33,16 +33,16 @@ print("\nCheck 3: Testing log_message integration...")
 try:
     import tkinter as tk
     from main_tkinter_free import TranslationApp
-    
+
     root = tk.Tk()
     root.withdraw()  # Hide window
     app = TranslationApp(root)
-    
+
     # Test log_message
     app.log_message("Test message 1")
     app.log_message("[OK] Test message 2")
     app.log_message("[ERROR] Test error message")
-    
+
     print("  [OK] log_message function verified")
     root.destroy()
 except Exception as e:
@@ -54,25 +54,26 @@ except Exception as e:
 print("\nCheck 4: Testing callback chain...")
 try:
     callback_received = False
-    
+
     def test_callback(orig, trans, src, tgt):
+
         global callback_received
         callback_received = True
         print(f"  [OK] Callback received: '{orig}' -> '{trans}' ({src}->{tgt})")
-    
+
     from translation import Translator
     translator = Translator(callback=test_callback)
     translator.start()
     translator.translate_async("Test", "en")
-    
+
     import time
     time.sleep(1)
-    
+
     if callback_received:
         print("  [OK] Callback chain verified")
     else:
         print("  [WARN] Callback not received (might be because text is already in target language)")
-    
+
     translator.stop()
 except Exception as e:
     print(f"  [ERROR] Callback chain test failed: {e}")
@@ -83,4 +84,3 @@ print("\n" + "=" * 70)
 print("LOGGING VERIFICATION COMPLETE")
 print("=" * 70)
 print("\nAll logging systems verified and working correctly!")
-

@@ -33,7 +33,7 @@ usb_devices = []
 for i, device in enumerate(devices):
     name = device['name'].lower()
     is_usb = any(keyword in name for keyword in ['usb', 'headset', 'headphone', 'headphone'])
-    
+
     device_info = {
         'index': i,
         'name': device['name'],
@@ -42,12 +42,12 @@ for i, device in enumerate(devices):
         'default_samplerate': device['default_samplerate'],
         'hostapi': device['hostapi']
     }
-    
+
     if device['max_input_channels'] > 0:
         input_devices.append(device_info)
         if is_usb:
             usb_devices.append(device_info)
-    
+
     if device['max_output_channels'] > 0:
         output_devices.append(device_info)
         if is_usb:
@@ -182,4 +182,3 @@ else:
     print("\n✗ No input devices found!")
 
 print("\n" + "="*80)
-

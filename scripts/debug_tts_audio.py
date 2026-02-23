@@ -22,30 +22,30 @@ if sys.platform == 'win32':
     try:
         import ctypes
         from ctypes import wintypes
-        
+
         # Check if audio is muted
         try:
             # Try to get volume using Windows API
             print("  Checking Windows audio settings...")
-            
+
             # Get default audio endpoint
             try:
                 import comtypes.client
                 from comtypes import CLSCTX_ALL
-                
+
                 # Try to use Windows Core Audio API
                 print("  Attempting to access Windows Core Audio API...")
                 # This is complex, so let's just check if we can get volume info
             except:
                 pass
-            
+
             print("  Note: Full audio device check requires Windows API access")
             print("  Please manually check:")
             print("    1. Right-click speaker icon in system tray")
             print("    2. Check if volume is muted")
             print("    3. Check which device is set as default playback")
             print("    4. Try playing a YouTube video to test audio output")
-            
+
         except Exception as e:
             print(f"  Could not check Windows audio: {e}")
     except Exception as e:
@@ -83,7 +83,7 @@ try:
     engine2 = pyttsx3.init('sapi5')
     engine2.setProperty('volume', 1.0)
     engine2.setProperty('rate', 150)
-    
+
     # Try to use Zira voice
     voices = engine2.getProperty('voices')
     for voice in voices:
@@ -91,7 +91,7 @@ try:
             engine2.setProperty('voice', voice.id)
             print(f"  Using voice: {voice.name}")
             break
-    
+
     print("  Speaking: 'Direct test two'")
     engine2.say("Direct test two")
     engine2.runAndWait()
@@ -109,26 +109,26 @@ print("-" * 80)
 try:
     from core.tts.engine import TextToSpeech
     from config.manager import config
-    
+
     # Force enable
     config.set("tts", "enabled", value=True)
     config.save()
-    
+
     tts = TextToSpeech()
     print(f"  TTS created - enabled: {tts.is_enabled}, engine: {tts.engine is not None}")
-    
+
     if tts.is_enabled and tts.engine:
         tts.enable()
         print("  Speaking: 'Class test three'")
         tts.speak("Class test three")
-        
+
         # Wait for it to complete
         time.sleep(3)
         print("  ✓ Completed")
         print("  Did you hear 'Class test three'?")
     else:
         print("  ✗ TTS not enabled or engine is None")
-        
+
 except Exception as e:
     print(f"  ✗ Error: {e}")
     import traceback
@@ -154,4 +154,3 @@ print("  - TTS is working! The issue might be in the app's integration")
 print()
 
 input("Press Enter to exit...")
-

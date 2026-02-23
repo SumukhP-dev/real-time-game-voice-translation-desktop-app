@@ -5,6 +5,7 @@ import sys
 import os
 
 def run_command(cmd, description):
+
     """Run a command and show output"""
     print(f"\n{'='*60}")
     print(f"{description}")
@@ -21,6 +22,7 @@ def run_command(cmd, description):
         return False
 
 def check_package(package_name, import_name=None):
+
     """Check if a package is installed"""
     if import_name is None:
         import_name = package_name

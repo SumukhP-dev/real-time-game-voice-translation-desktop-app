@@ -5,13 +5,14 @@ Check Python version compatibility for TTS library
 import sys
 
 def check_python_version():
+
     """Check if Python version is compatible with TTS"""
     version = sys.version_info
     version_str = f"{version.major}.{version.minor}.{version.micro}"
-    
+
     print(f"Current Python version: {version_str}")
     print(f"Python {version.major}.{version.minor} detected")
-    
+
     if version.major == 3:
         if version.minor in [9, 10, 11]:
             print("✅ Python version is COMPATIBLE with TTS library")
@@ -44,9 +45,9 @@ if __name__ == "__main__":
     print("Python Version Compatibility Check for TTS Library")
     print("=" * 60)
     print()
-    
+
     compatible = check_python_version()
-    
+
     print()
     print("=" * 60)
     if compatible:

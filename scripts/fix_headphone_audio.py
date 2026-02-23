@@ -60,4 +60,3 @@ print("   → Make sure system volume is up")
 print("   → Check Volume Mixer (right-click speaker → Volume mixer)")
 print("\n4. Restart the app after changing settings")
 print("="*70)
-

@@ -4,14 +4,15 @@ Helper script to check for VB-Audio Virtual Cable and provide setup instructions
 import sys
 
 def check_virtual_cable():
+
     """Check if VB-Audio Virtual Cable is available"""
     try:
         import sounddevice as sd
         devices = sd.query_devices()
-        
+
         print("Checking for VB-Audio Virtual Cable...")
         print("=" * 60)
-        
+
         found_cable = False
         for i, device in enumerate(devices):
             name_lower = device['name'].lower()
@@ -21,7 +22,7 @@ def check_virtual_cable():
                     print(f"   Max input channels: {device['max_input_channels']}")
                     print(f"   Sample rate: {device['default_samplerate']}Hz")
                     found_cable = True
-        
+
         if not found_cable:
             print("✗ VB-Audio Virtual Cable NOT FOUND")
             print("\nTo install:")
@@ -37,11 +38,10 @@ def check_virtual_cable():
             print("2. Route your game/system audio to CABLE Input")
             print("3. Select 'CABLE Input' in the translation app")
             return True
-            
+
     except Exception as e:
         print(f"Error checking devices: {e}")
         return False
 
 if __name__ == "__main__":
     check_virtual_cable()
-

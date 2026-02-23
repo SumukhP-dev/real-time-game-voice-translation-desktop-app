@@ -8,15 +8,16 @@ import subprocess
 from pathlib import Path
 
 def open_audio_file(filename=None):
+
     """Open an audio file in the default system player"""
     script_dir = Path(__file__).parent
     project_root = script_dir.parent
     audio_dir = project_root / "audio"
-    
+
     if not audio_dir.exists():
         print(f"Audio directory not found: {audio_dir}")
         return
-    
+
     if filename:
         # Try to find the file
         filepath = audio_dir / filename
@@ -34,7 +35,7 @@ def open_audio_file(filename=None):
             return
         filepath = audio_files[-1]  # Most recent
         print(f"Opening most recent file: {filepath.name}")
-    
+
     # Open with default system player
     try:
         if sys.platform == "win32":
@@ -52,4 +53,3 @@ def open_audio_file(filename=None):
 if __name__ == "__main__":
     filename = sys.argv[1] if len(sys.argv) > 1 else None
     open_audio_file(filename)
-

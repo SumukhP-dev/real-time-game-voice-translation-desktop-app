@@ -51,7 +51,7 @@ try:
         "",  # Empty string
         123,  # Number
     ]
-    
+
     for msg in test_messages:
         try:
             app.log_message(msg)
@@ -59,7 +59,7 @@ try:
             print(f"  [ERROR] Failed to log '{msg}': {e}")
             issues.append(f"log_message failed for '{msg}': {e}")
             all_passed = False
-    
+
     print("  [OK] All message types handled correctly")
 except Exception as e:
     print(f"  [ERROR] log_message test failed: {e}")
@@ -70,26 +70,27 @@ except Exception as e:
 print("\nTest 4: Transcription logging...")
 try:
     transcription_count = [0]  # Use list to allow modification in nested function
-    
+
     def count_transcription(text, lang, segments=None):
+
         transcription_count[0] += 1
         app.on_transcription(text, lang)
-    
+
     test_transcriptions = [
         ("Hello", "en"),
         ("Hola", "es"),
         ("Bonjour", "fr"),
     ]
-    
+
     for text, lang in test_transcriptions:
         count_transcription(text, lang)
         time.sleep(0.2)
-    
+
     if transcription_count[0] == len(test_transcriptions):
         print(f"  [OK] {transcription_count[0]} transcriptions processed")
     else:
         print(f"  [WARN] Expected {len(test_transcriptions)}, got {transcription_count[0]}")
-        
+
 except Exception as e:
     print(f"  [ERROR] Transcription logging failed: {e}")
     all_passed = False
@@ -102,29 +103,30 @@ print("\nTest 5: Translation logging with callback...")
 try:
     translation_count = [0]  # Use list to allow modification in nested function
     translation_results = []
-    
+
     def translation_callback(orig, trans, src, tgt):
+
         translation_count[0] += 1
         translation_results.append((orig, trans, src, tgt))
         app.on_translation(orig, trans, src, tgt)
-    
+
     app.translator = Translator(callback=translation_callback)
     app.translator.start()
-    
+
     # Test translations
     test_translations = [
         ("Hola mundo", "es"),
         ("Bonjour", "fr"),
         ("Hello", "en"),
     ]
-    
+
     for text, lang in test_translations:
         app.translator.translate_async(text, lang)
         time.sleep(0.3)
-    
+
     print("  Waiting for translations...")
     time.sleep(3)
-    
+
     if translation_count[0] > 0:
         print(f"  [OK] {translation_count[0]} translations received")
         for orig, trans, src, tgt in translation_results:
@@ -132,9 +134,9 @@ try:
     else:
         print("  [WARN] No translations received")
         issues.append("No translations received")
-    
+
     app.translator.stop()
-    
+
 except Exception as e:
     print(f"  [ERROR] Translation logging failed: {e}")
     all_passed = False
@@ -146,17 +148,18 @@ except Exception as e:
 print("\nTest 6: Thread safety check...")
 try:
     import threading
-    
+
     def background_log():
+
         app.log_message("Thread-safe log from background thread")
         app.on_transcription("Test from thread", "en")
-    
+
     thread = threading.Thread(target=background_log, daemon=True)
     thread.start()
     thread.join(timeout=2)
-    
+
     print("  [OK] Thread-safe logging works")
-    
+
 except Exception as e:
     print(f"  [ERROR] Thread safety test failed: {e}")
     all_passed = False
@@ -194,4 +197,3 @@ if all_passed and len(issues) == 0:
     sys.exit(0)
 else:
     sys.exit(1)
-
