@@ -72,12 +72,12 @@ models/translation/
 *.ckpt
 *.safetensors
 
-# Rust build artifacts (Tauri)
-tauri-app/src-tauri/target/
-tauri-app/src-tauri/Cargo.lock
+# Rust build artifacts ()
+-app/src-/target/
+-app/src-/Cargo.lock
 
 # Audio captures (large binary files)
-tauri-app/audio_captures/
+-app/audio_captures/
 *.f32pcm
 
 # Node.js dependencies

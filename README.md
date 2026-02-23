@@ -121,14 +121,14 @@ See [Audio Setup Guide](docs/VB_AUDIO_SETUP_GUIDE.md) for detailed instructions.
 ```bash
 # Install Python dependencies
 pip install -r requirements.txt
-pip install -r tauri-app/ml-service/requirements.txt
+pip install -r -app/ml-service/requirements.txt
 
 # Install Node.js dependencies
-cd tauri-app
+cd -app
 npm install
 
 # Run development server
-npm run tauri dev
+npm run  dev
 ```
 
 **Building for Distribution**:
