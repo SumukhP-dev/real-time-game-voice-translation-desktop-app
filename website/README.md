@@ -1,6 +1,6 @@
 # Website
 
-Simple static landing page for `Real-Time Game Voice Translation`.
+Next.js landing page for `Real-Time Game Voice Translation`.
 
 ## Purpose
 
@@ -9,11 +9,24 @@ Simple static landing page for `Real-Time Game Voice Translation`.
 - Link visitors to Kickstarter
 - Link visitors to the Kit email signup page
 
-## Open locally
+## Run locally
 
-Open `website/index.html` in a browser.
+From `website/`:
+
+```bash
+npm install
+npm run dev
+```
+
+Then open `http://localhost:3000`.
+
+## Structure
+
+- `app/layout.js` sets page metadata and global layout
+- `app/page.js` contains the landing page content
+- `app/globals.css` contains the page styling
 
 ## Notes
 
-- The page uses `../app_icon.png` from the repo root.
-- Update the traction numbers in `website/index.html` as new results come in.
+- Update traction numbers in `app/page.js` as new results come in.
+- Build for production with `npm run build`.
