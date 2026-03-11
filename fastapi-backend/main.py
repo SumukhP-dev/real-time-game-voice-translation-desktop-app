@@ -1,17 +1,29 @@
 """
 FastAPI service for ML models (Whisper and Translation)
 """
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+import sys
+import asyncio
+import threading
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
 import numpy as np
 import io
 import json
+import subprocess
+from pathlib import Path
 from whisper_service import WhisperService
 from translation_service import TranslationService
 from speaker_identification import get_service as get_speaker_service
 from adaptive_learning import learn_preference, get_personalized_translation
+
+try:
+    import sounddevice as sd
+    SOUNDDEVICE_AVAILABLE = True
+except ImportError:
+    SOUNDDEVICE_AVAILABLE = False
+    sd = None
 
 app = FastAPI(title="CS:GO 2 Translation ML Service")
 
@@ -31,6 +43,12 @@ translation_service: Optional[TranslationService] = None
 # Audio capture state
 audio_capture_active = False
 selected_device_index = None
+audio_stream = None
+_chunk_queue = None
+_ws_connections: set = set()
+_broadcast_task = None
+_capture_sample_rate = 48000
+_capture_block_size = 2048
 
 # Audio device models
 class AudioDevice(BaseModel):
@@ -69,6 +87,14 @@ class TranslateResponse(BaseModel):
     translated_text: str
     source_language: str
     target_language: str
+
+class OverlayShowRequest(BaseModel):
+    text: str
+
+class OverlayShowResponse(BaseModel):
+    status: str
+    started: bool
+    script_path: str
 
 @app.on_event("startup")
 async def startup_event():
@@ -125,65 +151,152 @@ async def health_check():
         "translation_loaded": translation_service._model_loaded if translation_service else False
     }
 
+def _audio_callback(indata, frames, time_info, status):
+    """Sounddevice stream callback; runs in a separate thread. Puts (data_list, sample_rate) into queue."""
+    global _chunk_queue, _capture_sample_rate
+    if status:
+        print(f"[AUDIO] Stream status: {status}", flush=True)
+    if _chunk_queue is None:
+        return
+    try:
+        data = np.asarray(indata, dtype=np.float32)
+        if data.ndim == 2:
+            data = np.mean(data, axis=1)
+        _chunk_queue.put((data.flatten().tolist(), _capture_sample_rate))
+    except Exception as e:
+        print(f"[AUDIO] Callback error: {e}", flush=True)
+
+
+async def _broadcast_audio_task():
+    """Background task: read chunks from queue and send to all WebSocket clients."""
+    global _chunk_queue, _ws_connections
+    loop = asyncio.get_event_loop()
+    while True:
+        try:
+            chunk = await loop.run_in_executor(None, _chunk_queue.get)
+            if chunk is None:
+                break
+            data_list, sample_rate = chunk
+            dead = set()
+            for ws in _ws_connections:
+                try:
+                    await ws.send_json({"data": data_list, "sample_rate": sample_rate})
+                except Exception:
+                    dead.add(ws)
+            for ws in dead:
+                _ws_connections.discard(ws)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"[AUDIO] Broadcast error: {e}", flush=True)
+
+
 # Audio device endpoints
 @app.get("/audio/devices", response_model=List[AudioDevice])
 async def get_audio_devices():
-    """Get available audio devices"""
-    # Return mock devices for now - in a real implementation, you'd use pyaudio or sounddevice
+    """Get available audio input devices (real list from sounddevice, or mock if unavailable)."""
+    if SOUNDDEVICE_AVAILABLE and sd is not None:
+        try:
+            devices = sd.query_devices()
+            result = []
+            for i, dev in enumerate(devices):
+                if dev["max_input_channels"] > 0:
+                    result.append({
+                        "index": i,
+                        "name": dev["name"],
+                        "channels": int(dev["max_input_channels"]),
+                        "sample_rate": int(dev["default_samplerate"]),
+                        "is_input": True,
+                    })
+            return result
+        except Exception as e:
+            print(f"[AUDIO] Failed to list devices: {e}", flush=True)
     return [
-        {
-            "index": 0,
-            "name": "Default Audio Device",
-            "channels": 2,
-            "sample_rate": 44100,
-            "is_input": True
-        },
-        {
-            "index": 1,
-            "name": "CABLE Input (VB-Audio Virtual Cable)",
-            "channels": 2,
-            "sample_rate": 48000,
-            "is_input": True
-        },
-        {
-            "index": 2,
-            "name": "Microphone",
-            "channels": 1,
-            "sample_rate": 48000,
-            "is_input": True
-        }
+        {"index": 0, "name": "Default Audio Device", "channels": 2, "sample_rate": 44100, "is_input": True},
+        {"index": 1, "name": "CABLE Input (VB-Audio Virtual Cable)", "channels": 2, "sample_rate": 48000, "is_input": True},
+        {"index": 2, "name": "Microphone", "channels": 1, "sample_rate": 48000, "is_input": True},
     ]
+
 
 @app.post("/audio/start")
 async def start_audio_capture(request: AudioStartRequest):
-    """Start audio capture from specified device"""
-    global audio_capture_active, selected_device_index
-    
+    """Start real audio capture from the specified device and stream chunks to WebSocket clients."""
+    global audio_capture_active, selected_device_index, audio_stream, _chunk_queue, _broadcast_task, _capture_sample_rate
+
     if audio_capture_active:
         raise HTTPException(status_code=400, detail="Audio capture is already active")
-    
+
+    if not SOUNDDEVICE_AVAILABLE or sd is None:
+        raise HTTPException(status_code=503, detail="sounddevice not available; install with: pip install sounddevice")
+
+    try:
+        dev = sd.query_devices(request.device_index)
+        sample_rate = int(dev.get("default_samplerate", 48000))
+        channels = min(2, int(dev.get("max_input_channels", 1)))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid device: {e}")
+
+    _capture_sample_rate = sample_rate
+    _chunk_queue = threading.Queue()
+    audio_stream = sd.InputStream(
+        device=request.device_index,
+        channels=channels,
+        samplerate=sample_rate,
+        blocksize=_capture_block_size,
+        dtype="float32",
+        callback=_audio_callback,
+    )
+    audio_stream.start()
     audio_capture_active = True
     selected_device_index = request.device_index
-    
-    print(f"[AUDIO] Starting capture for device {request.device_index}")
-    
+    _broadcast_task = asyncio.create_task(_broadcast_audio_task())
+    print(f"[AUDIO] Started capture for device {request.device_index} @ {sample_rate}Hz", flush=True)
     return {"status": "success", "message": f"Audio capture started for device {request.device_index}"}
+
 
 @app.post("/audio/stop")
 async def stop_audio_capture():
-    """Stop audio capture"""
-    global audio_capture_active, selected_device_index
-    
+    """Stop audio capture and broadcast task."""
+    global audio_capture_active, selected_device_index, audio_stream, _chunk_queue, _broadcast_task
+
     if not audio_capture_active:
         raise HTTPException(status_code=400, detail="Audio capture is not active")
-    
+
     device_index = selected_device_index
     audio_capture_active = False
     selected_device_index = None
-    
-    print(f"[AUDIO] Stopped capture for device {device_index}")
-    
+    if audio_stream is not None:
+        try:
+            audio_stream.stop()
+            audio_stream.close()
+        except Exception as e:
+            print(f"[AUDIO] Stop stream error: {e}", flush=True)
+        audio_stream = None
+    if _chunk_queue is not None:
+        _chunk_queue.put(None)
+    if _broadcast_task is not None:
+        try:
+            await _broadcast_task
+        except asyncio.CancelledError:
+            pass
+        _broadcast_task = None
+    _chunk_queue = None
+    print(f"[AUDIO] Stopped capture for device {device_index}", flush=True)
     return {"status": "success", "message": f"Audio capture stopped for device {device_index}"}
+
+
+@app.websocket("/audio/stream")
+async def audio_stream_ws(websocket: WebSocket):
+    """WebSocket endpoint for real-time audio chunks. Connect after /audio/start; receive { data, sample_rate }."""
+    await websocket.accept()
+    _ws_connections.add(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        _ws_connections.discard(websocket)
 
 @app.post("/transcribe", response_model=TranscribeResponse)
 async def transcribe_audio(
@@ -480,6 +593,40 @@ async def translate_text(request: TranslateRequest):
         print(f"[ERROR] Translation exception: {e}")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Translation error: {str(e)}")
+
+@app.post("/overlay/show", response_model=OverlayShowResponse)
+async def show_overlay(request: OverlayShowRequest):
+    """
+    Show subtitle overlay text using the Python overlay script.
+
+    This is intentionally a side-effecting endpoint used by the Electron UI
+    (including the "Test Overlay" button) so overlay behavior matches runtime.
+    """
+    text = (request.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Text is required")
+
+    project_root = Path(__file__).resolve().parent.parent
+    overlay_script = project_root / "overlay_test.py"
+    if not overlay_script.exists():
+        raise HTTPException(
+            status_code=500,
+            detail=f"overlay_test.py not found at {str(overlay_script)}",
+        )
+
+    try:
+        subprocess.Popen(
+            [sys.executable, str(overlay_script), text],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return OverlayShowResponse(
+            status="ok",
+            started=True,
+            script_path=str(overlay_script),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start overlay: {str(e)}")
 
 @app.post("/identify_speaker")
 async def identify_speaker(

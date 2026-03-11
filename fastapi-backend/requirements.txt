@@ -19,3 +19,6 @@ googletrans==4.0.0rc1
 
 # Audio file handling
 soundfile>=0.12.0
+
+# Real-time audio capture (for live streaming to UI)
+sounddevice>=0.4.6

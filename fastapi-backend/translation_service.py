@@ -304,28 +304,6 @@ class TranslationService:
             with self.cache_lock:
                 self.translation_cache[cache_key] = result
 
-            # NEW: also trigger Python overlay on this machine
-            try:
-                import os
-                import subprocess
-                import sys as _sys
-
-                # Project root is two levels up from this file: -app/ml-service/translation_service.py
-                project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-                overlay_script = os.path.join(project_root, "overlay_test.py")
-
-                if os.path.exists(overlay_script):
-                    # Launch overlay as a separate process, passing translated text
-                    subprocess.Popen(
-                        [_sys.executable, overlay_script, translated],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
-                else:
-                    safe_print(f"[WARN] overlay_test.py not found at {overlay_script}", flush=True)
-            except Exception as overlay_err:
-                safe_print(f"[WARN] Failed to launch Python overlay: {overlay_err}", flush=True)
-
             return result
 
         except Exception as e:

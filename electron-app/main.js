@@ -33,11 +33,12 @@ function createWindow() {
     autoHideMenuBar: true
   });
 
-  // Load the app
-  const startUrl = isDev 
-    ? 'http://localhost:3013'  // Updated to match the running React dev server
+  // Load the app (port from start_electron.py via REACT_DEV_PORT, or default 3010)
+  const devPort = process.env.REACT_DEV_PORT || '3010';
+  const startUrl = isDev
+    ? `http://localhost:${devPort}`
     : `file://${path.join(__dirname, 'react-frontend/build/index.html')}`;
-  
+
   mainWindow.loadURL(startUrl);
 
   // Show window when ready to prevent visual flash
@@ -123,31 +124,24 @@ async function startMLService() {
 }
 
 // App event handlers
-app.whenReady().then(async () => {
-  try {
-    // Start ML service first
-    await startMLService();
-    
-    // Create main window
-    createWindow();
+app.whenReady().then(() => {
+  // Create window immediately so the app is visible and responsive
+  createWindow();
 
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) {
-        createWindow();
-      }
-    });
-
-  } catch (error) {
-    console.error('[ELECTRON] Failed to start application:', error);
-    
-    // Show error dialog
-    if (mainWindow) {
-      dialog.showErrorBox(
-        'Startup Error',
-        `Failed to start the ML service: ${error.message}\n\nPlease check your Python installation and try again.`
-      );
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
     }
-  }
+  });
+
+  // Start ML service in background (do not await - keeps app responsive)
+  startMLService().catch((error) => {
+    console.error('[ELECTRON] ML service failed to start:', error);
+    dialog.showErrorBox(
+      'ML Service',
+      `The translation backend could not start: ${error.message}\n\nYou can still use the app; translation may be limited until the service is running.`
+    );
+  });
 });
 
 app.on('window-all-closed', () => {
