@@ -97,6 +97,18 @@ p {
   flex: 0 0 auto;
 }
 
+.brand-mark-img {
+  background: none;
+  object-fit: contain;
+  border-radius: 14px;
+}
+
+.logo-mark-img {
+  background: none;
+  object-fit: contain;
+  border-radius: 18px;
+}
+
 .brand-copy {
   min-width: 0;
 }

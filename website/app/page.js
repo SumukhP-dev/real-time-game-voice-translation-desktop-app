@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 const heroPoints = [
   "Built for real ranked matches, with voice capture, transcription, and translation in one flow.",
   "Designed for gameplay speed, not generic translator workflows or manual workarounds.",
@@ -105,9 +107,14 @@ export default function HomePage() {
         <div className="container">
           <div className="topbar-card">
             <div className="brand">
-              <div className="brand-mark" aria-hidden="true">
-                RT
-              </div>
+              <Image
+                src="/app_icon.png"
+                alt=""
+                width={44}
+                height={44}
+                className="brand-mark brand-mark-img"
+                aria-hidden="true"
+              />
               <div className="brand-copy">
                 <strong>Real-Time Game Voice Translation</strong>
                 <span>
@@ -195,10 +202,15 @@ export default function HomePage() {
 
               <div className="hero-side">
                 <div className="proof-panel">
-                  <div className="proof-header">
-                    <div className="logo-mark" aria-hidden="true">
-                      RT
-                    </div>
+                <div className="proof-header">
+                  <Image
+                    src="/app_icon.png"
+                    alt=""
+                    width={60}
+                    height={60}
+                    className="logo-mark logo-mark-img"
+                    aria-hidden="true"
+                  />
                     <div>
                       <h2>Live match preview</h2>
                       <p>
