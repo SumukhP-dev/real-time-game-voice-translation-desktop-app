@@ -68,24 +68,6 @@ export function TranslationSettings() {
       </h2>
 
       <div className="space-y-4">
-        {/* UI Language Selector */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            {t(I18N_KEYS.TRANSLATION_UI_LANGUAGE)}
-          </label>
-          <select
-            value={uiLanguage}
-            onChange={(e) => setUiLanguage(e.target.value)}
-            className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
-          >
-            {LANGUAGES.map((lang) => (
-              <option key={lang.code} value={lang.code}>
-                {lang.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
             {t(I18N_KEYS.TRANSLATION_TARGET_LANGUAGE)}

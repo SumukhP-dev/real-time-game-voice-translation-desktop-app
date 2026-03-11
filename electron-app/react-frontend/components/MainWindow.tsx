@@ -22,7 +22,7 @@ import { HelpCenter } from "./HelpCenter";
 export function MainWindow() {
   const { translate, targetLanguage } = useTranslation();
   const { config, updateConfig, loading: configLoading } = useConfig();
-  const { t, language } = useI18n();
+  const { t, language, setLanguage } = useI18n();
   const [status, setStatus] = useState<string>("Initializing...");
 
   // Update status text when language changes
@@ -48,11 +48,18 @@ export function MainWindow() {
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [showHelpCenter, setShowHelpCenter] = useState(false);
   const [statusLogs, setStatusLogs] = useState<string[]>([]);
-  const [testOverlayText, setTestOverlayText] = useState<string | null>(null);
   const { recordTranslation, startMatchSession, endMatchSession } =
     useMatchHistory();
-  const { isCapturing, stopCapture, startCapture, selectedDevice, devices } =
-    useAudio();
+  const {
+    devices,
+    selectedDevice,
+    isCapturing,
+    loading: audioLoading,
+    error: audioError,
+    startCapture,
+    stopCapture,
+    selectDevice,
+  } = useAudio();
   const { teammates } = useTeammates();
 
   // Use refs to persist values across renders without causing re-renders
@@ -96,7 +103,18 @@ export function MainWindow() {
       const device = devices.find((d: any) => d.index === selectedDevice);
       const deviceName = device ? device.name : `Device ${selectedDevice}`;
       addLog(`Audio capture started - ${deviceName}`);
-      setStatus(`Capturing audio from ${deviceName}`);
+      setStatus(`Capturing from ${deviceName} — waiting for audio...`);
+
+      // If no audio chunks are received within 5s, show a clear message (avoids
+      // "Capturing..." implying data is flowing when the pipeline isn't sending chunks yet)
+      const noAudioTimeout = setTimeout(() => {
+        if (!firstChunkLoggedRef.current) {
+          setStatus(
+            `Capturing from ${deviceName} — no audio received yet. Check VB-Audio routing and that system/game audio is playing.`
+          );
+        }
+      }, 5000);
+      return () => clearTimeout(noAudioTimeout);
     } else {
       addLog("Audio capture stopped");
       setStatus("Audio capture stopped");
@@ -1172,13 +1190,6 @@ export function MainWindow() {
         color: '#ffffff'
       }}
     >
-      {testOverlayText && (
-        <div className="fixed top-4 inset-x-0 flex justify-center z-50 pointer-events-none">
-          <div className="px-6 py-3 bg-black bg-opacity-90 rounded-xl border border-white/20 shadow-2xl text-white text-lg font-medium pointer-events-auto backdrop-blur-sm">
-            {testOverlayText}
-          </div>
-        </div>
-      )}
       <div className="max-w-7xl mx-auto p-6">
         <header className="mb-8">
           <div className="flex justify-between items-start mb-4">
@@ -1220,17 +1231,13 @@ export function MainWindow() {
                 onClick={async () => {
                   try {
                     const testText =
-                      "Test: Overlay is working via Python overlay";
-                    addLog("Testing Python overlay with sample text...");
+                      "Test: Overlay is working (Python subtitles)";
+                    addLog("Testing Python subtitle overlay with sample text...");
                     console.log("=== TEST OVERLAY BUTTON CLICKED (PYTHON) ===");
 
-                    // Directly call Python overlay (no ML service needed)
-                    const result = await electronService.showPythonOverlay(testText);
+                    // Use the exact same overlay path as real subtitles
+                    const result = await electronService.showOverlayText(testText);
                     console.log("Python overlay result:", result);
-
-                    // Also show the in-app banner so you get instant feedback
-                    setTestOverlayText(testText);
-                    setTimeout(() => setTestOverlayText(null), 4000);
 
                     addLog(`Overlay test result: ${result}`);
                   } catch (err) {
@@ -1291,7 +1298,16 @@ export function MainWindow() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-6">
-            <AudioSettings />
+            <AudioSettings
+              devices={devices}
+              selectedDevice={selectedDevice}
+              isCapturing={isCapturing}
+              loading={audioLoading}
+              error={audioError}
+              selectDevice={selectDevice}
+              startCapture={startCapture}
+              stopCapture={stopCapture}
+            />
             <TranslationSettings />
             <SubtitleSettings />
             <TranslationToTeam />
@@ -1356,6 +1372,36 @@ export function MainWindow() {
           </div>
         </div>
       )}
+
+      {/* UI Language Selector - bottom-right aligned with cards */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <div className="bg-gray-900/90 border border-gray-700 rounded-xl px-4 py-2 shadow-lg flex items-center space-x-2 text-sm">
+          <span className="text-gray-300">
+            {t(I18N_KEYS.TRANSLATION_UI_LANGUAGE)}
+          </span>
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            className="bg-gray-900 text-white text-sm rounded border border-gray-600 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="ru">Russian</option>
+            <option value="zh">Chinese</option>
+            <option value="ja">Japanese</option>
+            <option value="ko">Korean</option>
+            <option value="pt">Portuguese</option>
+            <option value="it">Italian</option>
+            <option value="ar">Arabic</option>
+            <option value="hi">Hindi</option>
+            <option value="tr">Turkish</option>
+            <option value="pl">Polish</option>
+            <option value="uk">Ukrainian</option>
+          </select>
+        </div>
+      </div>
     </div>
   );
 }

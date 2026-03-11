@@ -40,7 +40,7 @@ export function useAudio() {
       }
     } catch (err: any) {
       setError(err?.toString?.() || "Failed to load audio devices");
-      // Fallback to mock devices if Electron service fails
+      // Fallback to mock devices if ML service fails (e.g. not started yet)
       const mockDevices: AudioDevice[] = [
         {
           index: 0,
@@ -51,6 +51,13 @@ export function useAudio() {
         },
         {
           index: 1,
+          name: "CABLE Input (VB-Audio Virtual Cable)",
+          channels: 2,
+          sample_rate: 48000,
+          is_input: true
+        },
+        {
+          index: 2,
           name: "Microphone",
           channels: 1,
           sample_rate: 48000,
@@ -58,6 +65,15 @@ export function useAudio() {
         }
       ];
       setDevices(mockDevices);
+      // Auto-select first device so Start Capture works even when ML service was unavailable
+      if (mockDevices.length > 0) {
+        const preferred = mockDevices.find(
+          (d) =>
+            d.name.toLowerCase().includes("cable") ||
+            d.name.toLowerCase().includes("vb-audio")
+        ) || mockDevices[0];
+        setSelectedDevice(preferred.index);
+      }
     } finally {
       setLoading(false);
     }

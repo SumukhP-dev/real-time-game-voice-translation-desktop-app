@@ -112,22 +112,6 @@ export function TeamStats({ stats, loading, onRefresh }: Props) {
               ))}
             </div>
           </div>
-
-          <div className="bg-gray-700 rounded p-3">
-            <p className="text-gray-400 text-sm mb-2">Active Teammates</p>
-            <div className="space-y-1">
-              {metrics.teammates.length === 0 ? (
-                <p className="text-gray-500 text-sm">No teammates detected</p>
-              ) : (
-                metrics.teammates.slice(0, 3).map((teammate: any, index: number) => (
-                  <div key={index} className="flex justify-between text-sm">
-                    <span className="text-gray-300">{teammate.name || `Teammate ${index + 1}`}</span>
-                    <span className="text-gray-400">{teammate.language || 'Unknown'}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
         </div>
       ) : (
         <div className="text-center py-4">

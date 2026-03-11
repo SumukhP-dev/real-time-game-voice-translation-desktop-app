@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useMatchHistory } from "../hooks/useMatchHistory";
-import { useTeammates } from "../hooks/useTeammates";
 import { useI18n } from "../hooks/useI18n";
 import { I18N_KEYS } from "../i18n/keys";
 import { StatsDashboard } from "./StatsDashboard";
@@ -12,7 +11,6 @@ interface QuickStatsCardProps {
 export function QuickStatsCard({ onViewFullStats }: QuickStatsCardProps) {
   const { t } = useI18n();
   const { history: matchHistory } = useMatchHistory();
-  const { teammates } = useTeammates();
   const [showFullStats, setShowFullStats] = useState(false);
   const [translationsToday, setTranslationsToday] = useState(0);
 
@@ -35,14 +33,6 @@ export function QuickStatsCard({ onViewFullStats }: QuickStatsCardProps) {
     
     setTranslationsToday(todayTranslations);
   }, [matchHistory]);
-
-  const activeTeammates = (teammates && Array.isArray(teammates))
-    ? teammates.filter((t) => {
-        // Consider teammate active if they've been detected recently
-        // This is a simplified check
-        return true;
-      }).length
-    : 0;
 
   if (showFullStats) {
     return (
@@ -77,14 +67,10 @@ export function QuickStatsCard({ onViewFullStats }: QuickStatsCardProps) {
           View Full →
         </span>
       </div>
-      <div className="grid grid-cols-3 gap-3 text-center">
+      <div className="grid grid-cols-2 gap-3 text-center">
         <div>
           <div className="text-lg font-bold text-white">{translationsToday}</div>
           <div className="text-xs text-gray-400">Translations Today</div>
-        </div>
-        <div>
-          <div className="text-lg font-bold text-white">{activeTeammates}</div>
-          <div className="text-xs text-gray-400">Active Teammates</div>
         </div>
         <div>
           <div className="text-lg font-bold text-white">

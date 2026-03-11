@@ -1,19 +1,29 @@
 import React from "react";
-import { useAudio } from "../hooks/useAudio";
+import { AudioDevice, useAudio } from "../hooks/useAudio";
 import { useI18n } from "../hooks/useI18n";
 import { I18N_KEYS } from "../i18n/keys";
 
-export function AudioSettings() {
-  const {
-    devices,
-    selectedDevice,
-    isCapturing,
-    loading,
-    error,
-    selectDevice,
-    startCapture,
-    stopCapture,
-  } = useAudio();
+export interface AudioSettingsProps {
+  devices: AudioDevice[];
+  selectedDevice: number | null;
+  isCapturing: boolean;
+  loading: boolean;
+  error: string | null;
+  selectDevice: (deviceIndex: number) => void;
+  startCapture: (deviceIndex?: number) => Promise<void> | void;
+  stopCapture: () => Promise<void> | void;
+}
+
+export function AudioSettings({
+  devices,
+  selectedDevice,
+  isCapturing,
+  loading,
+  error,
+  selectDevice,
+  startCapture,
+  stopCapture,
+}: AudioSettingsProps) {
   const { t } = useI18n();
 
   return (

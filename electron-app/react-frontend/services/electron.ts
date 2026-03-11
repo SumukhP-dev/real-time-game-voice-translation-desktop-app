@@ -216,8 +216,8 @@ class ElectronService {
       await this.callMLService('/audio/start', { device_index: deviceIndex });
     } catch (error) {
       console.error('Failed to start audio capture via ML service:', error);
-      // For development, we'll mock the success
-      console.log('Mock: Audio capture started successfully');
+      // Surface the failure to the caller so the UI can show a real error
+      throw error;
     }
   }
 
@@ -227,8 +227,8 @@ class ElectronService {
       await this.callMLService('/audio/stop');
     } catch (error) {
       console.error('Failed to stop audio capture via ML service:', error);
-      // For development, we'll mock the success
-      console.log('Mock: Audio capture stopped successfully');
+      // Surface the failure so callers can react appropriately
+      throw error;
     }
   }
 
@@ -263,16 +263,27 @@ class ElectronService {
     return name || `Teammate (${language})`;
   }
 
-  // Show Python overlay
-  async showPythonOverlay(text: string): Promise<string> {
-    console.log('Mock: showPythonOverlay', { text });
-    return `Overlay shown: ${text}`;
+  // Show Python overlay by reusing the translation pipeline.
+  // This calls a dedicated backend endpoint that spawns `overlay_test.py`.
+  async showPythonOverlay(text: string): Promise<any> {
+    console.log('showPythonOverlay called with text:', text);
+    
+    try {
+      const result = await this.callMLService('/overlay/show', { text });
+      console.log('showPythonOverlay result:', result);
+      return result;
+    } catch (error) {
+      console.error('showPythonOverlay failed:', error);
+      throw error;
+    }
   }
-
-  // Show overlay text
+  
+  // Show overlay text (Electron/web fallback).
+  // For now this simply calls `showPythonOverlay` so both paths use the same
+  // Python-based overlay implementation when available.
   async showOverlayText(text: string): Promise<any> {
-    console.log('Mock: showOverlayText', { text });
-    return { success: true, text };
+    console.log('showOverlayText called with text:', text);
+    return this.showPythonOverlay(text);
   }
 
   // Get anti-cheat report
@@ -334,12 +345,35 @@ class ElectronService {
     }
   }
 
-  // Audio chunk listener (mock implementation)
-  listenToAudioChunk(callback: (event: any) => void): () => void {
-    console.log('Mock: listenToAudioChunk');
-    // Return a cleanup function
+  // Audio chunk listener: connect to ML service WebSocket and forward real capture chunks
+  listenToAudioChunk(callback: (event: { data: number[]; sample_rate: number }) => void): () => void {
+    let ws: WebSocket | null = null;
+    this.getMLServiceURL().then((baseUrl) => {
+      const wsUrl = baseUrl.replace(/^http/, 'ws') + '/audio/stream';
+      try {
+        ws = new WebSocket(wsUrl);
+        ws.onmessage = (ev) => {
+          try {
+            const msg = JSON.parse(ev.data as string) as { data: number[]; sample_rate: number };
+            if (Array.isArray(msg.data) && typeof msg.sample_rate === 'number') {
+              callback({ data: msg.data, sample_rate: msg.sample_rate });
+            }
+          } catch (e) {
+            console.warn('Audio chunk parse error:', e);
+          }
+        };
+        ws.onerror = (err) => console.warn('Audio stream WebSocket error:', err);
+        ws.onclose = () => { ws = null; };
+      } catch (e) {
+        console.error('Failed to connect to audio stream:', e);
+      }
+    }).catch((e) => console.error('getMLServiceURL failed:', e));
+
     return () => {
-      console.log('Stopped listening to audio chunks');
+      if (ws) {
+        ws.close();
+        ws = null;
+      }
     };
   }
 

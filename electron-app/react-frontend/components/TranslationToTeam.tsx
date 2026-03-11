@@ -121,8 +121,10 @@ export function TranslationToTeam() {
   const isEnabled = config?.translation?.translate_to_teammates ?? false;
 
   return (
-    <div className="p-4 bg-gray-800 rounded-lg">
-      <h2 className="text-xl font-bold mb-4 text-white">{t(I18N_KEYS.TEAM_TRANSLATION)}</h2>
+    <div className="p-6 bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700">
+      <h2 className="text-xl font-bold mb-4 text-white">
+        {t(I18N_KEYS.TEAM_TRANSLATION)}
+      </h2>
 
       <div className="space-y-4">
         {/* Enable/Disable Toggle */}
