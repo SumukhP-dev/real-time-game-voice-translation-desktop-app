@@ -87,10 +87,11 @@ package-lock.json
 
 # Next.js
 .next/
-website/.next/
+product-website/.next/
 
 # Runtime logs
 logs/
+startup_log.txt
 
 # Python bundled dependencies
 python_deps/

@@ -1,0 +1,19 @@
+{
+  "name": "rt-game-voice-translation-website",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Next.js landing page for Real-Time Game Voice Translation.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "next": "^16.1.6",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  }
+}
