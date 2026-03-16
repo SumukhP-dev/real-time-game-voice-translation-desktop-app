@@ -6,42 +6,42 @@ const heroPoints = [
 ];
 
 const proofStats = [
-  { value: "167,928", label: "Impressions" },
-  { value: "584", label: "Clicks" },
-  { value: "2", label: "Signups" },
+  { value: "350,255", label: "Impressions" },
+  { value: "1,126", label: "Clicks" },
+  { value: "4", label: "Waitlist signups" },
   { value: "2", label: "Backers" },
 ];
 
 const tractionStats = [
   {
-    value: "167,928",
+    value: "350,255",
     label: "Impressions",
-    sub: "Gaming-focused Reddit reach",
+    sub: "Reddit reach across FPS communities",
   },
   {
-    value: "584",
+    value: "1,126",
     label: "Clicks",
     sub: "Players who clicked to learn more",
   },
   {
-    value: "$150.67",
+    value: "~$350",
     label: "Ad spend",
-    sub: "Lean validation budget",
+    sub: "Lean validation budget (~$350)",
   },
   {
-    value: "$0.26",
+    value: "$0.32",
     label: "CPC",
     sub: "Efficient click cost",
   },
   {
-    value: "0.348%",
+    value: "0.321%",
     label: "CTR",
-    sub: "Messaging resonance",
+    sub: "Messaging resonance on Reddit",
   },
   {
-    value: "2 / 2",
+    value: "4 / 2",
     label: "Signups / backers",
-    sub: "Initial conversion signal",
+    sub: "4 waitlist signups, 2 Kickstarter backers",
   },
 ];
 
@@ -118,7 +118,8 @@ export default function HomePage() {
               <div className="brand-copy">
                 <strong>Real-Time Game Voice Translation</strong>
                 <span>
-                  Live subtitles and translated speech for multiplayer voice chat
+                  Live subtitles and translated speech for multiplayer voice
+                  chat
                 </span>
               </div>
             </div>
@@ -150,7 +151,7 @@ export default function HomePage() {
             <div className="hero-card">
               <div>
                 <div className="eyebrow">
-                  Built product • Early traction • Georgia Tech founder
+                  Early traction • Reddit ad validation • Georgia Tech founder
                 </div>
                 <h1>Break the language barrier in game voice chat.</h1>
                 <p className="subtitle">
@@ -202,19 +203,20 @@ export default function HomePage() {
 
               <div className="hero-side">
                 <div className="proof-panel">
-                <div className="proof-header">
-                  <Image
-                    src="/app_icon.png"
-                    alt=""
-                    width={60}
-                    height={60}
-                    className="logo-mark logo-mark-img"
-                    aria-hidden="true"
-                  />
+                  <div className="proof-header">
+                    <Image
+                      src="/app_icon.png"
+                      alt=""
+                      width={60}
+                      height={60}
+                      className="logo-mark logo-mark-img"
+                      aria-hidden="true"
+                    />
                     <div>
-                      <h2>Live match preview</h2>
+                      <h2>Desktop app preview</h2>
                       <p>
-                        Working MVP with early traction and launch assets underway.
+                        Preview of the desktop app interface with early traction
+                        and launch assets underway.
                       </p>
                     </div>
                   </div>
@@ -224,7 +226,7 @@ export default function HomePage() {
                       <span className="mockup-dot" />
                       <span className="mockup-dot" />
                       <span className="mockup-dot" />
-                      <span className="mockup-title">Working MVP (desktop app)</span>
+                      <span className="mockup-title">Desktop app interface</span>
                     </div>
 
                     <div className="screenshot-wrap">
@@ -239,10 +241,10 @@ export default function HomePage() {
                     </div>
 
                     <div className="mockup-subtitle">
-                      <strong>Working product</strong>
+                      <strong>Desktop workflow</strong>
                       <span>
-                        Live translation workflow with audio capture, on-screen overlay, and
-                        status logs.
+                        Live translation workflow with audio capture, on-screen
+                        overlay, and status logs.
                       </span>
                     </div>
                   </div>
@@ -258,8 +260,8 @@ export default function HomePage() {
                 </div>
 
                 <div className="proof-note">
-                  <strong>Why this matters:</strong> this is beyond idea stage,
-                  with a live MVP, paid demand testing, and early conversion
+                  <strong>Why this matters:</strong> beyond idea stage, with
+                  Reddit ad tests, Kickstarter backers, and early conversion
                   signal.
                 </div>
               </div>
