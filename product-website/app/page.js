@@ -26,7 +26,7 @@ const tractionStats = [
   {
     value: "~$350",
     label: "Ad spend",
-    sub: "Lean validation budget (~$350)",
+    sub: "Lean validation budget",
   },
   {
     value: "$0.32",
@@ -226,7 +226,9 @@ export default function HomePage() {
                       <span className="mockup-dot" />
                       <span className="mockup-dot" />
                       <span className="mockup-dot" />
-                      <span className="mockup-title">Desktop app interface</span>
+                      <span className="mockup-title">
+                        Desktop app interface
+                      </span>
                     </div>
 
                     <div className="screenshot-wrap">
