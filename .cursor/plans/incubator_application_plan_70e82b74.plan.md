@@ -1,6 +1,7 @@
 ---
 name: Incubator Application Plan
 overview: A structured plan to apply to all identified startup incubators and accelerators for Dreamflow AI and Game Voice Translation, with priorities, materials, and timelines from March 2026 onward.
+lastUpdated: 2026-03-17
 todos:
   - id: prep-materials
     content: Create one-pager, pitch deck, and reusable 50/150/300-word application copy
@@ -41,7 +42,7 @@ Apply to every relevant program identified, ordered by deadline and fit. Reuse o
 
 ---
 
-## Phase 2: Apply Immediately (March 2026)
+## Phase 2: Apply Immediately (March 2026 — in progress as of March 17)
 
 | Program              | Action                                                                             | Lead product                          | Link / note                    |
 | -------------------- | ---------------------------------------------------------------------------------- | ------------------------------------- | ------------------------------ |
@@ -71,7 +72,7 @@ Apply when you’re ready to use their APIs; no strict batch deadline.
 | Program                   | When to check | What to do                                                                                                            |
 | ------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------- |
 | **Techstars**             | Q2 2026       | Watch for Summer/Fall 2026 program announcements; apply as soon as applications open (often 2–3 months before batch). |
-| **F/ai (Station F)**      | Early 2026    | Check Station F / F/ai site for 2026 cohort dates; apply for cohort that fits (model credits for both products).      |
+| **F/ai (Station F)**      | Q2 2026       | Check Station F / F/ai site for 2026 cohort dates; apply for cohort that fits (model credits for both products).      |
 | **YC Summer / Fall 2026** | Already open  | If not applied in Phase 2, submit via Early Decision for Summer or Fall 2026.                                         |
 
 ---
@@ -86,8 +87,10 @@ Apply when you’re ready to use their APIs; no strict batch deadline.
 
 ## Execution Order (Checklist)
 
-1. **Week 1:** Build one-pager and 50/150/300-word descriptions; finalize “one company, two products” or “two projects” framing.
-2. **Week 1–2:** Submit YC, ElevateAI, Supercell AI Lab, PLAI (all that are still open).
+*Current date: March 17, 2026*
+
+1. **By March 24:** Build one-pager and 50/150/300-word descriptions; finalize “one company, two products” or “two projects” framing.
+2. **By March 31:** Submit YC, ElevateAI, Supercell AI Lab, PLAI (all that are still open).
 3. **Ongoing:** Apply to Speechmatics, Murf, Layercode with same materials.
 4. **Q2 2026:** Add Techstars and F/ai to calendar; apply when applications open.
 5. **Monthly:** Re-check ElevateAI, Supercell, PLAI, Techstars, F/ai for new cohorts or late application options.
@@ -129,4 +132,4 @@ flowchart LR
   march --> later
 ```
 
-Use this plan as a single checklist; update it as you submit and as program deadlines or links change.
+Use this plan as a single checklist; update it as you submit and as program deadlines or links change. *Last updated: March 17, 2026.*
