@@ -5,6 +5,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   root: '.',
+  // Critical for Electron `file://` loading in production builds.
+  // Without this, assets default to absolute `/assets/...` which resolves to `file:///assets/...` (blank screen).
+  base: './',
   build: {
     outDir: 'dist'
   },

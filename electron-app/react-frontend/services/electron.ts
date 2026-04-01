@@ -76,11 +76,18 @@ class ElectronService {
   private isElectron: boolean;
   private isDev: boolean;
   private mlServiceURL: string;
+  private mlServiceReady: boolean;
+  private mlServiceReadyPromise: Promise<void> | null;
+
+  private static readonly ML_SERVICE_STARTUP_TIMEOUT_MS = 5000;
+  private static readonly ML_SERVICE_POLL_INTERVAL_MS = 250;
 
   constructor() {
     this.isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI;
     this.isDev = (window as any).nodeEnv?.NODE_ENV === 'development' || false;
     this.mlServiceURL = 'http://127.0.0.1:8000';
+    this.mlServiceReady = false;
+    this.mlServiceReadyPromise = null;
   }
 
   // Check if running in Electron
@@ -152,26 +159,94 @@ class ElectronService {
     return this.isDev;
   }
 
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private isRetriableMLServiceError(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    return /Failed to fetch|NetworkError|ERR_CONNECTION_REFUSED/i.test(error.message);
+  }
+
+  private async fetchMLServiceResponse(fullUrl: string, data?: any): Promise<Response> {
+    return await fetch(fullUrl, {
+      method: data ? 'POST' : 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  private async waitForMLService(
+    timeoutMs: number = ElectronService.ML_SERVICE_STARTUP_TIMEOUT_MS
+  ): Promise<void> {
+    if (this.mlServiceReady) {
+      return;
+    }
+
+    if (!this.mlServiceReadyPromise) {
+      this.mlServiceReadyPromise = (async () => {
+        const baseUrl = await this.getMLServiceURL();
+        const deadline = Date.now() + timeoutMs;
+        let lastError: unknown = null;
+
+        while (Date.now() < deadline) {
+          try {
+            const response = await fetch(`${baseUrl}/health`);
+            if (response.ok) {
+              this.mlServiceReady = true;
+              return;
+            }
+
+            lastError = new Error(`Health check returned ${response.status}`);
+          } catch (error) {
+            lastError = error;
+          }
+
+          await this.delay(ElectronService.ML_SERVICE_POLL_INTERVAL_MS);
+        }
+
+        const reason = lastError instanceof Error ? `: ${lastError.message}` : "";
+        throw new Error(`ML service did not become ready within ${timeoutMs}ms${reason}`);
+      })();
+    }
+
+    try {
+      await this.mlServiceReadyPromise;
+    } finally {
+      this.mlServiceReadyPromise = null;
+    }
+  }
+
   // ML Service API calls (via HTTP)
   async callMLService(endpoint: string, data?: any): Promise<any> {
     const url = await this.getMLServiceURL();
     const fullUrl = `${url}${endpoint}`;
-    
+
     try {
-      const response = await fetch(fullUrl, {
-        method: data ? 'POST' : 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: data ? JSON.stringify(data) : undefined,
-      });
-      
+      await this.waitForMLService();
+      let response = await this.fetchMLServiceResponse(fullUrl, data);
+
+      if (!response.ok && response.status >= 500) {
+        this.mlServiceReady = false;
+        await this.waitForMLService();
+        response = await this.fetchMLServiceResponse(fullUrl, data);
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
+      this.mlServiceReady = true;
       return await response.json();
     } catch (error) {
+      if (this.isRetriableMLServiceError(error)) {
+        this.mlServiceReady = false;
+      }
       console.error('ML Service API call failed:', error);
       throw error;
     }
@@ -224,7 +299,8 @@ class ElectronService {
   async stopAudioCapture(): Promise<void> {
     console.log('Stopping audio capture');
     try {
-      await this.callMLService('/audio/stop');
+      // Send an empty JSON body so the transport uses POST.
+      await this.callMLService('/audio/stop', {});
     } catch (error) {
       console.error('Failed to stop audio capture via ML service:', error);
       // Surface the failure so callers can react appropriately
@@ -348,30 +424,63 @@ class ElectronService {
   // Audio chunk listener: connect to ML service WebSocket and forward real capture chunks
   listenToAudioChunk(callback: (event: { data: number[]; sample_rate: number }) => void): () => void {
     let ws: WebSocket | null = null;
-    this.getMLServiceURL().then((baseUrl) => {
+    let active = true;
+
+    this.waitForMLService()
+    .then(() => this.getMLServiceURL())
+    .then((baseUrl) => {
+      if (!active) {
+        return;
+      }
+
       const wsUrl = baseUrl.replace(/^http/, 'ws') + '/audio/stream';
       try {
         ws = new WebSocket(wsUrl);
+        ws.onopen = () => {
+          if (!active && ws) {
+            ws.close();
+            ws = null;
+          }
+        };
         ws.onmessage = (ev) => {
           try {
             const msg = JSON.parse(ev.data as string) as { data: number[]; sample_rate: number };
             if (Array.isArray(msg.data) && typeof msg.sample_rate === 'number') {
-              callback({ data: msg.data, sample_rate: msg.sample_rate });
+              // Match backend cap; avoids renderer stress if a buggy driver sends a huge block.
+              const MAX_SAMPLES = 8192;
+              const data =
+                msg.data.length > MAX_SAMPLES ? msg.data.slice(0, MAX_SAMPLES) : msg.data;
+              callback({ data, sample_rate: msg.sample_rate });
             }
           } catch (e) {
             console.warn('Audio chunk parse error:', e);
           }
         };
-        ws.onerror = (err) => console.warn('Audio stream WebSocket error:', err);
+        ws.onerror = (err) => {
+          if (active) {
+            console.warn('Audio stream WebSocket error:', err);
+          }
+        };
         ws.onclose = () => { ws = null; };
       } catch (e) {
         console.error('Failed to connect to audio stream:', e);
       }
-    }).catch((e) => console.error('getMLServiceURL failed:', e));
+    }).catch((e) => {
+      if (active) {
+        console.warn('Audio stream unavailable during startup:', e);
+      }
+    });
 
     return () => {
+      active = false;
       if (ws) {
-        ws.close();
+        ws.onerror = null;
+        ws.onmessage = null;
+        ws.onclose = null;
+        ws.onopen = null;
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close();
+        }
         ws = null;
       }
     };

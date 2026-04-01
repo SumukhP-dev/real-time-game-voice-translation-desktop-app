@@ -18,6 +18,7 @@ import { SubtitleSettings } from "./SubtitleSettings";
 import { GameDetectionBadge } from "./GameDetectionBadge";
 import { AntiCheatStatusComponent } from "./AntiCheatStatus";
 import { HelpCenter } from "./HelpCenter";
+import { peakAbs } from "../utils/audioMath";
 
 export function MainWindow() {
   const { translate, targetLanguage } = useTranslation();
@@ -171,7 +172,7 @@ export function MainWindow() {
           event.data.reduce((sum: number, val: number) => sum + val * val, 0) /
             event.data.length
         );
-        const peak = Math.max(...event.data.map(Math.abs));
+        const peak = peakAbs(event.data);
         addLog(
           `Received ${audioChunkCount} chunks (RMS=${rms.toFixed(
             6
@@ -213,7 +214,7 @@ export function MainWindow() {
       );
 
       // Also check peak level (max absolute value) for better detection
-      const peakLevel = Math.max(...event.data.map(Math.abs));
+      const peakLevel = peakAbs(event.data);
 
       // Safety check: if isProcessing has been true for too long (>60s), reset it
       // This prevents the buffer from growing indefinitely if processing gets stuck
@@ -517,9 +518,7 @@ export function MainWindow() {
             combinedAudio.reduce((sum: number, val: number) => sum + val * val, 0) /
               combinedAudio.length
           );
-          const peakLevel = Math.max(
-            ...Array.from(combinedAudio).map(Math.abs)
-          );
+          const peakLevel = peakAbs(combinedAudio);
 
           // Skip transcription if audio is completely silent
           if (avgLevel === 0 && peakLevel === 0) {

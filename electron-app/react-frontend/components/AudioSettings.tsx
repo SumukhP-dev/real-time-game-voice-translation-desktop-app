@@ -92,7 +92,13 @@ export function AudioSettings({
 
       <div className="flex gap-3">
         <button
-          onClick={() => startCapture(selectedDevice || undefined)}
+          onClick={async () => {
+            try {
+              await startCapture(selectedDevice || undefined);
+            } catch (err) {
+              console.error("Error starting capture:", err);
+            }
+          }}
           disabled={isCapturing || loading}
           className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
         >
