@@ -3,7 +3,9 @@ FastAPI service for ML models (Whisper and Translation)
 """
 import sys
 import asyncio
+import functools
 import threading
+import queue
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -17,6 +19,15 @@ from whisper_service import WhisperService
 from translation_service import TranslationService
 from speaker_identification import get_service as get_speaker_service
 from adaptive_learning import learn_preference, get_personalized_translation
+from audio_capture import (
+    MAX_SAMPLES_PER_WS_CHUNK,
+    SoundcardCaptureController,
+    list_capture_devices,
+    probe_soundcard_capture,
+    soundcard_capture_available,
+    soundcard_device_count,
+    soundcard_preferred_samplerate,
+)
 
 try:
     import sounddevice as sd
@@ -49,6 +60,8 @@ _ws_connections: set = set()
 _broadcast_task = None
 _capture_sample_rate = 48000
 _capture_block_size = 2048
+# Bound queue so a stuck WebSocket/client cannot grow memory without bound (can take down the process).
+_AUDIO_QUEUE_MAXSIZE = 64
 
 # Audio device models
 class AudioDevice(BaseModel):
@@ -162,7 +175,10 @@ def _audio_callback(indata, frames, time_info, status):
         data = np.asarray(indata, dtype=np.float32)
         if data.ndim == 2:
             data = np.mean(data, axis=1)
-        _chunk_queue.put((data.flatten().tolist(), _capture_sample_rate))
+        flat = data.flatten()
+        if flat.size > MAX_SAMPLES_PER_WS_CHUNK:
+            flat = flat[:MAX_SAMPLES_PER_WS_CHUNK]
+        _chunk_queue.put((flat.tolist(), _capture_sample_rate))
     except Exception as e:
         print(f"[AUDIO] Callback error: {e}", flush=True)
 
@@ -194,23 +210,13 @@ async def _broadcast_audio_task():
 # Audio device endpoints
 @app.get("/audio/devices", response_model=List[AudioDevice])
 async def get_audio_devices():
-    """Get available audio input devices (real list from sounddevice, or mock if unavailable)."""
-    if SOUNDDEVICE_AVAILABLE and sd is not None:
-        try:
-            devices = sd.query_devices()
-            result = []
-            for i, dev in enumerate(devices):
-                if dev["max_input_channels"] > 0:
-                    result.append({
-                        "index": i,
-                        "name": dev["name"],
-                        "channels": int(dev["max_input_channels"]),
-                        "sample_rate": int(dev["default_samplerate"]),
-                        "is_input": True,
-                    })
+    """WASAPI loopback (Windows) + PortAudio inputs; mock list only if nothing is available."""
+    try:
+        result = list_capture_devices()
+        if result:
             return result
-        except Exception as e:
-            print(f"[AUDIO] Failed to list devices: {e}", flush=True)
+    except Exception as e:
+        print(f"[AUDIO] Failed to list devices: {e}", flush=True)
     return [
         {"index": 0, "name": "Default Audio Device", "channels": 2, "sample_rate": 44100, "is_input": True},
         {"index": 1, "name": "CABLE Input (VB-Audio Virtual Cable)", "channels": 2, "sample_rate": 48000, "is_input": True},
@@ -220,26 +226,85 @@ async def get_audio_devices():
 
 @app.post("/audio/start")
 async def start_audio_capture(request: AudioStartRequest):
-    """Start real audio capture from the specified device and stream chunks to WebSocket clients."""
+    """Start capture: Windows WASAPI loopback for render devices, else sounddevice input."""
     global audio_capture_active, selected_device_index, audio_stream, _chunk_queue, _broadcast_task, _capture_sample_rate
 
     if audio_capture_active:
         raise HTTPException(status_code=400, detail="Audio capture is already active")
 
+    n_soundcard = soundcard_device_count()
+    use_soundcard = (
+        soundcard_capture_available()
+        and n_soundcard > 0
+        and request.device_index < n_soundcard
+    )
+
+    if use_soundcard:
+        preferred_rate = soundcard_preferred_samplerate(
+            request.device_index, default_rate=48000
+        )
+        # Smaller blocks are more reliable on some USB headphone loopback endpoints.
+        sc_block = max(256, min(_capture_block_size, 1024))
+        try:
+            effective_rate = await asyncio.wait_for(
+                asyncio.get_event_loop().run_in_executor(
+                    None,
+                    functools.partial(
+                        probe_soundcard_capture,
+                        request.device_index,
+                        preferred_rate,
+                        sc_block,
+                    ),
+                ),
+                timeout=15.0,
+            )
+        except asyncio.TimeoutError:
+            raise HTTPException(
+                status_code=504,
+                detail="Opening the audio device timed out. Try another device or reconnect the headset.",
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Could not open WASAPI loopback capture: {e!s}",
+            )
+
+        _capture_sample_rate = int(effective_rate)
+        _chunk_queue = queue.Queue(maxsize=_AUDIO_QUEUE_MAXSIZE)
+        audio_stream = SoundcardCaptureController(
+            request.device_index,
+            _chunk_queue,
+            sc_block,
+            samplerate=_capture_sample_rate,
+        )
+        audio_stream.start()
+        audio_capture_active = True
+        selected_device_index = request.device_index
+        _broadcast_task = asyncio.create_task(_broadcast_audio_task())
+        print(
+            f"[AUDIO] Started soundcard capture (loopback/mic) device {request.device_index} @ {_capture_sample_rate}Hz block={sc_block}",
+            flush=True,
+        )
+        return {
+            "status": "success",
+            "message": f"Audio capture started (soundcard) device {request.device_index}",
+        }
+
     if not SOUNDDEVICE_AVAILABLE or sd is None:
         raise HTTPException(status_code=503, detail="sounddevice not available; install with: pip install sounddevice")
 
+    sd_device_index = request.device_index - n_soundcard
     try:
-        dev = sd.query_devices(request.device_index)
+        dev = sd.query_devices(sd_device_index)
         sample_rate = int(dev.get("default_samplerate", 48000))
         channels = min(2, int(dev.get("max_input_channels", 1)))
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid device: {e}")
 
     _capture_sample_rate = sample_rate
-    _chunk_queue = threading.Queue()
+    _chunk_queue = queue.Queue(maxsize=_AUDIO_QUEUE_MAXSIZE)
     audio_stream = sd.InputStream(
-        device=request.device_index,
+        device=sd_device_index,
         channels=channels,
         samplerate=sample_rate,
         blocksize=_capture_block_size,
@@ -250,7 +315,10 @@ async def start_audio_capture(request: AudioStartRequest):
     audio_capture_active = True
     selected_device_index = request.device_index
     _broadcast_task = asyncio.create_task(_broadcast_audio_task())
-    print(f"[AUDIO] Started capture for device {request.device_index} @ {sample_rate}Hz", flush=True)
+    print(
+        f"[AUDIO] Started PortAudio capture logical={request.device_index} sd={sd_device_index} @ {sample_rate}Hz",
+        flush=True,
+    )
     return {"status": "success", "message": f"Audio capture started for device {request.device_index}"}
 
 
@@ -267,8 +335,11 @@ async def stop_audio_capture():
     selected_device_index = None
     if audio_stream is not None:
         try:
-            audio_stream.stop()
-            audio_stream.close()
+            if getattr(audio_stream, "_is_soundcard_capture", False):
+                audio_stream.stop()
+            else:
+                audio_stream.stop()
+                audio_stream.close()
         except Exception as e:
             print(f"[AUDIO] Stop stream error: {e}", flush=True)
         audio_stream = None
@@ -731,4 +802,5 @@ async def save_config(config: dict):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8001)
+    # Keep defaults aligned with the Electron host/port expectation.
+    uvicorn.run(app, host="127.0.0.1", port=8000)

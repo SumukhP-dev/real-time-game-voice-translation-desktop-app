@@ -1,6 +1,5 @@
 # Keep existing ML dependencies
 openai-whisper>=20231117
-easynmt>=2.0.0
 transformers>=4.30.0
 torch>=2.0.0
 sentencepiece>=0.1.99
@@ -22,3 +21,5 @@ soundfile>=0.12.0
 
 # Real-time audio capture (for live streaming to UI)
 sounddevice>=0.4.6
+# Windows (and others): WASAPI loopback / monitor devices without extra drivers
+soundcard>=0.4.3

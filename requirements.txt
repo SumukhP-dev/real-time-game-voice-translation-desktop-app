@@ -1,6 +1,7 @@
 # Audio capture
 pyaudio>=0.2.14
-sounddevice>=0.4.6  # FREE: Used for WASAPI loopback in free version
+sounddevice>=0.4.6
+soundcard>=0.4.3  # WASAPI loopback / monitor (Windows) without virtual cable
 
 # Speech recognition
 openai-whisper>=20231117
