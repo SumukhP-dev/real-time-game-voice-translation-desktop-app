@@ -2,8 +2,9 @@ const electron = require('electron');
 const { BrowserWindow, ipcMain, shell, dialog } = electron;
 const app = electron.app;
 const path = require('path');
+const fs = require('fs');
 const { spawn } = require('child_process');
-const isDev = true; // Force development mode for now
+const isDev = require('electron-is-dev');
 
 let mainWindow;
 let mlServiceProcess;
@@ -11,6 +12,22 @@ let mlServiceProcess;
 // ML Service Configuration
 const ML_SERVICE_PORT = 8000;
 const ML_SERVICE_HOST = '127.0.0.1';
+
+function logToFile(line) {
+  try {
+    const logPath = path.join(app.getPath('userData'), 'renderer.log');
+    fs.appendFileSync(logPath, `${new Date().toISOString()} ${line}\n`, { encoding: 'utf8' });
+  } catch {
+    // Ignore logging failures.
+  }
+}
+
+function getBundledMLServiceExePath() {
+  // electron-builder places extraResources under:
+  //   <install>/resources/<to>
+  // where process.resourcesPath points at <install>/resources
+  return path.join(process.resourcesPath, 'ml-service', 'ml-service.exe');
+}
 
 function createWindow() {
   // Create the browser window
@@ -24,8 +41,10 @@ function createWindow() {
       contextIsolation: true,
       enableRemoteModule: false,
       preload: path.join(__dirname, 'preload.js'),
-      webSecurity: false, // Disable for development
-      additionalArguments: ['--disable-web-security', '--disable-features=VizDisplayCompositor']
+      webSecurity: isDev ? false : true, // Disable only for development
+      additionalArguments: isDev
+        ? ['--disable-web-security', '--disable-features=VizDisplayCompositor']
+        : []
     },
     icon: path.join(__dirname, '../app_icon.png'),
     title: 'Real-Time Voice Translation Tool',
@@ -37,9 +56,31 @@ function createWindow() {
   const devPort = process.env.REACT_DEV_PORT || '3010';
   const startUrl = isDev
     ? `http://localhost:${devPort}`
-    : `file://${path.join(__dirname, 'react-frontend/build/index.html')}`;
+    : `file://${path.join(__dirname, 'react-frontend/dist/index.html')}`;
 
   mainWindow.loadURL(startUrl);
+
+  // Capture renderer load/console errors for packaged builds (white screen debugging).
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    if (!isMainFrame) return;
+    const msg = `[did-fail-load] code=${errorCode} desc=${JSON.stringify(errorDescription)} url=${validatedURL}`;
+    console.error(msg);
+    logToFile(msg);
+    if (!isDev) {
+      dialog.showErrorBox('App failed to load', `${errorDescription}\n\nURL: ${validatedURL}\nCode: ${errorCode}\n\nLog: ${path.join(app.getPath('userData'), 'renderer.log')}`);
+    }
+  });
+
+  mainWindow.webContents.on('render-process-gone', (event, details) => {
+    const msg = `[render-process-gone] reason=${details?.reason} exitCode=${details?.exitCode}`;
+    console.error(msg);
+    logToFile(msg);
+  });
+
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    // level: 0=log,1=warn,2=error
+    logToFile(`[console level=${level}] ${message} (${sourceId}:${line})`);
+  });
 
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
@@ -65,30 +106,43 @@ function createWindow() {
 async function startMLService() {
   return new Promise((resolve, reject) => {
     console.log('[ELECTRON] Starting ML service...');
-    
-    const mlServicePath = path.join(__dirname, '../fastapi-backend');
-    const pythonProcess = spawn('python', ['-m', 'uvicorn', 'main:app', '--host', ML_SERVICE_HOST, `--port=${ML_SERVICE_PORT}`], {
-      cwd: mlServicePath,
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
 
-    mlServiceProcess = pythonProcess;
+    let child;
+    if (isDev) {
+      const mlServicePath = path.join(__dirname, '../fastapi-backend');
+      child = spawn(
+        'python',
+        ['-m', 'uvicorn', 'main:app', '--host', ML_SERVICE_HOST, `--port=${ML_SERVICE_PORT}`],
+        {
+          cwd: mlServicePath,
+          stdio: ['pipe', 'pipe', 'pipe']
+        }
+      );
+    } else {
+      const exePath = getBundledMLServiceExePath();
+      child = spawn(exePath, [], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: true
+      });
+    }
+
+    mlServiceProcess = child;
 
     // Log output
-    pythonProcess.stdout.on('data', (data) => {
+    child.stdout.on('data', (data) => {
       console.log(`[ML-SERVICE] ${data.toString()}`);
     });
 
-    pythonProcess.stderr.on('data', (data) => {
+    child.stderr.on('data', (data) => {
       console.error(`[ML-SERVICE] ${data.toString()}`);
     });
 
-    pythonProcess.on('error', (error) => {
+    child.on('error', (error) => {
       console.error('[ELECTRON] Failed to start ML service:', error);
       reject(error);
     });
 
-    pythonProcess.on('close', (code) => {
+    child.on('close', (code) => {
       console.log(`[ML-SERVICE] Process exited with code ${code}`);
     });
 
@@ -124,23 +178,32 @@ async function startMLService() {
 }
 
 // App event handlers
-app.whenReady().then(() => {
-  // Create window immediately so the app is visible and responsive
-  createWindow();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
-
-  // Start ML service in background (do not await - keeps app responsive)
-  startMLService().catch((error) => {
+app.whenReady().then(async () => {
+  try {
+    // Wait for the ML service before creating the renderer window so the
+    // frontend does not spam connection-refused errors during startup.
+    await startMLService();
+    createWindow();
+  } catch (error) {
     console.error('[ELECTRON] ML service failed to start:', error);
     dialog.showErrorBox(
       'ML Service',
       `The translation backend could not start: ${error.message}\n\nYou can still use the app; translation may be limited until the service is running.`
     );
+    createWindow();
+  }
+
+  app.on('activate', async () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      if (!mlServiceProcess) {
+        try {
+          await startMLService();
+        } catch (error) {
+          console.error('[ELECTRON] ML service failed to restart:', error);
+        }
+      }
+      createWindow();
+    }
   });
 });
 

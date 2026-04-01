@@ -35,8 +35,7 @@
     "files": [
       "main.js",
       "preload.js",
-      "../react-frontend/build/**/*",
-      "../react-frontend/ml-service/**/*",
+      "react-frontend/dist/**/*",
       "../app_icon.*",
       "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
       "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
@@ -52,14 +51,8 @@
     ],
     "extraResources": [
       {
-        "from": "../react-frontend/ml-service",
-        "to": "ml-service",
-        "filter": [
-          "**/*",
-          "!**/node_modules",
-          "!**/.venv*",
-          "!**/__pycache__"
-        ]
+        "from": "../fastapi-backend/dist/ml-service.exe",
+        "to": "ml-service/ml-service.exe"
       }
     ],
     "win": {
