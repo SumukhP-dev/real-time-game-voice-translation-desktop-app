@@ -1,47 +1,42 @@
 """
-Helper script to check for VB-Audio Virtual Cable and provide setup instructions
+Check for WASAPI loopback capture devices and print setup instructions.
 """
 import sys
 
-def check_virtual_cable():
 
-    """Check if VB-Audio Virtual Cable is available"""
+def check_wasapi_loopback():
+    """List capture devices and highlight WASAPI loopback entries."""
     try:
-        import sounddevice as sd
-        devices = sd.query_devices()
+        from pathlib import Path
 
-        print("Checking for VB-Audio Virtual Cable...")
-        print("=" * 60)
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "fastapi-backend"))
+        from audio_capture import list_capture_devices  # type: ignore
+    except ImportError as e:
+        print(f"Could not import audio_capture: {e}")
+        return
 
-        found_cable = False
-        for i, device in enumerate(devices):
-            name_lower = device['name'].lower()
-            if 'cable' in name_lower or 'virtual' in name_lower:
-                if device['max_input_channels'] > 0:
-                    print(f"✓ FOUND: {device['name']} (Index: {i})")
-                    print(f"   Max input channels: {device['max_input_channels']}")
-                    print(f"   Sample rate: {device['default_samplerate']}Hz")
-                    found_cable = True
+    print("Checking for WASAPI loopback capture devices...")
+    devices = list_capture_devices()
+    loopback = [d for d in devices if "loopback" in d.get("name", "").lower()]
 
-        if not found_cable:
-            print("✗ VB-Audio Virtual Cable NOT FOUND")
-            print("\nTo install:")
-            print("1. Download: https://vb-audio.com/Cable/")
-            print("2. Install the software")
-            print("3. Restart this application")
-            print("4. Select 'CABLE Input' as your audio device")
-            return False
-        else:
-            print("\n✓ Virtual Cable is available!")
-            print("To use it:")
-            print("1. Set 'CABLE Input' as default playback device in Windows")
-            print("2. Route your game/system audio to CABLE Input")
-            print("3. Select 'CABLE Input' in the translation app")
-            return True
+    if not devices:
+        print("✗ No audio devices reported by the backend.")
+        return
 
-    except Exception as e:
-        print(f"Error checking devices: {e}")
-        return False
+    for d in devices:
+        marker = "  ← WASAPI loopback" if d in loopback else ""
+        print(f"  [{d['index']}] {d['name']}{marker}")
+
+    if loopback:
+        print("\n✓ WASAPI loopback device(s) found. Select one in the app Audio Settings.")
+        print("  1. Start the translation app")
+        print("  2. Choose your headphones/speakers (WASAPI loopback)")
+        print("  3. Click Start Capture and play game or system audio")
+    else:
+        print("\n✗ No WASAPI loopback devices found.")
+        print("  • Run the app on Windows 10/11 with the ML service started")
+        print("  • Or enable Stereo Mix in Windows Sound → Recording")
+
 
 if __name__ == "__main__":
-    check_virtual_cable()
+    check_wasapi_loopback()

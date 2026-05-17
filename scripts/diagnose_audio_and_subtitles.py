@@ -82,36 +82,26 @@ else:
     print("  Note: Detection is based on keywords: 'usb', 'headset', 'headphone'")
     print("  If your device has a different name, it may not be detected automatically")
 
-# Check for CABLE Output (for game audio capture)
+# WASAPI loopback devices (app capture list)
 print("\n" + "="*80)
-print("VB-AUDIO CABLE CHECK:")
+print("WASAPI LOOPBACK CHECK:")
 print("="*80)
 
-cable_output = None
-cable_input = None
-
-for dev in input_devices:
-    if 'cable' in dev['name'].lower() and 'output' in dev['name'].lower():
-        cable_output = dev
-        break
-
-for dev in output_devices:
-    if 'cable' in dev['name'].lower() and 'input' in dev['name'].lower():
-        cable_input = dev
-        break
-
-if cable_output:
-    print(f"✓ CABLE Output found: [{cable_output['index']}] {cable_output['name']}")
-    print("  → This is the device the app should use to capture game audio")
-else:
-    print("✗ CABLE Output NOT FOUND")
-    print("  → Install VB-Audio Virtual Cable for game audio capture")
-    print("  → Download: https://vb-audio.com/Cable/")
-
-if cable_input:
-    print(f"✓ CABLE Input found: [{cable_input['index']}] {cable_input['name']}")
-else:
-    print("✗ CABLE Input NOT FOUND")
+loopback_devices = []
+try:
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "fastapi-backend"))
+    from audio_capture import list_capture_devices
+    for dev in list_capture_devices():
+        if "loopback" in dev.get("name", "").lower():
+            loopback_devices.append(dev)
+            print(f"✓ [{dev['index']}] {dev['name']}")
+    if not loopback_devices:
+        print("✗ No WASAPI loopback devices in app device list")
+        print("  → Run on Windows 10/11; start ML service and refresh Audio Settings")
+except Exception as e:
+    print(f"Could not query capture devices: {e}")
 
 # Check default devices
 print("\n" + "="*80)
@@ -148,12 +138,11 @@ print("\n" + "="*80)
 print("RECOMMENDATIONS:")
 print("="*80)
 
-if not cable_output:
+if not loopback_devices:
     print("\n1. For game audio capture:")
-    print("   → Install VB-Audio Virtual Cable")
-    print("   → Set CABLE Input as default playback device")
-    print("   → Enable 'Listen to this device' on CABLE Output")
-    print("   → Select your USB headphones in the 'Listen' dropdown")
+    print("   → Select headphones/speakers (WASAPI loopback) in the app")
+    print("   → Click Start Capture and play game or system audio")
+    print("   → Optional: enable Stereo Mix in Windows Recording devices")
 
 if usb_devices:
     print("\n2. Your USB headphones are detected:")
@@ -172,8 +161,9 @@ print("\n" + "="*80)
 print("TESTING AUDIO CAPTURE:")
 print("="*80)
 
-if cable_output:
-    print(f"\nTry capturing from device [{cable_output['index']}]: {cable_output['name']}")
+if loopback_devices:
+    d = loopback_devices[0]
+    print(f"\nTry capturing from device [{d['index']}]: {d['name']}")
     print("In the app, select this device in Audio Settings")
 elif input_devices:
     print(f"\nTry capturing from device [{input_devices[0]['index']}]: {input_devices[0]['name']}")
