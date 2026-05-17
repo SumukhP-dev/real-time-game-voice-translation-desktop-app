@@ -1,4 +1,5 @@
 import React from "react";
+import type { MatchSession } from "../utils/communicationStats";
 
 interface Props {
   history: MatchSession[];
@@ -31,24 +32,22 @@ export function MatchHistory({ history, loading, error }: Props) {
         {history
           .slice()
           .reverse()
-          .map((session, idx) => (
+          .map((session) => (
             <div
-              key={`${session.start_time}-${idx}`}
+              key={session.id}
               className="border border-gray-700 rounded p-3 bg-gray-900"
             >
               <div className="flex justify-between text-sm text-gray-300">
-                <span className="font-semibold">{session.game_name}</span>
+                <span className="font-semibold">{session.gameMode}</span>
                 <span>
-                  {new Date(session.start_time).toLocaleString()}{" "}
+                  {new Date(session.start_time).toLocaleString()}
                   {session.end_time
-                    ? "ↁE" + new Date(session.end_time).toLocaleString()
+                    ? ` → ${new Date(session.end_time).toLocaleString()}`
                     : ""}
                 </span>
               </div>
               <div className="text-sm text-gray-400 mt-1">
-                Translations: {session.total_translations} • Languages:{" "}
-                {Object.keys(session.languages_detected).length} • Teammates:{" "}
-                {Array.from(session.teammates || []).join(", ") || "n/a"}
+                Translations: {session.total_translations}
               </div>
               <div className="mt-2 text-xs text-gray-400">
                 Recent translations:
@@ -71,4 +70,3 @@ export function MatchHistory({ history, loading, error }: Props) {
     </div>
   );
 }
-

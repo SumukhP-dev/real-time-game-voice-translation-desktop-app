@@ -73,8 +73,23 @@ export function TranslationSettings() {
             {t(I18N_KEYS.TRANSLATION_TARGET_LANGUAGE)}
           </label>
           <select
-            value={targetLanguage}
-            onChange={(e) => setTargetLanguage(e.target.value)}
+            value={config?.translation?.target_language ?? targetLanguage}
+            onChange={async (e) => {
+              const code = e.target.value;
+              setTargetLanguage(code);
+              if (!config) return;
+              try {
+                await updateConfig({
+                  ...config,
+                  translation: {
+                    ...config.translation,
+                    target_language: code,
+                  },
+                });
+              } catch (err) {
+                console.error("Failed to save target language:", err);
+              }
+            }}
             className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
           >
             {LANGUAGES.map((lang) => (

@@ -1,0 +1,14 @@
+/* Overlay window only — must stay transparent for Electron frameless overlay */
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  background: transparent !important;
+  background-color: transparent !important;
+}

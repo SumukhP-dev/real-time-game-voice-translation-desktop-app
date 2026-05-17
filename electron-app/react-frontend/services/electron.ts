@@ -7,6 +7,7 @@ export interface AudioDevice {
   channels: number;
   sample_rate: number;
   is_input: boolean;
+  is_loopback?: boolean;
 }
 
 export interface Config {
@@ -79,8 +80,8 @@ class ElectronService {
   private mlServiceReady: boolean;
   private mlServiceReadyPromise: Promise<void> | null;
 
-  private static readonly ML_SERVICE_STARTUP_TIMEOUT_MS = 5000;
-  private static readonly ML_SERVICE_POLL_INTERVAL_MS = 250;
+  private static readonly ML_SERVICE_STARTUP_TIMEOUT_MS = 120000;
+  private static readonly ML_SERVICE_POLL_INTERVAL_MS = 500;
 
   constructor() {
     this.isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI;
@@ -246,6 +247,17 @@ class ElectronService {
     } catch (error) {
       if (this.isRetriableMLServiceError(error)) {
         this.mlServiceReady = false;
+        const hint =
+          'Cannot reach the translation backend at ' +
+          `${url}. Wait for startup to finish or restart the app.`;
+        console.error('ML Service API call failed:', error);
+        throw new Error(
+          error instanceof Error && error.message.includes('Failed to fetch')
+            ? `${hint} (${error.message})`
+            : error instanceof Error
+              ? error.message
+              : String(error)
+        );
       }
       console.error('ML Service API call failed:', error);
       throw error;
@@ -269,10 +281,11 @@ class ElectronService {
         },
         {
           index: 1,
-          name: "CABLE Input (VB-Audio Virtual Cable)",
+          name: "Default Output",
           channels: 2,
           sample_rate: 48000,
-          is_input: true
+          is_input: true,
+          is_loopback: true,
         },
         {
           index: 2,
@@ -308,28 +321,87 @@ class ElectronService {
     }
   }
 
-  // Transcribe audio method
-  async transcribeAudio(audioData: number[], sampleRate?: number): Promise<any> {
-    // For now, return mock data since we're not connecting to real ML service
-    console.log('Mock: transcribeAudio', { audioDataLength: audioData.length, sampleRate });
-    return {
-      text: 'Mock transcription result',
-      language: 'en',
-      confidence: 0.95
-    };
-    
-    // Real implementation would be:
-    // const url = await this.getMLServiceURL();
-    // const formData = new FormData();
-    // // Convert number array to Float32Array then to ArrayBuffer
-    // const float32Array = new Float32Array(audioData);
-    // formData.append('audio', new Blob([float32Array.buffer]), 'audio.wav');
-    // if (sampleRate) formData.append('sample_rate', sampleRate.toString());
-    // const response = await fetch(`${url}/transcribe`, {
-    //   method: 'POST',
-    //   body: formData,
-    // });
-    // return await response.json();
+  // Transcribe audio via ML service (float32 PCM)
+  async transcribeAudio(
+    audioData: number[],
+    sampleRate: number = 48000,
+    options?: {
+      language?: string | null;
+      channels?: number;
+      modelName?: string;
+    }
+  ): Promise<{
+    text: string;
+    language: string;
+    confidence?: number;
+    rms_level?: number;
+    segments?: unknown[];
+  }> {
+    if (!audioData?.length) {
+      throw new Error('transcribeAudio: empty audio buffer');
+    }
+
+    await this.waitForMLService(30000);
+    const baseUrl = await this.getMLServiceURL();
+    const float32 = new Float32Array(audioData);
+
+    const formData = new FormData();
+    formData.append(
+      'audio_data',
+      new Blob([float32.buffer], { type: 'application/octet-stream' }),
+      'audio.pcm'
+    );
+    formData.append('sample_rate', String(sampleRate));
+    formData.append('model_name', options?.modelName || 'base');
+    formData.append('channels', String(options?.channels ?? 1));
+    if (options?.language) {
+      formData.append('language', options.language);
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
+
+    try {
+      const response = await fetch(`${baseUrl}/transcribe_bytes`, {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        let detail = response.statusText;
+        try {
+          const errBody = await response.json();
+          detail =
+            typeof errBody.detail === 'string'
+              ? errBody.detail
+              : JSON.stringify(errBody);
+        } catch {
+          try {
+            detail = await response.text();
+          } catch {
+            // keep statusText
+          }
+        }
+        throw new Error(`Transcription failed (${response.status}): ${detail}`);
+      }
+
+      const result = await response.json();
+      return {
+        text: result.text ?? '',
+        language: result.language ?? 'unknown',
+        confidence: result.confidence,
+        rms_level: result.rms_level,
+        segments: result.segments,
+      };
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Transcription timeout after 90 seconds');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   // Auto-detect teammate language
@@ -354,11 +426,22 @@ class ElectronService {
     }
   }
   
-  // Show overlay text (Electron/web fallback).
-  // For now this simply calls `showPythonOverlay` so both paths use the same
-  // Python-based overlay implementation when available.
-  async showOverlayText(text: string): Promise<any> {
+  // Show overlay text: prefer Electron transparent overlay window (works without
+  // `overlay_test.py`). Fall back to Python subprocess if Electron API is unavailable.
+  async showOverlayText(text: string, overlayConfig?: Record<string, unknown>): Promise<any> {
     console.log('showOverlayText called with text:', text);
+    const api = typeof window !== 'undefined' ? (window as any).electronAPI : null;
+    if (this.isElectron) {
+      if (!api?.showSubtitleOverlay) {
+        throw new Error(
+          'Electron overlay API is missing. Restart the app from electron-app (npm run dev).'
+        );
+      }
+      return await api.showSubtitleOverlay({
+        text,
+        config: overlayConfig || {},
+      });
+    }
     return this.showPythonOverlay(text);
   }
 
@@ -391,11 +474,42 @@ class ElectronService {
 
   // Translation operations
   async translateText(text: string, targetLanguage: string, sourceLanguage?: string): Promise<any> {
-    return await this.callMLService('/translate', {
-      text,
-      target_language: targetLanguage,
-      source_language: sourceLanguage,
-    });
+    const url = await this.getMLServiceURL();
+    const fullUrl = `${url}/translate`;
+
+    await this.waitForMLService(30000);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+    try {
+      const response = await fetch(fullUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          target_language: targetLanguage,
+          source_language: sourceLanguage,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      this.mlServiceReady = true;
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Translation timeout after 120 seconds');
+      }
+      if (this.isRetriableMLServiceError(error)) {
+        this.mlServiceReady = false;
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   // Configuration operations

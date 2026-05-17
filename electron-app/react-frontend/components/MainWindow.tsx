@@ -10,18 +10,17 @@ import { useI18n } from "../hooks/useI18n";
 import { I18N_KEYS } from "../i18n/keys";
 import electronService from "../services/electron";
 import { StatsDashboard } from "./StatsDashboard";
-import { Benchmark } from "./Benchmark";
 import { SetupWizard } from "./SetupWizard";
 import { useTeammates } from "../hooks/useTeammates";
 import { TranslationToTeam } from "./TranslationToTeam";
 import { SubtitleSettings } from "./SubtitleSettings";
 import { GameDetectionBadge } from "./GameDetectionBadge";
-import { AntiCheatStatusComponent } from "./AntiCheatStatus";
 import { HelpCenter } from "./HelpCenter";
 import { peakAbs } from "../utils/audioMath";
+import { isLikelyHallucination } from "../utils/transcriptionFilter";
 
 export function MainWindow() {
-  const { translate, targetLanguage } = useTranslation();
+  const { translate, targetLanguage, setTargetLanguage } = useTranslation();
   const { config, updateConfig, loading: configLoading } = useConfig();
   const { t, language, setLanguage } = useI18n();
   const [status, setStatus] = useState<string>("Initializing...");
@@ -47,6 +46,7 @@ export function MainWindow() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTranslationActive, setIsTranslationActive] = useState(true);
   const [showSetupWizard, setShowSetupWizard] = useState(false);
+  const initialSetupPromptDone = useRef(false);
   const [showHelpCenter, setShowHelpCenter] = useState(false);
   const [statusLogs, setStatusLogs] = useState<string[]>([]);
   const { recordTranslation, startMatchSession, endMatchSession } =
@@ -65,9 +65,20 @@ export function MainWindow() {
 
   // Use refs to persist values across renders without causing re-renders
   const lastProcessTimeRef = useRef<number>(0);
+  const pipelineStartRef = useRef<number>(0);
   const lastTimeoutCheckRef = useRef<number>(0);
   const timeoutResetInProgressRef = useRef<boolean>(false);
   const firstChunkLoggedRef = useRef<boolean>(false);
+  const isProcessingRef = useRef(false);
+  const isCapturingRef = useRef(false);
+  const isTranslationActiveRef = useRef(true);
+  const configRef = useRef(config);
+  const teammatesRef = useRef(teammates);
+  const targetLanguageRef = useRef(targetLanguage);
+  const translateRef = useRef(translate);
+  const recordTranslationRef = useRef(recordTranslation);
+  const addLogRef = useRef<(message: string) => void>(() => {});
+  const stopCaptureRef = useRef(stopCapture);
 
   // Add logging function
   const addLog = useCallback((message: string) => {
@@ -78,15 +89,35 @@ export function MainWindow() {
     setStatus(message); // Also update status
   }, []);
 
-  // Check if setup is complete on mount
+  isProcessingRef.current = isProcessing;
+  isCapturingRef.current = isCapturing;
+  isTranslationActiveRef.current = isTranslationActive;
+  configRef.current = config;
+  teammatesRef.current = teammates;
+  targetLanguageRef.current = targetLanguage;
+  translateRef.current = translate;
+  recordTranslationRef.current = recordTranslation;
+  addLogRef.current = addLog;
+  stopCaptureRef.current = stopCapture;
+
   useEffect(() => {
-    if (config && !config.app?.setup_complete) {
+    const lang = config?.translation?.target_language;
+    if (lang && lang !== targetLanguage) {
+      setTargetLanguage(lang);
+    }
+  }, [config?.translation?.target_language, targetLanguage, setTargetLanguage]);
+
+  // Auto-show setup wizard once after config loads (not on every config save)
+  useEffect(() => {
+    if (configLoading || !config || initialSetupPromptDone.current) return;
+    initialSetupPromptDone.current = true;
+    if (!config.app?.setup_complete) {
       addLog("Setup wizard will be shown");
       setShowSetupWizard(true);
-    } else if (config) {
+    } else {
       addLog("Setup complete, initializing...");
     }
-  }, [config, addLog]);
+  }, [config, configLoading, addLog]);
 
   // Log device selection changes
   useEffect(() => {
@@ -111,7 +142,7 @@ export function MainWindow() {
       const noAudioTimeout = setTimeout(() => {
         if (!firstChunkLoggedRef.current) {
           setStatus(
-            `Capturing from ${deviceName} — no audio received yet. Check VB-Audio routing and that system/game audio is playing.`
+            `Capturing from ${deviceName} — no audio received yet. Confirm this is your headphones/speakers and that game or system audio is playing.`
           );
         }
       }, 5000);
@@ -119,6 +150,10 @@ export function MainWindow() {
     } else {
       addLog("Audio capture stopped");
       setStatus("Audio capture stopped");
+      firstChunkLoggedRef.current = false;
+      isProcessingRef.current = false;
+      setIsProcessing(false);
+      lastProcessTimeRef.current = 0;
     }
   }, [isCapturing, addLog, selectedDevice, devices]);
 
@@ -135,12 +170,9 @@ export function MainWindow() {
   }, [startMatchSession, endMatchSession]);
 
   useEffect(() => {
-    // Reset processing state when effect starts (component mount or dependency change)
-    setIsProcessing(false);
-    lastProcessTimeRef.current = 0;
-    lastTimeoutCheckRef.current = 0;
-    timeoutResetInProgressRef.current = false;
-    // Don't reset firstChunkLoggedRef - we only want to log once per session
+    if (!isCapturing) {
+      return;
+    }
 
     let audioChunkCount = 0;
     let lastLogTime = Date.now();
@@ -150,20 +182,35 @@ export function MainWindow() {
     // Audio buffering for better transcription
     let audioBuffer: number[][] = [];
     let bufferStartTime = Date.now();
-    const MIN_BUFFER_DURATION_MS = 1000; // Minimum 1 second before processing (faster response, less likely to timeout)
-    // lastProcessTime is stored in lastProcessTimeRef to persist across renders
-    const MIN_PROCESS_INTERVAL_MS = 500; // Small delay between processing to avoid overwhelming the ML service
+    const MIN_BUFFER_DURATION_MS = 1000;
+    const MIN_PROCESS_INTERVAL_MS = 2500; // Avoid back-to-back 1s clips (Whisper hallucinates)
+    const MAX_BUFFER_SECONDS = 4;
+    const MIN_TRANSCRIBE_SECONDS = 3.0; // Phrase-level context (speech, lyrics, cast)
     let lastBufferLogTime = Date.now();
+
+    const trimBuffer = (sampleRate: number) => {
+      const maxSamples = Math.floor(sampleRate * MAX_BUFFER_SECONDS);
+      let total = audioBuffer.reduce((sum, chunk) => sum + chunk.length, 0);
+      while (total > maxSamples && audioBuffer.length > 0) {
+        const removed = audioBuffer.shift();
+        if (removed) total -= removed.length;
+      }
+    };
 
     // Listen to audio chunks
     const unlisten = electronService.listenToAudioChunk(async (event) => {
+      if (!isCapturingRef.current) {
+        return;
+      }
+
       audioChunkCount++;
       const now = Date.now();
+      const addLog = addLogRef.current;
 
       // Log first audio chunk received (only once per session)
       if (audioChunkCount === 1 && !firstChunkLoggedRef.current) {
         firstChunkLoggedRef.current = true;
-        addLog("✁EFirst audio chunk received - capture is working!");
+        addLog("[OK] First audio chunk received - capture is working!");
       }
 
       // Log audio chunk details every 50 chunks
@@ -201,7 +248,7 @@ export function MainWindow() {
       }
 
       // Check if translation is active
-      if (!isTranslationActive) {
+      if (!isTranslationActiveRef.current) {
         audioBuffer = []; // Clear buffer when translation is inactive
         return;
       }
@@ -219,11 +266,12 @@ export function MainWindow() {
       // Safety check: if isProcessing has been true for too long (>60s), reset it
       // This prevents the buffer from growing indefinitely if processing gets stuck
       // Whisper transcription can take 15-30 seconds for longer audio clips
-      if (isProcessing && !timeoutResetInProgressRef.current) {
+      if (isProcessingRef.current && !timeoutResetInProgressRef.current) {
         // If lastProcessTimeRef is 0, it means processing was set but timestamp wasn't recorded
         // This is a bug state - reset it silently (don't log, just fix it)
         if (lastProcessTimeRef.current === 0) {
           timeoutResetInProgressRef.current = true;
+          isProcessingRef.current = false;
           setIsProcessing(false);
           lastProcessTimeRef.current = 0;
           lastTimeoutCheckRef.current = 0;
@@ -245,6 +293,7 @@ export function MainWindow() {
               now,
             });
             timeoutResetInProgressRef.current = true;
+            isProcessingRef.current = false;
             setIsProcessing(false);
             lastProcessTimeRef.current = 0;
             lastTimeoutCheckRef.current = 0;
@@ -277,6 +326,7 @@ export function MainWindow() {
                 );
                 timeoutResetInProgressRef.current = true;
                 addLog("⚠ Processing timeout - resetting state");
+                isProcessingRef.current = false;
                 setIsProcessing(false);
                 lastProcessTimeRef.current = 0; // Reset to allow new processing
                 lastTimeoutCheckRef.current = 0; // Reset timeout check ref
@@ -286,23 +336,10 @@ export function MainWindow() {
                 }, 1000);
                 // Continue to process the buffer
               } else {
-                // Still processing, add to buffer but don't process new chunks
-                if (
-                  audioLevel >= AUDIO_THRESHOLD ||
-                  peakLevel >= AUDIO_THRESHOLD * 3
-                ) {
-                  audioBuffer.push(event.data);
-                }
+                // Drop live audio while a slow transcription is in flight (avoids stale subtitles).
                 return;
               }
             } else {
-              // Still processing, add to buffer but don't process new chunks
-              if (
-                audioLevel >= AUDIO_THRESHOLD ||
-                peakLevel >= AUDIO_THRESHOLD * 3
-              ) {
-                audioBuffer.push(event.data);
-              }
               return;
             }
           }
@@ -332,7 +369,7 @@ export function MainWindow() {
         // Log warning periodically about silent audio
         if (lowAudioCount % 1000 === 0) {
           addLog(
-            "⚠ Audio is completely silent (RMS=0). Set Windows Playback Device to 'CABLE Input (VB-Audio Virtual Cable)' and play audio."
+            "⚠ Audio is completely silent (RMS=0). Select your headphones/speakers in Audio Settings and play game or system audio."
           );
         }
         // Clear buffer if we've been silent for too long
@@ -368,6 +405,7 @@ export function MainWindow() {
 
       // Add to buffer (only if audio has some level)
       audioBuffer.push(event.data);
+      trimBuffer(event.sample_rate);
       if (audioBuffer.length === 1) {
         bufferStartTime = now;
       }
@@ -389,12 +427,11 @@ export function MainWindow() {
       // So we need: 0.5s at 16kHz = 8000 samples
       // After conversions: 8000 * 3 (resample) * 2 (stereo) = 48000 samples at 48kHz = 1.0s
       // Also process if buffer is getting too large (max 4s) OR if many chunks have accumulated (stall prevention)
-      const MIN_AUDIO_DURATION_MS = 1000; // At least 1.0 seconds of audio to account for conversions
+      const minAudioMs = MIN_TRANSCRIBE_SECONDS * 1000;
       const shouldProcess =
-        (actualAudioDurationMs >= MIN_AUDIO_DURATION_MS &&
+        (actualAudioDurationMs >= minAudioMs &&
           timeSinceLastProcess >= MIN_PROCESS_INTERVAL_MS) ||
-        actualAudioDurationMs >= 4000 ||
-        audioBuffer.length >= 200; // stall guard: force process if 200 chunks buffered
+        actualAudioDurationMs >= MAX_BUFFER_SECONDS * 1000;
 
       // Log buffer status periodically
       if (audioBuffer.length > 0 && now - lastBufferLogTime > 2000) {
@@ -425,22 +462,13 @@ export function MainWindow() {
         lastBufferLogTime = now;
       }
 
-      // Force process if buffer is getting too large (safety mechanism)
-      if (audioBuffer.length >= 200 && !isProcessing) {
+      if (
+        actualAudioDurationMs >= MAX_BUFFER_SECONDS * 1000 &&
+        !isProcessingRef.current
+      ) {
         addLog(
-          `⚠ Buffer too large (${audioBuffer.length} chunks), forcing processing`
+          `⚠ Buffer at ${(actualAudioDurationMs / 1000).toFixed(1)}s, processing latest audio`
         );
-      }
-
-      // Safety: Clear buffer if it grows too large (prevents memory issues)
-      const MAX_BUFFER_CHUNKS = 500; // Maximum 500 chunks (~10 seconds at 48kHz)
-      if (audioBuffer.length > MAX_BUFFER_CHUNKS) {
-        const droppedChunks = audioBuffer.length - MAX_BUFFER_CHUNKS;
-        audioBuffer = audioBuffer.slice(-MAX_BUFFER_CHUNKS); // Keep only the most recent chunks
-        addLog(
-          `⚠ Buffer exceeded ${MAX_BUFFER_CHUNKS} chunks, dropped ${droppedChunks} old chunks`
-        );
-        bufferStartTime = now; // Reset buffer start time
       }
 
       // Reset buffer start time if buffer was cleared (prevents stale timestamps)
@@ -451,7 +479,8 @@ export function MainWindow() {
       // Only process if not already processing AND enough time has passed since last process
       // (timeSinceLastProcess is already declared above, reuse it)
       const canProcess =
-        !isProcessing && timeSinceLastProcess >= MIN_PROCESS_INTERVAL_MS;
+        !isProcessingRef.current &&
+        timeSinceLastProcess >= MIN_PROCESS_INTERVAL_MS;
 
       if (shouldProcess && audioBuffer.length > 0 && canProcess) {
         // Recalculate actual audio duration before processing
@@ -462,18 +491,18 @@ export function MainWindow() {
         const processingAudioDurationMs =
           (processingTotalSamples / event.sample_rate) * 1000;
 
-        // CRITICAL: Double-check we have at least 1.0s before processing
-        // This prevents premature processing due to race conditions or other triggers
-        if (processingAudioDurationMs < 1000) {
+        const minProcessMs = MIN_TRANSCRIBE_SECONDS * 1000;
+        if (processingAudioDurationMs < minProcessMs) {
           console.log(
             `[DEBUG] Skipping processing: only ${processingAudioDurationMs.toFixed(
               0
-            )}ms, need 1000ms`
+            )}ms, need ${minProcessMs}ms`
           );
-          return; // Skip processing, wait for more audio
+          return;
         }
 
         // Set processing flag IMMEDIATELY to prevent concurrent requests
+        isProcessingRef.current = true;
         setIsProcessing(true);
         const logMsg = `Processing buffer now (chunks=${
           audioBuffer.length
@@ -493,16 +522,22 @@ export function MainWindow() {
           (sum, chunk) => sum + chunk.length,
           0
         );
-        const combinedAudio = new Float32Array(totalLength);
+        let combinedAudio = new Float32Array(totalLength);
         let offset = 0;
         for (const chunk of audioBuffer) {
           combinedAudio.set(new Float32Array(chunk), offset);
           offset += chunk.length;
         }
 
+        const maxSamples = Math.floor(event.sample_rate * MAX_BUFFER_SECONDS);
+        if (combinedAudio.length > maxSamples) {
+          combinedAudio = combinedAudio.slice(-maxSamples);
+        }
+
         // Clear buffer
         audioBuffer = [];
         lastProcessTimeRef.current = now;
+        pipelineStartRef.current = now;
 
         // Processing flag was already set above to prevent concurrent requests
         addLog(
@@ -629,9 +664,20 @@ export function MainWindow() {
 
             // Add timeout wrapper to prevent hanging
             addLog(`[DEBUG] Creating transcription promise...`);
+            const whisperLanguage =
+              configRef.current?.whisper?.language ||
+              (configRef.current?.translation?.target_language === "en"
+                ? "en"
+                : undefined);
+
             const transcriptionPromise = electronService.transcribeAudio(
               Array.from(combinedAudio),
-              event.sample_rate
+              event.sample_rate,
+              {
+                channels: 1,
+                language: whisperLanguage || undefined,
+                modelName: configRef.current?.whisper?.model || "base",
+              }
             );
 
             const timeoutPromise = new Promise((_, reject) => {
@@ -757,14 +803,23 @@ export function MainWindow() {
             !transcription.text ||
             transcription.text.trim().length === 0
           ) {
-            const emptyLog = `⚠ Transcription returned empty text. Audio may be too quiet or contain no speech. RMS=${
+            const emptyLog = `⚠ No caption (instrumental section, filtered phrase, or vocals too quiet in mix). RMS=${
               transcription?.rms_level || 0
             }`;
             console.warn(emptyLog);
             addLog(emptyLog);
             setStatus("Transcription: No speech detected");
+            isProcessingRef.current = false;
             setIsProcessing(false);
             return; // Exit early if no text
+          }
+
+          if (isLikelyHallucination(transcription.text)) {
+            addLog(
+              `⚠ Skipped likely Whisper hallucination: "${transcription.text.trim()}"`
+            );
+            setStatus("Skipped noise / hallucination");
+            return;
           }
 
           if (
@@ -772,8 +827,8 @@ export function MainWindow() {
             transcription.text &&
             transcription.text.trim().length > 0
           ) {
-            const transcribeSuccess = `✁ETranscription: "${transcription.text}" (${transcription.language})`;
-            console.log("✁ETranscription successful:", transcription.text);
+            const transcribeSuccess = `[OK] Transcription: "${transcription.text}" (${transcription.language})`;
+            console.log("[OK] Transcription successful:", transcription.text);
             addLog(transcribeSuccess);
             setStatus(`Transcribed: ${transcription.text}`);
 
@@ -788,7 +843,7 @@ export function MainWindow() {
                 `Auto-detected language ${transcription.language} for teammate: ${detectedTeammate}`
               );
               addLog(
-                `✁EAuto-detected teammate: ${detectedTeammate} (${transcription.language})`
+                `[OK] Auto-detected teammate: ${detectedTeammate} (${transcription.language})`
               );
             } catch (error) {
               console.warn("Failed to auto-detect teammate language:", error);
@@ -800,9 +855,9 @@ export function MainWindow() {
               console.log("=== CALLING TRANSLATE ===", {
                 text: transcription.text,
                 sourceLanguage: transcription.language,
-                targetLanguage: targetLanguage,
+                targetLanguage: targetLanguageRef.current,
               });
-              translation = await translate(
+              translation = await translateRef.current(
                 transcription.text,
                 transcription.language
               );
@@ -844,7 +899,7 @@ export function MainWindow() {
                 error instanceof Error
                   ? error.message
                   : String(error) || "Unknown error";
-              addLog(`✁ETranslation failed: ${errorMsg}`);
+              addLog(`[OK] Translation failed: ${errorMsg}`);
               addLog(
                 `[DEBUG] Translation error details: ${JSON.stringify(
                   error,
@@ -858,7 +913,7 @@ export function MainWindow() {
 
             if (translation) {
               addLog(`[DEBUG] Translation exists, checking overlay display...`);
-              const translateLog = `✁ETranslation: "${transcription.text}" ↁE"${translation.translated}" (${translation.sourceLanguage}ↁE{translation.targetLanguage})`;
+              const translateLog = `[OK] Translation: "${transcription.text}" -> "${translation.translated}" (${translation.sourceLanguage}->${translation.targetLanguage})`;
               console.log("=== TRANSLATION SUCCESS ===", {
                 original: transcription.text,
                 translated: translation.translated,
@@ -869,41 +924,33 @@ export function MainWindow() {
               addLog(translateLog);
               setStatus(`Translated: ${translation.translated}`);
 
-              // Record translation for history
-              try {
-                await recordTranslation({
-                  original: transcription.text,
-                  translated: translation.translated,
-                  source_lang: transcription.language,
-                  target_lang: translation.targetLanguage,
-                });
-                console.log("✁ETranslation recorded in history");
-              } catch (recordError) {
-                console.warn("Failed to record translation:", recordError);
-              }
-
               // Show on overlay - always show if overlay is enabled
-              const overlayEnabled = config?.overlay?.enabled ?? true;
-              const shouldShowOverlay = overlayEnabled; // Always show when enabled
+              const overlayEnabled = configRef.current?.overlay?.enabled ?? true;
+              const showSameLanguage =
+                configRef.current?.overlay?.show_same_language ?? false;
+              const languagesMatch =
+                translation.sourceLanguage === translation.targetLanguage;
+              const shouldShowOverlay =
+                overlayEnabled && (showSameLanguage || !languagesMatch);
               addLog(
                 `[DEBUG] Overlay check: enabled=${overlayEnabled}, shouldShow=${shouldShowOverlay}, config=${JSON.stringify(
-                  config?.overlay
+                  configRef.current?.overlay
                 )}`
               );
 
               // Translate to team language if enabled
               const translateToTeammates =
-                config?.translation?.translate_to_teammates ?? false;
+                configRef.current?.translation?.translate_to_teammates ?? false;
               const useAutoDetect =
-                config?.translation?.use_auto_detect_team_language ?? false;
+                configRef.current?.translation?.use_auto_detect_team_language ?? false;
               const manualTeamTargetLanguage =
-                config?.translation?.team_target_language || "en";
+                configRef.current?.translation?.team_target_language || "en";
 
               // Calculate most common language from teammates if auto-detect is enabled
               let effectiveTeamLanguage = manualTeamTargetLanguage;
-              if (useAutoDetect && teammates.length > 0) {
+              if (useAutoDetect && teammatesRef.current.length > 0) {
                 const languageCounts: Record<string, number> = {};
-                teammates.forEach((t) => {
+                teammatesRef.current.forEach((t) => {
                   if (t.primary_language) {
                     languageCounts[t.primary_language] =
                       (languageCounts[t.primary_language] || 0) + 1;
@@ -943,7 +990,7 @@ export function MainWindow() {
                   effectiveTeamLanguage !== translation.sourceLanguage
                 ) {
                   try {
-                    const teamTranslation = await translate(
+                    const teamTranslation = await translateRef.current(
                       transcription.text,
                       translation.sourceLanguage,
                       effectiveTeamLanguage
@@ -955,7 +1002,7 @@ export function MainWindow() {
                         text: teamTranslation.translated,
                       });
                       addLog(
-                        `ↁETeam (${effectiveTeamLanguage}${
+                        `-> Team (${effectiveTeamLanguage}${
                           useAutoDetect ? " [auto]" : ""
                         }): "${teamTranslation.translated}"`
                       );
@@ -978,7 +1025,7 @@ export function MainWindow() {
                     overlayEnabled,
                     sourceLang: translation.sourceLanguage,
                     targetLang: translation.targetLanguage,
-                    showSameLanguage: config?.overlay?.show_same_language,
+                    showSameLanguage: configRef.current?.overlay?.show_same_language,
                     teammateTranslations: teammateTranslations.length,
                   });
                   addLog(overlayLog);
@@ -998,19 +1045,22 @@ export function MainWindow() {
                   );
 
                   addLog(`[DEBUG] About to invoke show_overlay_text...`);
-                  const result = await electronService.showOverlayText(overlayText);
-                  console.log("✁EOverlay command succeeded:", result);
+                  const result = await electronService.showOverlayText(
+                    overlayText,
+                    configRef.current?.overlay as Record<string, unknown> | undefined
+                  );
+                  console.log("[OK] Overlay command succeeded:", result);
                   addLog(
-                    `✁EOverlay displayed successfully. Result: ${JSON.stringify(
+                    `[OK] Overlay displayed successfully. Result: ${JSON.stringify(
                       result
                     )}`
                   );
                   addLog(`[DEBUG] Overlay invoke completed without error`);
                 } catch (error) {
-                  const errorMsg = `✁EFailed to show overlay: ${
+                  const errorMsg = `[OK] Failed to show overlay: ${
                     error instanceof Error ? error.message : "Unknown error"
                   }`;
-                  console.error("✁EFailed to show overlay:", error);
+                  console.error("[OK] Failed to show overlay:", error);
                   console.error(
                     "Error details:",
                     JSON.stringify(error, null, 2)
@@ -1030,7 +1080,7 @@ export function MainWindow() {
                     ? "same language"
                     : "overlay disabled"
                 }`;
-                console.log("✁EOverlay not shown - reasons:", {
+                console.log("[OK] Overlay not shown - reasons:", {
                   overlayEnabled,
                   shouldShowOverlay,
                   sourceLang: translation.sourceLanguage,
@@ -1050,14 +1100,17 @@ export function MainWindow() {
                   source_lang: transcription.language,
                   target_lang: translation.targetLanguage || "",
                 });
-                await recordTranslation({
+                await recordTranslationRef.current({
                   original: transcription.text,
                   translated: translation.translated,
                   source_lang: transcription.language,
                   target_lang: translation.targetLanguage || "",
-                  teammate: undefined,
+                  processing_ms:
+                    pipelineStartRef.current > 0
+                      ? Date.now() - pipelineStartRef.current
+                      : undefined,
                 });
-                console.log("✁ETranslation recorded in history successfully");
+                console.log("[OK] Translation recorded in history successfully");
               } catch (error) {
                 console.error("Failed to record translation:", error);
                 addLog(
@@ -1068,11 +1121,11 @@ export function MainWindow() {
               }
             }
           } else {
-            const noSpeechLog = `✁ENo speech detected (RMS=${avgLevel.toFixed(
+            const noSpeechLog = `[OK] No speech detected (RMS=${avgLevel.toFixed(
               6
             )})`;
             console.log(
-              "✁ENo text in transcription - empty or whitespace only. Transcription object:",
+              "[OK] No text in transcription - empty or whitespace only. Transcription object:",
               transcription
             );
             console.log("Transcription details:", {
@@ -1111,10 +1164,11 @@ export function MainWindow() {
               JSON.stringify(error);
           }
 
-          const errorLog = `✁EError: ${errorMessage}`;
+          const errorLog = `[OK] Error: ${errorMessage}`;
           addLog(errorLog);
           setStatus(`Error: ${errorMessage}`);
         } finally {
+          isProcessingRef.current = false;
           setIsProcessing(false);
           lastProcessTimeRef.current = 0; // Reset timestamp when processing completes
         }
@@ -1130,29 +1184,17 @@ export function MainWindow() {
         console.error("Error cleaning up audio listener:", err);
       }
     };
-  }, [
-    translate,
-    isProcessing,
-    recordTranslation,
-    config,
-    targetLanguage,
-    isTranslationActive,
-    addLog,
-    teammates,
-  ]);
+  }, [isCapturing]);
 
-  // Cleanup on unmount (when window closes)
+  // Cleanup only when the window/component is destroyed (not when isCapturing toggles)
   useEffect(() => {
     return () => {
-      // Cleanup when component unmounts
-      console.log("Component unmounting, performing cleanup...");
-      (async () => {
+      console.log("MainWindow unmounting, performing cleanup...");
+      void (async () => {
         try {
-          if (isCapturing) {
-            await stopCapture();
+          if (isCapturingRef.current) {
+            await stopCaptureRef.current();
           }
-          // Don't pause translation on cleanup - let it continue running
-          // setIsTranslationActive(false);
           await endMatchSession();
           console.log("Cleanup complete");
         } catch (err) {
@@ -1160,7 +1202,7 @@ export function MainWindow() {
         }
       })();
     };
-  }, [isCapturing, stopCapture, endMatchSession]);
+  }, [endMatchSession]);
 
   // Show loading state if config is still loading (AFTER all hooks are called)
   if (configLoading) {
@@ -1235,17 +1277,20 @@ export function MainWindow() {
                     console.log("=== TEST OVERLAY BUTTON CLICKED (PYTHON) ===");
 
                     // Use the exact same overlay path as real subtitles
-                    const result = await electronService.showOverlayText(testText);
+                    const result = await electronService.showOverlayText(
+                      testText,
+                      configRef.current?.overlay as Record<string, unknown> | undefined
+                    );
                     console.log("Python overlay result:", result);
 
-                    addLog(`Overlay test result: ${result}`);
+                    addLog(`Overlay test result: ${JSON.stringify(result)}`);
                   } catch (err) {
                     console.error("Test overlay error:", err);
                     const errorMsg =
                       err instanceof Error
                         ? err.message
                         : String(err) || "Unknown error";
-                    addLog(`✁ETest overlay failed: ${errorMsg}`);
+                    addLog(`[OK] Test overlay failed: ${errorMsg}`);
 
                     // Show error details in console for debugging
                     console.error("Full error object:", err);
@@ -1288,8 +1333,8 @@ export function MainWindow() {
               (status.includes("very quiet") ||
                 status.includes("RMS=0.000000")) && (
                 <div className="p-3 bg-yellow-500/20 border border-yellow-500/30 text-yellow-200 rounded-lg text-sm">
-                  ⚠ Audio is silent (RMS=0). Set Windows Playback Device to
-                  "CABLE Input (VB-Audio Virtual Cable)" and play audio to test.
+                  ⚠ Audio is silent (RMS=0). In Audio Settings, choose your
+                  headphones or speakers and play audio to test.
                 </div>
               )}
           </div>
@@ -1337,8 +1382,6 @@ export function MainWindow() {
               </button>
             </div>
             <StatsDashboard />
-            <AntiCheatStatusComponent />
-            <Benchmark />
           </div>
         </div>
       </div>
@@ -1361,10 +1404,12 @@ export function MainWindow() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold text-white">Help Center</h2>
               <button
+                type="button"
                 onClick={() => setShowHelpCenter(false)}
-                className="text-gray-400 hover:text-white text-2xl"
+                className="text-gray-400 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center"
+                aria-label="Close"
               >
-                ÁE
+                X
               </button>
             </div>
             <HelpCenter />

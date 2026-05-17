@@ -1,7 +1,8 @@
 import React from "react";
-import { AudioDevice, useAudio } from "../hooks/useAudio";
+import { AudioDevice } from "../hooks/useAudio";
 import { useI18n } from "../hooks/useI18n";
 import { I18N_KEYS } from "../i18n/keys";
+import { findPreferredCaptureDevice } from "../utils/audioDevices";
 
 export interface AudioSettingsProps {
   devices: AudioDevice[];
@@ -50,15 +51,7 @@ export function AudioSettings({
             const value = e.target.value;
             if (value === "") {
               // Don't allow deselecting - auto-select the best device instead
-              const cableDevice = devices.find(
-                (d) =>
-                  d.name.toLowerCase().includes("cable") ||
-                  d.name.toLowerCase().includes("vb-audio")
-              );
-              const stereoMix = devices.find((d) =>
-                d.name.toLowerCase().includes("stereo mix")
-              );
-              const deviceToSelect = cableDevice || stereoMix || devices[0];
+              const deviceToSelect = findPreferredCaptureDevice(devices);
               if (deviceToSelect) {
                 selectDevice(deviceToSelect.index);
               }
@@ -71,7 +64,9 @@ export function AudioSettings({
         >
           {devices.map((device) => (
             <option key={device.index} value={device.index}>
-              {device.name} ({device.sample_rate}Hz, {device.channels}ch)
+              {device.name}
+              {device.is_loopback ? " [Loopback]" : ""} ({device.sample_rate}Hz,{" "}
+              {device.channels}ch)
             </option>
           ))}
         </select>
@@ -83,6 +78,17 @@ export function AudioSettings({
               : "Loading devices..."}
           </p>
         )}
+        {selectedDevice !== null && devices.length > 0 && (() => {
+          const dev = devices.find((d) => d.index === selectedDevice);
+          if (!dev?.is_loopback && !dev?.name.toLowerCase().includes("stereo mix")) {
+            return (
+              <p className="mt-2 text-xs text-amber-400">
+                Tip: For game or system audio, pick your speakers or headphones from the list (not a microphone).
+              </p>
+            );
+          }
+          return null;
+        })()}
         {selectedDevice === null && devices.length > 0 && (
           <p className="mt-2 text-xs text-yellow-400">
             No device selected. Auto-selecting best device...

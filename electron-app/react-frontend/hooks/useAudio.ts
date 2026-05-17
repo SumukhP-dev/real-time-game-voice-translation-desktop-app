@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import electronService from "../services/electron";
+import { findPreferredCaptureDevice } from "../utils/audioDevices";
 
 export interface AudioDevice {
   index: number;
@@ -7,6 +8,7 @@ export interface AudioDevice {
   channels: number;
   sample_rate: number;
   is_input: boolean;
+  is_loopback?: boolean;
 }
 
 export function useAudio() {
@@ -25,15 +27,7 @@ export function useAudio() {
       
       // Auto-select the best device if none is selected
       if (selectedDevice === null && audioDevices.length > 0) {
-        const cableDevice = audioDevices.find(
-          (d) =>
-            d.name.toLowerCase().includes("cable") ||
-            d.name.toLowerCase().includes("vb-audio")
-        );
-        const stereoMix = audioDevices.find((d) =>
-          d.name.toLowerCase().includes("stereo mix")
-        );
-        const deviceToSelect = cableDevice || stereoMix || audioDevices[0];
+        const deviceToSelect = findPreferredCaptureDevice(audioDevices);
         if (deviceToSelect) {
           setSelectedDevice(deviceToSelect.index);
         }
@@ -44,34 +38,23 @@ export function useAudio() {
       const mockDevices: AudioDevice[] = [
         {
           index: 0,
-          name: "Default Audio Device",
+          name: "Default Output",
           channels: 2,
-          sample_rate: 44100,
-          is_input: true
+          sample_rate: 48000,
+          is_input: true,
+          is_loopback: true,
         },
         {
           index: 1,
-          name: "CABLE Input (VB-Audio Virtual Cable)",
-          channels: 2,
-          sample_rate: 48000,
-          is_input: true
-        },
-        {
-          index: 2,
           name: "Microphone",
           channels: 1,
           sample_rate: 48000,
-          is_input: true
-        }
+          is_input: true,
+        },
       ];
       setDevices(mockDevices);
-      // Auto-select first device so Start Capture works even when ML service was unavailable
       if (mockDevices.length > 0) {
-        const preferred = mockDevices.find(
-          (d) =>
-            d.name.toLowerCase().includes("cable") ||
-            d.name.toLowerCase().includes("vb-audio")
-        ) || mockDevices[0];
+        const preferred = findPreferredCaptureDevice(mockDevices) ?? mockDevices[0];
         setSelectedDevice(preferred.index);
       }
     } finally {
@@ -102,18 +85,15 @@ export function useAudio() {
   }, [selectedDevice]);
 
   const stopCapture = useCallback(async () => {
-    setLoading(true);
     setError(null);
+    setIsCapturing(false);
     try {
       console.log('Stopping audio capture');
       await electronService.stopAudioCapture();
-      setIsCapturing(false);
     } catch (err: any) {
       const errorMsg = err?.toString?.() || "Failed to stop audio capture";
       setError(errorMsg);
       throw err;
-    } finally {
-      setLoading(false);
     }
   }, []);
 

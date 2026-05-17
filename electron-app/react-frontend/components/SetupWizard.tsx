@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useConfig } from "../hooks/useConfig";
-import { AudioSetupWizard } from "./AudioSetupWizard";
 
 interface SetupWizardProps {
   onComplete?: () => void;
@@ -11,7 +10,6 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
   const { config, updateConfig } = useConfig();
   const [currentStep, setCurrentStep] = useState(0);
   const [audioDevices, setAudioDevices] = useState<any[]>([]);
-  const [showAudioSetupWizard, setShowAudioSetupWizard] = useState(false);
 
   useEffect(() => {
     // Load audio devices
@@ -51,29 +49,9 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
       content: (
         <div className="space-y-4">
           <p className="text-gray-300">
-            Select your audio input device. For game audio, use VB-Audio Virtual
-            Cable or Stereo Mix.
+            Select your audio device. For game or system audio, choose
+            your headphones or speakers.
           </p>
-
-          {/* Quick Audio Setup Card */}
-          <div className="p-3 bg-blue-900 bg-opacity-50 rounded-lg border border-blue-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-white text-sm mb-1">
-                  Quick Audio Setup
-                </h3>
-                <p className="text-xs text-gray-300">
-                  Automatically configure VB-Audio Virtual Cable for game audio capture
-                </p>
-              </div>
-              <button
-                onClick={() => setShowAudioSetupWizard(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium whitespace-nowrap"
-              >
-                Auto-Setup Audio
-              </button>
-            </div>
-          </div>
 
           {audioDevices.length > 0 ? (
             <div className="space-y-2">
@@ -154,7 +132,7 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
         <div className="space-y-4">
           <div className="bg-green-900 bg-opacity-50 p-4 rounded-lg">
             <h3 className="font-semibold text-green-300 mb-2">
-              Setup Complete! 🎉
+              Setup Complete! {"\u{1F389}"}
             </h3>
             <p className="text-sm text-green-200">
               You're all set! Here's how to use the app:
@@ -213,10 +191,10 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
               {steps[currentStep].title}
             </h2>
             <button
-              onClick={onClose}
+              onClick={handleSkip}
               className="text-gray-400 hover:text-gray-200 text-2xl"
             >
-              ×
+              {"\u00D7"}
             </button>
           </div>
 
@@ -244,18 +222,6 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
           <div className="mb-6">
             {steps[currentStep].content}
           </div>
-
-          {/* Audio Setup Wizard Modal */}
-          {showAudioSetupWizard && (
-            <AudioSetupWizard
-              onComplete={() => {
-                setShowAudioSetupWizard(false);
-              }}
-              onClose={() => {
-                setShowAudioSetupWizard(false);
-              }}
-            />
-          )}
 
           {/* Navigation */}
           <div className="flex justify-between">

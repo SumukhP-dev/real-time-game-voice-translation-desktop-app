@@ -2,6 +2,9 @@ import React, { useEffect, Component, ErrorInfo, ReactNode } from "react";
 import { MainWindow } from "./components/MainWindow";
 import { I18nProvider } from "./hooks/useI18n";
 import { OnboardingProvider } from "./components/OnboardingTooltips";
+import { TranslationProvider } from "./hooks/useTranslation";
+import { ConfigProvider } from "./hooks/useConfig";
+import { MatchHistoryProvider } from "./hooks/useMatchHistory";
 import electronService from "./services/electron";
 import "./index.css";
 
@@ -81,11 +84,17 @@ function App() {
   try {
     return (
       <ErrorBoundary>
-        <I18nProvider>
-          <OnboardingProvider>
-            <MainWindow />
-          </OnboardingProvider>
-        </I18nProvider>
+        <ConfigProvider>
+          <MatchHistoryProvider>
+            <I18nProvider>
+              <OnboardingProvider>
+                <TranslationProvider>
+                  <MainWindow />
+                </TranslationProvider>
+              </OnboardingProvider>
+            </I18nProvider>
+          </MatchHistoryProvider>
+        </ConfigProvider>
       </ErrorBoundary>
     );
   } catch (error) {

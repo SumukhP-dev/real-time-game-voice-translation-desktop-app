@@ -2,6 +2,8 @@ import React from "react";
 import { useConfig } from "../hooks/useConfig";
 import { useI18n } from "../hooks/useI18n";
 import { I18N_KEYS } from "../i18n/keys";
+import { buildOverlayStyles } from "../utils/overlayStyle";
+import electronService from "../services/electron";
 
 const STYLE_PRESETS = [
   { value: "minimal", labelKey: I18N_KEYS.SUBTITLE_STYLE_MINIMAL },
@@ -26,55 +28,43 @@ export function SubtitleSettings() {
   const { config, updateConfig } = useConfig();
   const { t } = useI18n();
 
-  const handleSizeChange = async (size: number) => {
-    if (!config) return;
+  const previewOnOverlay = async (overlay: NonNullable<typeof config>["overlay"]) => {
     try {
-      const newConfig = {
-        ...config,
-        overlay: {
-          ...config.overlay,
-          font_size: size,
-        },
-      };
-      await updateConfig(newConfig);
-      // Mock implementation - overlay config is already updated via updateConfig
-      console.log('Mock: updateOverlayConfig', newConfig.overlay);
+      await electronService.showOverlayText("Sample Subtitle Text", overlay);
+    } catch (error) {
+      console.warn("Overlay preview failed:", error);
+    }
+  };
+
+  const applyOverlayUpdate = async (
+    overlayPatch: Partial<NonNullable<typeof config>["overlay"]>
+  ) => {
+    if (!config) return;
+    const newOverlay = { ...config.overlay, ...overlayPatch };
+    const newConfig = { ...config, overlay: newOverlay };
+    await updateConfig(newConfig);
+    await previewOnOverlay(newOverlay);
+  };
+
+  const handleSizeChange = async (size: number) => {
+    try {
+      await applyOverlayUpdate({ font_size: size });
     } catch (error) {
       console.error("Failed to update subtitle size:", error);
     }
   };
 
   const handleStyleChange = async (style: string) => {
-    if (!config) return;
     try {
-      const newConfig = {
-        ...config,
-        overlay: {
-          ...config.overlay,
-          style_preset: style,
-        },
-      };
-      await updateConfig(newConfig);
-      // Mock implementation - overlay config is already updated via updateConfig
-      console.log('Mock: updateOverlayConfig', newConfig.overlay);
+      await applyOverlayUpdate({ style_preset: style });
     } catch (error) {
       console.error("Failed to update subtitle style:", error);
     }
   };
 
   const handlePositionChange = async (position: string) => {
-    if (!config) return;
     try {
-      const newConfig = {
-        ...config,
-        overlay: {
-          ...config.overlay,
-          position_preset: position,
-        },
-      };
-      await updateConfig(newConfig);
-      // Mock implementation - overlay config is already updated via updateConfig
-      console.log('Mock: updateOverlayConfig', newConfig.overlay);
+      await applyOverlayUpdate({ position_preset: position });
     } catch (error) {
       console.error("Failed to update subtitle position:", error);
     }
@@ -84,7 +74,8 @@ export function SubtitleSettings() {
 
   const currentSize = config.overlay?.font_size || 24;
   const currentStyle = config.overlay?.style_preset || "minimal";
-  const currentPosition = config.overlay?.position_preset || "center";
+  const currentPosition = config.overlay?.position_preset || "bottom";
+  const previewStyles = buildOverlayStyles(config.overlay);
 
   return (
     <div className="p-6 bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700">
@@ -155,21 +146,16 @@ export function SubtitleSettings() {
         {/* Preview */}
         <div className="p-4 bg-gray-900/50 rounded-xl border border-gray-700">
           <p className="text-sm font-medium text-gray-300 mb-3">Preview:</p>
-          <div className="flex justify-center">
+          <div className="flex justify-center p-2">
             <div
-              className="px-6 py-3 rounded-lg text-center"
               style={{
-                fontSize: `${currentSize}px`,
-                fontWeight: currentStyle === "bold" || currentStyle === "outline" || currentStyle === "gaming" ? "bold" : "normal",
-                color: "#FFFFFF",
-                backgroundColor: currentStyle === "minimal" ? "rgba(0, 0, 0, 0.7)" : "rgba(0, 0, 0, 0.85)",
-                textShadow: currentStyle === "shadow" || currentStyle === "gaming" 
-                  ? "2px 2px 8px rgba(0,0,0,1), 0 0 10px rgba(0,0,0,0.8)" 
-                  : currentStyle === "bold" 
-                  ? "2px 2px 4px rgba(0,0,0,0.8)" 
-                  : "none",
-                border: currentStyle === "outline" ? "2px solid #FFFFFF" : "none",
-                backdropFilter: "blur(10px)",
+                ...previewStyles.box,
+                position: "relative",
+                top: "auto",
+                left: "auto",
+                right: "auto",
+                bottom: "auto",
+                transform: "none",
               }}
             >
               Sample Subtitle Text

@@ -11,13 +11,13 @@ interface FAQItem {
 const FAQ_DATA: FAQItem[] = [
   {
     category: "Setup",
-    question: "How do I set up VB-Audio Virtual Cable?",
-    answer: "Download VB-Audio Virtual Cable from vb-audio.com/Cable/, install it, restart your computer, then set CABLE Input as default playback device in Windows Sound settings.",
+    question: "How do I set up audio capture (WASAPI)?",
+    answer: "In Audio Settings, select your headphones or speakers from the list. Click Start Capture, then play game or system audio. No virtual audio cable is required on Windows 10/11.",
   },
   {
     category: "Setup",
-    question: "Why can't I hear audio after setting CABLE Input as default?",
-    answer: "You need to enable 'Listen to this device' on CABLE Output. Go to Recording tab → CABLE Output Properties → Listen tab → Check 'Listen to this device' and select your headphones.",
+    question: "Why can't I hear game audio in my headphones?",
+    answer: "The app captures what plays through the selected output without changing your Windows default device. If you changed Windows sound settings manually, set your normal headphones/speakers back as the default playback device.",
   },
   {
     category: "Translation",
@@ -32,7 +32,7 @@ const FAQ_DATA: FAQItem[] = [
   {
     category: "Audio",
     question: "Audio capture shows RMS=0.000000",
-    answer: "This means no audio is being captured. Verify: 1) CABLE Input is default playback device, 2) 'Listen to this device' is enabled, 3) Audio is actually playing (check Windows volume), 4) Game audio is routed to CABLE Input.",
+    answer: "This means no audio is being captured. Verify: 1) The correct device is selected (your headphones/speakers), 2) Capture is started, 3) Audio is actually playing (check Windows volume), 4) Status logs show non-zero RMS when sound plays.",
   },
   {
     category: "Anti-Cheat",
@@ -141,42 +141,15 @@ export function HelpCenter() {
         )}
       </div>
 
-      {/* Additional Resources */}
-      <div className="mt-6 p-4 bg-blue-900 bg-opacity-50 rounded-lg border border-blue-700">
-        <h3 className="font-semibold text-white mb-2">Additional Resources</h3>
-        <div className="space-y-2 text-sm">
-          <a
-            href="https://vb-audio.com/Cable/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-300 hover:text-blue-200 block"
-          >
-            → Download VB-Audio Virtual Cable
-          </a>
-          <a
-            href="#"
-            className="text-blue-300 hover:text-blue-200 block"
-          >
-            → Video Tutorials (Coming Soon)
-          </a>
-          <a
-            href="#"
-            className="text-blue-300 hover:text-blue-200 block"
-          >
-            → Visual Setup Guide
-          </a>
-        </div>
-      </div>
-
       {/* Support Contact */}
-      <div className="mt-4 text-center">
+      <div className="mt-6 text-center">
         <p className="text-gray-400 text-sm">
           Still need help? Contact support:{" "}
           <a
-            href="mailto:1-9438889487_112@zohomail.com"
+            href="mailto:gaminglivevoicetranslationmod@gmail.com"
             className="text-blue-400 hover:text-blue-300"
           >
-            1-9438889487_112@zohomail.com
+            gaminglivevoicetranslationmod@gmail.com
           </a>
         </p>
       </div>

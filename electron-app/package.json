@@ -10,8 +10,9 @@
     "dev:react": "cd react-frontend && npm run dev",
     "build": "npm run build:react && npm run build:electron",
     "build:react": "cd react-frontend && npm run build",
-    "build:electron": "electron-builder",
-    "dist": "npm run build && electron-builder --publish=never",
+    "sync-icons": "node scripts/sync-app-icons.js",
+    "build:electron": "npm run sync-icons && electron-builder",
+    "dist": "npm run build && electron-builder --publish=never && node scripts/embed-win-icon.js",
     "pack": "npm run build && electron-builder --dir",
     "clean": "rimraf dist build"
   },
@@ -23,20 +24,23 @@
     "concurrently": "^8.2.2",
     "electron": "^28.3.3",
     "electron-builder": "^24.9.1",
+    "rcedit": "^4.0.1",
     "rimraf": "^5.0.5",
     "wait-on": "^7.2.0"
   },
   "build": {
+    "afterPack": "./electron-builder-after-pack.cjs",
     "appId": "com.csgo2.translation",
     "productName": "Real-Time Voice Translation Tool",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "build"
     },
     "files": [
       "main.js",
       "preload.js",
+      "app_icon.png",
       "react-frontend/dist/**/*",
-      "../app_icon.*",
       "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
       "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
       "!**/node_modules/*.d.ts",
@@ -51,8 +55,11 @@
     ],
     "extraResources": [
       {
-        "from": "../fastapi-backend/dist/ml-service.exe",
-        "to": "ml-service/ml-service.exe"
+        "from": "../fastapi-backend/dist/ml-service",
+        "to": "ml-service",
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
@@ -70,14 +77,20 @@
           ]
         }
       ],
-      "icon": "../app_icon.ico"
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false,
+      "signDlls": false
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Real-Time Voice Translation Tool"
+      "shortcutName": "Real-Time Voice Translation Tool",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "include": "installer.nsh"
     },
     "portable": {
       "artifactName": "${productName}-${version}-portable.${ext}"
@@ -92,7 +105,7 @@
           ]
         }
       ],
-      "icon": "../app_icon.icns",
+      "icon": "build/icon.icns",
       "category": "public.app-category.utilities"
     },
     "linux": {
@@ -110,7 +123,7 @@
           ]
         }
       ],
-      "icon": "../app_icon.png",
+      "icon": "build/icon.png",
       "category": "Utility"
     }
   },

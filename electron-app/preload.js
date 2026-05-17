@@ -15,6 +15,33 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // ML Service
   getMLServiceURL: () => ipcRenderer.invoke('get-ml-service-url'),
+
+  /** Ask main process to show text on the transparent overlay window. */
+  showSubtitleOverlay: (payload) => ipcRenderer.invoke('show-subtitle-overlay', payload),
+
+  /**
+   * Overlay window only: subscribe to subtitle payloads from the main process.
+   * @returns {() => void} unsubscribe
+   */
+  subscribeSubtitleOverlay: (callback) => {
+    const channel = 'subtitle-overlay-payload';
+    const listener = (_event, data) => {
+      try {
+        callback(data);
+      } catch (e) {
+        console.error('[PRELOAD] subscribeSubtitleOverlay callback error', e);
+      }
+    };
+    ipcRenderer.on(channel, listener);
+    return () => {
+      ipcRenderer.removeListener(channel, listener);
+    };
+  },
+
+  /** Call from overlay.html after subscribeSubtitleOverlay is registered. */
+  notifyOverlayRendererReady: () => {
+    ipcRenderer.send('overlay-renderer-ready');
+  },
   
   // Platform info
   platform: process.platform,
