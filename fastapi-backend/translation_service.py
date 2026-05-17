@@ -55,7 +55,9 @@ class TranslationService:
         if models_dir:
             self.models_dir = Path(models_dir)
         else:
-            self.models_dir = Path.home() / ".csgo2_translation" / "models"
+            from app_paths import get_models_dir
+
+            self.models_dir = get_models_dir()
 
         self.models_dir.mkdir(parents=True, exist_ok=True)
 
@@ -228,14 +230,29 @@ class TranslationService:
         except Exception:
             pass
 
-        # Lazy initialization
-        self._ensure_initialized()
-
-        # Check cache
         cache_key = f"{text}_{source_language}_{self.target_language}"
         with self.cache_lock:
             if cache_key in self.translation_cache:
                 return self.translation_cache[cache_key]
+
+        # Same language: return immediately without loading translation models.
+        if source_language and source_language not in ("auto", "unknown"):
+            if source_language == self.target_language:
+                safe_print(
+                    f"[INFO] Source and target languages match ({source_language}), returning original text",
+                    flush=True,
+                )
+                result = {
+                    "translated_text": text,
+                    "source_language": source_language,
+                    "target_language": self.target_language,
+                }
+                with self.cache_lock:
+                    self.translation_cache[cache_key] = result
+                return result
+
+        # Lazy initialization (only when translation may be needed)
+        self._ensure_initialized()
 
         # Wait for model loading
         if self._model_loading:
@@ -246,19 +263,6 @@ class TranslationService:
                 time.sleep(0.5)
 
         try:
-            # If source == target, return as-is (but log it)
-            if source_language and source_language != "auto" and source_language != "unknown":
-                if source_language == self.target_language:
-                    safe_print(f"[INFO] Source and target languages match ({source_language}), returning original text", flush=True)
-                    result = {
-                        "translated_text": text,
-                        "source_language": source_language,
-                        "target_language": self.target_language
-                    }
-                    with self.cache_lock:
-                        self.translation_cache[cache_key] = result
-                    return result
-
             # Try local translation first
             translated = None
             if self.model_type == "local" and self.local_translator and self._model_loaded:

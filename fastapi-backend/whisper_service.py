@@ -5,7 +5,6 @@ Refactored from src/core/speech/recognizer.py
 import sys
 import os
 import time
-import whisper
 import numpy as np
 from scipy import signal
 from pathlib import Path
@@ -48,9 +47,9 @@ class WhisperService:
         if models_dir:
             self.models_dir = Path(models_dir)
         else:
-            # Default to project root models directory
-            project_root = Path(__file__).parent.parent.parent
-            self.models_dir = project_root / "models" / "whisper"
+            from app_paths import get_models_dir
+
+            self.models_dir = get_models_dir() / "whisper"
 
         self.models_dir.mkdir(parents=True, exist_ok=True)
 
@@ -59,6 +58,8 @@ class WhisperService:
         """Load Whisper model (lazy loading)"""
         if self.model_loaded and self.model is not None:
             return
+
+        import whisper  # defer heavy import until first use
 
         safe_print(f"Loading Whisper model: {self.model_name}...", flush=True)
         try:
@@ -78,12 +79,82 @@ class WhisperService:
             safe_print(f"[ERROR] Error loading Whisper model: {e}", flush=True)
             raise
 
+    def _build_whisper_kwargs(self, language: Optional[str]) -> dict:
+        """Tuned for loopback chunks: game chat, music/vocals, and video dialogue."""
+        kwargs: dict = {
+            "task": "transcribe",
+            "fp16": False,
+            "condition_on_previous_text": False,
+            # Lower threshold helps sung vocals and speech over background music.
+            "no_speech_threshold": 0.45,
+            "compression_ratio_threshold": 2.4,
+            "logprob_threshold": -1.0,
+            "temperature": 0.0,
+        }
+        if language:
+            kwargs["language"] = language
+            if language == "en":
+                kwargs["initial_prompt"] = (
+                    "English speech, song lyrics, and dialogue from audio or video."
+                )
+        return kwargs
+
+    def _filter_transcription_text(
+        self, text: str, detected_language: str, segments: list, rms_level: float
+    ) -> Optional[dict]:
+        """Return filtered empty result dict, or None to keep the transcription."""
+        text_lower = text.lower().strip()
+        text_clean = text_lower.rstrip(".,!?;:")
+
+        hallucination_phrases = [
+            "thank you for watching",
+            "thanks for watching",
+            "see you next time",
+            "see you in the next",
+            "please subscribe",
+            "don't forget to subscribe",
+            "ご視聴ありがとう",
+            "subtitles by",
+            "amara.org",
+        ]
+        if any(phrase in text_clean for phrase in hallucination_phrases):
+            return {
+                "text": "",
+                "language": detected_language,
+                "segments": [],
+                "confidence": 0.0,
+                "rms_level": rms_level,
+                "filtered": True,
+            }
+
+        if segments:
+            logprobs = [s.get("avg_logprob", -99.0) for s in segments if "avg_logprob" in s]
+            if logprobs:
+                avg_logprob = sum(logprobs) / len(logprobs)
+                if avg_logprob < -1.25:
+                    print(
+                        f"[DEBUG] Filtered low-confidence transcription "
+                        f"(avg_logprob={avg_logprob:.3f}): {text[:60]!r}",
+                        flush=True,
+                    )
+                    return {
+                        "text": "",
+                        "language": detected_language,
+                        "segments": [],
+                        "confidence": 0.0,
+                        "rms_level": rms_level,
+                        "filtered": True,
+                    }
+
+        return None
+
     def transcribe(
         self,
         audio_data: np.ndarray,
         sample_rate: int = 16000,
         language: Optional[str] = None,
-        min_audio_threshold: float = 0.01
+        min_audio_threshold: float = 0.01,
+        channels: int = 1,
     ) -> Dict[str, Any]:
         """
         Transcribe audio data
@@ -123,46 +194,19 @@ class WhisperService:
         initial_max = np.max(np.abs(audio_data)) if len(audio_data) > 0 else 0
         print(f"[DEBUG] Initial audio stats: samples={len(audio_data)}, sample_rate={sample_rate}Hz, RMS={initial_rms:.6f}, max={initial_max:.6f}")
 
-        # Convert stereo to mono if needed
-        # Whisper expects mono audio. If we have stereo (interleaved L, R, L, R...),
-        # we need to convert it to mono by averaging channels.
-        # VB-Audio Virtual Cable typically outputs stereo at 48kHz, so we detect and convert.
-        # We only attempt conversion if:
-        # 1. Sample rate is 48kHz (common for VB-Audio and other virtual cables)
-        # 2. Length is even (required for interleaved stereo)
-        # 3. We have enough samples to make it worthwhile
+        # Our capture pipeline already sends mono float32. Only reshape when caller
+        # explicitly marks interleaved stereo (channels >= 2).
         original_length = len(audio_data)
-
-        # Note: Audio from Rust backend is already converted to mono
-        # Only attempt stereo-to-mono if we detect it's likely stereo AND the duration would be reasonable after conversion
-        # Check: if converting as stereo would result in < 0.3s, it's probably already mono
-        if sample_rate == 48000 and original_length % 2 == 0 and original_length >= 4:
-            # Calculate what duration would be after stereo conversion
-            potential_mono_length = original_length // 2
-            potential_duration = potential_mono_length / sample_rate
-            # Only convert if the resulting duration would be reasonable (>= 0.3s)
-            # This prevents incorrectly converting already-mono audio
-            if potential_duration >= 0.3:
-                try:
-                    stereo_reshaped = audio_data.reshape(-1, 2)
-                    audio_data = np.mean(stereo_reshaped, axis=1).astype(np.float32)
-                    print(f"[DEBUG] Converted stereo to mono: {original_length} samples -> {len(audio_data)} samples (48kHz stereo -> mono, duration={potential_duration:.2f}s)")
-                except (ValueError, Exception) as e:
-                    # If reshaping fails, it's likely already mono, continue as-is
-                    pass
-            else:
-                # Duration would be too short after conversion, so it's likely already mono
-                print(f"[DEBUG] Skipping stereo conversion: duration would be {potential_duration:.2f}s (too short, likely already mono)")
-        elif sample_rate != 48000 and sample_rate >= 16000 and original_length % 2 == 0 and original_length >= 4:
-            potential_mono_length = original_length // 2
-            potential_duration = potential_mono_length / sample_rate
-            if potential_duration >= 0.3:
-                try:
-                    stereo_reshaped = audio_data.reshape(-1, 2)
-                    audio_data = np.mean(stereo_reshaped, axis=1).astype(np.float32)
-                    print(f"[DEBUG] Converted stereo to mono: {original_length} samples -> {len(audio_data)} samples ({sample_rate}Hz stereo -> mono)")
-                except (ValueError, Exception) as e:
-                    pass
+        if channels >= 2 and original_length % 2 == 0 and original_length >= 4:
+            try:
+                stereo_reshaped = audio_data.reshape(-1, 2)
+                audio_data = np.mean(stereo_reshaped, axis=1).astype(np.float32)
+                print(
+                    f"[DEBUG] Converted interleaved stereo to mono: "
+                    f"{original_length} -> {len(audio_data)} samples"
+                )
+            except (ValueError, Exception):
+                pass
 
         # Ensure audio is still valid after conversion
         if len(audio_data) == 0:
@@ -355,6 +399,7 @@ class WhisperService:
             audio_data = np.ascontiguousarray(audio_data.astype(np.float32), dtype=np.float32)
 
             print(f"[DEBUG] Calling Whisper transcribe with {len(audio_data)} samples")
+            whisper_kwargs = self._build_whisper_kwargs(language)
 
             # Try direct transcription first (simpler, may work)
             # If that fails, fall back to file-based transcription
@@ -362,12 +407,7 @@ class WhisperService:
             try:
                 # Try direct transcription first
                 print(f"[DEBUG] Attempting direct transcription with {len(audio_data)} samples")
-                result = self.model.transcribe(
-                    audio_data,
-                    language=language,
-                    task="transcribe",
-                    fp16=False  # Use float32 for compatibility
-                )
+                result = self.model.transcribe(audio_data, **whisper_kwargs)
                 print(f"[DEBUG] Direct transcription succeeded")
             except (OSError, ValueError, RuntimeError) as direct_error:
                 # Direct transcription failed, try file-based approach
@@ -443,12 +483,7 @@ class WhisperService:
 
                     # Transcribe from file
                     try:
-                        result = self.model.transcribe(
-                            tmp_path,
-                            language=language,
-                            task="transcribe",
-                            fp16=False
-                        )
+                        result = self.model.transcribe(tmp_path, **whisper_kwargs)
                         print(f"[DEBUG] File-based transcription succeeded")
                     except Exception as transcribe_error:
                         import traceback
@@ -502,12 +537,7 @@ class WhisperService:
 
                 try:
                     # Try direct transcription as fallback
-                    result = self.model.transcribe(
-                        audio_data,
-                        language=language,
-                        task="transcribe",
-                        fp16=False
-                    )
+                    result = self.model.transcribe(audio_data, **whisper_kwargs)
                     print(f"[DEBUG] Direct transcription succeeded (fallback)")
                 except Exception as direct_error:
                     # Both methods failed
@@ -530,24 +560,11 @@ class WhisperService:
             detected_language = result.get("language", "unknown")
             segments = result.get("segments", [])
 
-            # Filter false positives
-            text_lower = text.lower().strip()
-            text_clean = text_lower.rstrip('.,!?;:')
-
-            high_confidence_false_positives = [
-                "thank you", "thanks", "thank you.",
-                "hello", "hi", "hey"
-            ]
-
-            if any(fp in text_clean for fp in high_confidence_false_positives):
-                return {
-                    "text": "",
-                    "language": detected_language,
-                    "segments": [],
-                    "confidence": 0.0,
-                    "rms_level": rms_level,
-                    "filtered": True
-                }
+            filtered = self._filter_transcription_text(
+                text, detected_language, segments, rms_level
+            )
+            if filtered is not None:
+                return filtered
 
             return {
                 "text": text,

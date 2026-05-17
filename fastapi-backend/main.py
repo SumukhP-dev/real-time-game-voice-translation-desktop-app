@@ -2,6 +2,14 @@
 FastAPI service for ML models (Whisper and Translation)
 """
 import sys
+
+if sys.platform == "win32":
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
+
 import asyncio
 import functools
 import threading
@@ -15,6 +23,8 @@ import io
 import json
 import subprocess
 from pathlib import Path
+from copy import deepcopy
+from app_paths import get_app_data_dir
 from whisper_service import WhisperService
 from translation_service import TranslationService
 from speaker_identification import get_service as get_speaker_service
@@ -41,8 +51,8 @@ app = FastAPI(title="CS:GO 2 Translation ML Service")
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict to  app
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,  # credentials + "*" is invalid CORS and breaks browser fetch
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -70,6 +80,7 @@ class AudioDevice(BaseModel):
     channels: int
     sample_rate: int
     is_input: bool
+    is_loopback: bool = False
 
 class AudioStartRequest(BaseModel):
     device_index: int
@@ -111,57 +122,46 @@ class OverlayShowResponse(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize services on startup"""
+    """Create services immediately; load heavy models in the background."""
     global whisper_service, translation_service
 
-    print("[STARTUP] ========================================", flush=True)
-    print("[STARTUP] Initializing ML Services...", flush=True)
-    print("[STARTUP] ========================================", flush=True)
+    print("[STARTUP] Initializing ML services (models load in background)...", flush=True)
+    whisper_service = WhisperService(model_name="base")
+    translation_service = TranslationService(
+        target_language="en",
+        model_type="local",
+        use_fallback=True,
+    )
+    print("[STARTUP] HTTP server ready; preloading models...", flush=True)
 
-    # Initialize Whisper service
-    print("[STARTUP] Creating WhisperService instance...", flush=True)
-    whisper_service = WhisperService(model_name="tiny")
-
-    # Pre-load the model (this may take time on first run)
-    print("[STARTUP] Loading Whisper model (may take 30-60 seconds if downloading)...", flush=True)
-    try:
+    async def preload_models():
         import time
-        load_start = time.time()
-        whisper_service.load_model()
-        load_time = time.time() - load_start
-        print(f"[STARTUP] OK Whisper model loaded successfully in {load_time:.2f} seconds", flush=True)
-    except Exception as e:
-        print(f"[STARTUP] ERROR loading Whisper model: {e}", flush=True)
-        import traceback
-        print("[STARTUP] Traceback:", flush=True)
-        traceback.print_exc()
-        print("[STARTUP] Model will be loaded on first transcription request", flush=True)
 
-    # Initialize Translation service
-    print("[STARTUP] Initializing Translation service...", flush=True)
-    try:
-        translation_service = TranslationService(
-            target_language="en",
-            model_type="local",
-            use_fallback=True
-        )
-        print("[STARTUP] OK Translation service initialized", flush=True)
-    except Exception as e:
-        print(f"[STARTUP] ERROR initializing Translation service: {e}", flush=True)
-        import traceback
-        traceback.print_exc()
+        try:
+            load_start = time.time()
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, whisper_service.load_model)
+            print(
+                f"[STARTUP] Whisper model loaded in {time.time() - load_start:.1f}s",
+                flush=True,
+            )
+        except Exception as e:
+            print(f"[STARTUP] Whisper preload failed (lazy load on use): {e}", flush=True)
 
-    print("[STARTUP] ========================================", flush=True)
-    print("[STARTUP] Startup complete", flush=True)
-    print("[STARTUP] ========================================", flush=True)
+    asyncio.create_task(preload_models())
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Health check endpoint — responds before models finish loading."""
+    whisper_loaded = bool(whisper_service and whisper_service.model_loaded)
+    translation_loaded = bool(
+        translation_service and translation_service._model_loaded
+    )
     return {
         "status": "healthy",
-        "whisper_loaded": whisper_service.model_loaded if whisper_service else False,
-        "translation_loaded": translation_service._model_loaded if translation_service else False
+        "ready": whisper_loaded,
+        "whisper_loaded": whisper_loaded,
+        "translation_loaded": translation_loaded,
     }
 
 def _audio_callback(indata, frames, time_info, status):
@@ -219,7 +219,7 @@ async def get_audio_devices():
         print(f"[AUDIO] Failed to list devices: {e}", flush=True)
     return [
         {"index": 0, "name": "Default Audio Device", "channels": 2, "sample_rate": 44100, "is_input": True},
-        {"index": 1, "name": "CABLE Input (VB-Audio Virtual Cable)", "channels": 2, "sample_rate": 48000, "is_input": True},
+        {"index": 1, "name": "Default Output", "channels": 2, "sample_rate": 48000, "is_input": True, "is_loopback": True},
         {"index": 2, "name": "Microphone", "channels": 1, "sample_rate": 48000, "is_input": True},
     ]
 
@@ -266,7 +266,7 @@ async def start_audio_capture(request: AudioStartRequest):
         except Exception as e:
             raise HTTPException(
                 status_code=503,
-                detail=f"Could not open WASAPI loopback capture: {e!s}",
+                detail=f"Could not open audio capture: {e!s}",
             )
 
         _capture_sample_rate = int(effective_rate)
@@ -346,11 +346,13 @@ async def stop_audio_capture():
     if _chunk_queue is not None:
         _chunk_queue.put(None)
     if _broadcast_task is not None:
-        try:
-            await _broadcast_task
-        except asyncio.CancelledError:
-            pass
+        task = _broadcast_task
         _broadcast_task = None
+        task.cancel()
+        try:
+            await asyncio.wait_for(task, timeout=2.0)
+        except (asyncio.CancelledError, asyncio.TimeoutError):
+            pass
     _chunk_queue = None
     print(f"[AUDIO] Stopped capture for device {device_index}", flush=True)
     return {"status": "success", "message": f"Audio capture stopped for device {device_index}"}
@@ -368,6 +370,29 @@ async def audio_stream_ws(websocket: WebSocket):
         pass
     finally:
         _ws_connections.discard(websocket)
+
+def _run_whisper_transcribe(
+    audio_array: np.ndarray,
+    sample_rate: int,
+    language: Optional[str],
+    min_audio_threshold: float,
+    model_name: str,
+    channels: int = 1,
+) -> dict:
+    """Run Whisper in a worker thread so the event loop stays responsive."""
+    global whisper_service
+    if whisper_service is None or whisper_service.model_name != model_name:
+        whisper_service = WhisperService(model_name=model_name)
+    if not whisper_service.model_loaded:
+        whisper_service.load_model()
+    return whisper_service.transcribe(
+        audio_array,
+        sample_rate=sample_rate,
+        language=language,
+        min_audio_threshold=min_audio_threshold,
+        channels=channels,
+    )
+
 
 @app.post("/transcribe", response_model=TranscribeResponse)
 async def transcribe_audio(
@@ -419,12 +444,17 @@ async def transcribe_audio(
             audio_array = np.frombuffer(audio_bytes, dtype=np.float32)
             sample_rate = 16000
 
-        # Transcribe
-        result = whisper_service.transcribe(
-            audio_array,
-            sample_rate=sample_rate,
-            language=language,
-            min_audio_threshold=min_audio_threshold
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None,
+            functools.partial(
+                _run_whisper_transcribe,
+                audio_array,
+                sample_rate,
+                language,
+                min_audio_threshold,
+                model_name,
+            ),
         )
 
         return TranscribeResponse(
@@ -444,7 +474,8 @@ async def transcribe_audio_bytes(
     sample_rate: int = Form(16000),
     model_name: str = Form("tiny"),
     language: Optional[str] = Form(None),
-        min_audio_threshold: float = Form(0.001)  # Lower default threshold
+    channels: int = Form(1),
+    min_audio_threshold: float = Form(0.001),
 ):
     """
     Transcribe raw audio bytes (float32 PCM)
@@ -517,20 +548,20 @@ async def transcribe_audio_bytes(
             start_time = time.time()
 
             # Ensure model is loaded before transcription
-            if not whisper_service.model_loaded:
-                print("[DEBUG] Model not loaded, loading now (this may take 10-30 seconds)...")
-                load_start = time.time()
-                whisper_service.load_model()
-                load_time = time.time() - load_start
-                print(f"[DEBUG] Model loaded in {load_time:.2f} seconds")
-
             print(f"[DEBUG] Starting transcription: {len(audio_array)} samples, {len(audio_array)/sample_rate:.3f}s, threshold={min_audio_threshold}")
             print(f"[DEBUG] Transcription start time: {time.strftime('%H:%M:%S')}")
-            result = whisper_service.transcribe(
-                audio_array,
-                sample_rate=sample_rate,
-                language=language,
-                min_audio_threshold=min_audio_threshold
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                functools.partial(
+                    _run_whisper_transcribe,
+                    audio_array,
+                    sample_rate,
+                    language,
+                    min_audio_threshold,
+                    model_name,
+                    channels,
+                ),
             )
             elapsed_time = time.time() - start_time
             print(f"[DEBUG] Transcription completed in {elapsed_time:.2f}s: text='{result.get('text', '')[:50]}...', language={result.get('language', 'unknown')}, rms={result.get('rms_level', 0.0):.6f}")
@@ -571,8 +602,9 @@ async def transcribe_audio_bytes(
             )
         except ValueError as ve:
             # ValueError from our validation - return 400
-            print(f"[ERROR] Validation error: {ve}")
-            raise HTTPException(status_code=400, detail=f"Validation error: {str(ve)}")
+            detail = str(ve).encode("ascii", "replace").decode("ascii")
+            print(f"[ERROR] Validation error: {detail}")
+            raise HTTPException(status_code=400, detail=f"Validation error: {detail}")
         except Exception as e:
             # Other errors - return 500 with full traceback
             import traceback
@@ -615,9 +647,14 @@ async def translate_text(request: TranslateRequest):
         elif translation_service.target_language != request.target_language:
             translation_service.set_target_language(request.target_language)
 
-        result = translation_service.translate(
-            request.text,
-            source_language=request.source_language
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None,
+            functools.partial(
+                translation_service.translate,
+                request.text,
+                request.source_language,
+            ),
         )
 
         # #region agent log
@@ -732,23 +769,23 @@ async def get_personalized_translation_api(context: str = Form(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Preference error: {str(e)}")
 
-# Config endpoints for Electron app
-@app.get("/config/get")
-async def get_config():
-    """Get current configuration"""
-    # Return a mock config since we don't have persistent storage
+_CONFIG_PATH = get_app_data_dir() / "config.json"
+_runtime_config: Optional[dict] = None
+
+
+def _default_config() -> dict:
     return {
         "audio": {
             "device_index": None,
             "chunk_size": 4096,
             "sample_rate": 16000,
-            "channels": 1
+            "channels": 1,
         },
         "whisper": {
-            "model": "tiny",
-            "language": None,
-            "min_buffer_duration": 1.0,
-            "min_transcription_interval": 2.0
+            "model": "base",
+            "language": "en",
+            "min_buffer_duration": 2.5,
+            "min_transcription_interval": 2.5,
         },
         "translation": {
             "target_language": "en",
@@ -760,13 +797,13 @@ async def get_config():
             "show_same_language": False,
             "ui_language": "en",
             "enable_overlay": True,
-            "enable_tts": False
+            "enable_tts": False,
         },
         "tts": {
             "enabled": False,
             "engine": "default",
             "rate": 1.0,
-            "volume": 1.0
+            "volume": 1.0,
         },
         "overlay": {
             "enabled": True,
@@ -778,26 +815,66 @@ async def get_config():
             "max_width": 800,
             "max_lines": 3,
             "fade_duration": 5.0,
-            "show_same_language": False
+            "show_same_language": False,
+            "style_preset": "minimal",
+            "position_preset": "bottom",
         },
         "ui": {
             "theme": "dark",
             "language": "en",
             "auto_start": False,
             "minimize_to_tray": True,
-            "show_notifications": True
+            "show_notifications": True,
         },
         "app": {
             "setup_complete": False,
-            "ui_language": "en"
-        }
+            "ui_language": "en",
+        },
     }
+
+
+def _merge_config(base: dict, override: dict) -> dict:
+    merged = deepcopy(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _merge_config(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def _load_config() -> dict:
+    global _runtime_config
+    if _runtime_config is not None:
+        return _runtime_config
+    defaults = _default_config()
+    if _CONFIG_PATH.exists():
+        try:
+            stored = json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
+            _runtime_config = _merge_config(defaults, stored)
+            return _runtime_config
+        except Exception as exc:
+            print(f"[CONFIG] Failed to load {_CONFIG_PATH}: {exc}", flush=True)
+    _runtime_config = defaults
+    return _runtime_config
+
+
+# Config endpoints for Electron app
+@app.get("/config/get")
+async def get_config():
+    """Get current configuration (persisted + defaults)."""
+    return _load_config()
+
 
 @app.post("/config/save")
 async def save_config(config: dict):
-    """Save configuration (mock implementation)"""
-    # In a real implementation, this would save to a file or database
-    print(f"[CONFIG] Received config: {config}")
+    """Persist configuration to disk."""
+    global _runtime_config
+    merged = _merge_config(_default_config(), config)
+    _runtime_config = merged
+    _CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _CONFIG_PATH.write_text(json.dumps(merged, indent=2), encoding="utf-8")
+    print(f"[CONFIG] Saved to {_CONFIG_PATH}", flush=True)
     return {"status": "success", "message": "Configuration saved"}
 
 if __name__ == "__main__":

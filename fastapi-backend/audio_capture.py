@@ -175,15 +175,15 @@ def list_capture_devices() -> List[dict]:
     mics = _soundcard_microphone_list()
     if mics:
         for i, mic in enumerate(mics):
-            tag = "WASAPI loopback" if getattr(mic, "isloopback", False) else "microphone"
             sample_rate = soundcard_preferred_samplerate(i, default_rate=48000)
             result.append(
                 {
                     "index": i,
-                    "name": f"{mic.name} ({tag})",
+                    "name": mic.name,
                     "channels": int(mic.channels),
                     "sample_rate": sample_rate,
                     "is_input": True,
+                    "is_loopback": bool(getattr(mic, "isloopback", False)),
                 }
             )
         return result
