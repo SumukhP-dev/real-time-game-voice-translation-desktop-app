@@ -97,15 +97,28 @@ def create_app_icon():
         resized = icon.resize(ico_size, Image.Resampling.LANCZOS)
         icon_images.append(resized)
 
-    # Save ICO file
-    icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app_icon.ico')
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    electron_build = os.path.join(root_dir, 'electron-app', 'build')
+    os.makedirs(electron_build, exist_ok=True)
+
+    # Save ICO file (repo root + electron-builder resources)
+    icon_path = os.path.join(root_dir, 'app_icon.ico')
     icon.save(icon_path, format='ICO', sizes=[(s[0], s[1]) for s in icon_sizes])
     print(f"✓ Icon created: {icon_path}")
 
-    # Also save as PNG for reference
-    png_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app_icon.png')
+    electron_ico = os.path.join(electron_build, 'icon.ico')
+    icon.save(electron_ico, format='ICO', sizes=[(s[0], s[1]) for s in icon_sizes])
+    print(f"✓ Electron build icon: {electron_ico}")
+
+    # Also save as PNG for reference and in-app window icon
+    png_path = os.path.join(root_dir, 'app_icon.png')
     icon.save(png_path, format='PNG')
     print(f"✓ PNG version created: {png_path}")
+
+    electron_png = os.path.join(root_dir, 'electron-app', 'app_icon.png')
+    icon.save(electron_png, format='PNG')
+    icon.save(os.path.join(electron_build, 'icon.png'), format='PNG')
+    print(f"✓ Electron app icon: {electron_png}")
 
     return icon_path
 

@@ -37,6 +37,35 @@ def _log(msg):
     except Exception:
         pass
 
+def free_port(port: int) -> None:
+    """Stop processes listening on a TCP port (Windows best-effort)."""
+    if sys.platform != "win32":
+        return
+    try:
+        result = subprocess.run(
+            ["netstat", "-ano"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        pids = set()
+        needle = f":{port} "
+        for line in result.stdout.splitlines():
+            if "LISTENING" in line and needle in line:
+                parts = line.split()
+                if parts and parts[-1].isdigit():
+                    pids.add(parts[-1])
+        for pid in pids:
+            subprocess.run(
+                ["taskkill", "/F", "/PID", pid],
+                capture_output=True,
+                check=False,
+            )
+            _log(f"[CLEANUP] Freed port {port} (stopped PID {pid})")
+    except Exception as exc:
+        _log(f"[WARN] Could not free port {port}: {exc}")
+
+
 def cleanup_processes():
     """Clean up background processes on exit"""
     _log("[CLEANUP] Terminating background processes...")
@@ -214,11 +243,8 @@ def start_electron_app(react_port=None):
     global electron_process
     electron_process = subprocess.Popen(
         [npm_path, 'start'],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
         env=env,
-        cwd=ELECTRON_DIR
+        cwd=ELECTRON_DIR,
     )
 
     _log(f"[ELECTRON] Electron app started with PID: {electron_process.pid}")
@@ -240,6 +266,11 @@ def main():
     if not check_dependencies():
         _log("[ERROR] Dependency check failed")
         sys.exit(1)
+
+    _log("[CLEANUP] Freeing ports 3010 and 8000 from previous runs...")
+    free_port(3010)
+    free_port(8000)
+    time.sleep(1)
 
     try:
         # Start React dev server (returns port or None)

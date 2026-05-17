@@ -45,49 +45,45 @@ def check_build_dependencies():
 
     return True
 
-def prepare_ml_service():
+def build_ml_service_exe():
+    """Bundle FastAPI backend as ml-service.exe for electron-builder extraResources."""
+    print("[BUILD] Bundling ML service (PyInstaller)...")
 
-    """Prepare ML service for bundling"""
-    print("[PREP] Preparing ML service...")
+    try:
+        import PyInstaller  # noqa: F401
+    except ImportError:
+        print("[BUILD] Installing PyInstaller...")
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "pyinstaller>=6.0.0"],
+            check=False,
+        )
+        if result.returncode != 0:
+            print("[ERROR] Failed to install PyInstaller")
+            return False
 
-    # Change to ML service directory
     os.chdir(ML_SERVICE_DIR)
-
-    # Install Python dependencies
-    print("[PREP] Installing Python dependencies...")
-    result = subprocess.run([
-        sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt',
-        '--target', 'python_deps'
-    ])
-    if result.returncode != 0:
-        print("[ERROR] Failed to install Python dependencies")
+    spec_path = ML_SERVICE_DIR / "ml-service.spec"
+    if not spec_path.exists():
+        print(f"[ERROR] Missing {spec_path}")
         return False
 
-    # Create startup script for bundled version
-    startup_script = ML_SERVICE_DIR / "start_bundled.py"
-    with open(startup_script, 'w') as f:
-        f.write('''#!/usr/bin/env python3
-"""
-Bundled ML service startup script
-"""
-import sys
-import os
-from pathlib import Path
+    result = subprocess.run(
+        [sys.executable, "-m", "PyInstaller", str(spec_path), "--clean", "--noconfirm"],
+        check=False,
+    )
+    if result.returncode != 0:
+        print("[ERROR] PyInstaller failed for ML service")
+        return False
 
-# Add bundled dependencies to path
-current_dir = Path(__file__).parent
-deps_dir = current_dir / "python_deps"
-if deps_dir.exists():
-    sys.path.insert(0, str(deps_dir))
+    exe_path = ML_SERVICE_DIR / "dist" / "ml-service" / "ml-service.exe"
+    if not exe_path.exists():
+        print(f"[ERROR] Expected executable not found: {exe_path}")
+        return False
 
-# Start the service
-if __name__ == "__main__":
-    import uvicorn
-    from main import app
-    uvicorn.run(app, host="127.0.0.1", port=8000)
-''')
-
-    print("[PREP] ML service prepared")
+    folder_mb = sum(
+        f.stat().st_size for f in (ML_SERVICE_DIR / "dist" / "ml-service").rglob("*") if f.is_file()
+    ) / (1024 * 1024)
+    print(f"[BUILD] ML service bundle ready ({folder_mb:.1f} MB): {exe_path}")
     return True
 
 def build_react_app():
@@ -132,9 +128,11 @@ def build_electron_app():
             print("[ERROR] npm install failed")
             return False
 
-    # Build the Electron app
+    # Build the Electron app (skip code signing — avoids Windows symlink errors)
     print("[BUILD] Building Electron application...")
-    result = subprocess.run(['npm', 'run', 'dist'])
+    env = os.environ.copy()
+    env["CSC_IDENTITY_AUTO_DISCOVERY"] = "false"
+    result = subprocess.run(['npm', 'run', 'dist'], env=env)
     if result.returncode != 0:
         print("[ERROR] Electron build failed")
         return False
@@ -190,9 +188,9 @@ def main():
         print("[ERROR] Build dependency check failed")
         sys.exit(1)
 
-    # Prepare ML service
-    if not prepare_ml_service():
-        print("[ERROR] Failed to prepare ML service")
+    # Bundle ML service for packaged Electron app
+    if not build_ml_service_exe():
+        print("[ERROR] Failed to bundle ML service")
         sys.exit(1)
 
     # Build React application
