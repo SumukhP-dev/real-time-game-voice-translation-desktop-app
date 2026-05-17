@@ -27,7 +27,7 @@ This software is available for purchase at:
 - **Live Translation**: Translates speech to your preferred language using local AI models (works offline, no API keys needed)
 - **On-Screen Subtitles**: Displays translated text as customizable subtitles overlay
 - **Text-to-Speech**: Optional audio playback of translations
-- **Virtual Microphone Output**: Routes translated voice to VB-Audio Cable for game compatibility
+- **Virtual Microphone Output**: Routes translated voice to a virtual microphone for game compatibility (optional)
 - **Smart Language Detection**: Automatically detects teammate languages and adjusts your translation target
 - **Low Latency**: Optimized for real-time performance with minimal delay (<1 second with local models)
 - **Multiple Language Support**: Translate to/from 15+ languages (including Polish, Ukrainian, Portuguese, Turkish based on gaming playerbase)
@@ -70,15 +70,14 @@ See [Installation Guide](docs/INSTALLATION.md) for detailed instructions.
 
 ### 2. Audio Setup
 
-**Recommended: VB-Audio Virtual Cable**
+**Windows (recommended): WASAPI loopback**
 
-1. Download and install [VB-Audio Virtual Cable](https://vb-audio.com/Cable/) (FREE)
-2. Restart your computer
-3. Set "CABLE Input" as default playback device in Windows Sound settings
-4. Enable "Listen to this device" on "CABLE Output" (select your headphones)
-5. In the app, click "Auto-Configure" or select "Game Audio (Recommended)"
+1. Launch the app and open **Audio Settings**
+2. Select your **headphones or speakers** (listed with **WASAPI loopback**)
+3. Click **Start Capture**
+4. Play game or system audio — status logs should show non-zero audio levels
 
-See [Audio Setup Guide](docs/VB_AUDIO_SETUP_GUIDE.md) for detailed instructions.
+No virtual audio cable is required. See [Audio Device Guide](docs/AUDIO_DEVICE_GUIDE.md) for details.
 
 ### 3. Start Translating
 
@@ -149,76 +148,30 @@ The application consists of:
 Comprehensive documentation is available in the `docs/` folder:
 
 - **[Installation Guide](docs/INSTALLATION.md)** - Detailed installation instructions
-- **[Audio Setup Guide](docs/VB_AUDIO_SETUP_GUIDE.md)** - Complete audio configuration guide
+- **[Audio Device Guide](docs/AUDIO_DEVICE_GUIDE.md)** - WASAPI loopback and device selection
 - **[Troubleshooting](docs/SOLUTIONS.md)** - Common issues and solutions
 - **[Quick Start Guide](docs/QUICKSTART.md)** - 5-minute quick start
 
 ## Support
 
-- **Support Email**: 1-9438889487_112@zohomail.com
+- **Support Email**: gaminglivevoicetranslationmod@gmail.com
 - **Documentation**: Check the `docs/` folder
 - **FAQ**: See [Troubleshooting Guide](docs/SOLUTIONS.md)
 
 ## Audio Device Setup
 
-### For System Audio Capture (Game Audio):
+### For system / game audio capture (Windows)
 
-**⚠ IMPORTANT:** To capture game/system audio (not microphone), you need a virtual audio device.
+The app uses **WASAPI loopback** to capture what plays through your chosen output device (headphones, speakers, headset) without changing your Windows default device.
 
-**Windows:**
+1. Open **Audio Settings** in the app
+2. Pick a device named like `Your Headphones (WASAPI loopback)`
+3. Click **Start Capture**
+4. Play game voice chat or any audio and confirm RMS levels in the status log
 
-**Option 1: VB-Audio Virtual Cable (RECOMMENDED - Most Reliable)**
+**Optional fallback: Stereo Mix**
 
-**Complete Setup Steps:**
-
-1. **Download and Install:**
-
-   - Download: https://vb-audio.com/Cable/ (FREE)
-   - Install VB-Audio Virtual Cable
-   - **Restart your computer** (required!)
-
-2. **Configure Windows Audio:**
-
-   **A. Set CABLE Input as Default Playback Device:**
-
-   - Right-click speaker icon → "Sounds"
-   - Go to "Playback" tab
-   - Find "CABLE Input (VB-Audio Virtual Cable)"
-   - Right-click → "Set as Default Device"
-   - ✅ Should have green checkmark
-
-   **B. Enable "Listen to this device" (to hear audio through headphones):**
-
-   - In same "Sounds" window, go to "Recording" tab
-   - Find "CABLE Output (VB-Audio Virtual Cable)"
-   - Right-click → "Properties"
-   - Go to "Listen" tab
-   - ✅ Check "Listen to this device"
-   - In dropdown, select your headphones (e.g., "Headphones (Bose QC Headphones)")
-   - Click "Apply" then "OK"
-
-3. **Configure Translation App:**
-
-   - Run: `python main_tkinter.py`
-   - Click "Select Stereo Mix" button (auto-selects CABLE Output)
-   - Or manually select "CABLE Output" from audio device dropdown
-   - Click "Start Translation"
-
-4. **Test:**
-   - Play a YouTube video or any audio
-   - You should hear it through headphones (via "Listen to this device")
-   - The app should capture and transcribe it
-
-**See `docs/VB_AUDIO_SETUP_GUIDE.md` for complete step-by-step instructions**
-
-**Option 2: Stereo Mix (May Not Work)**
-
-1. Right-click speaker icon in system tray
-2. Select "Sounds" → "Recording" tab
-3. Right-click in empty space → "Show Disabled Devices"
-4. Enable "Stereo Mix"
-5. In the app, click "Select Stereo Mix" button
-6. **Note:** Many systems have Stereo Mix on WDM-KS drivers which cannot be accessed. If you get errors, use VB-Audio Virtual Cable instead.
+If no loopback device appears, enable **Stereo Mix** in Windows Sound → Recording → Show disabled devices, then select it in the app. See [Audio Device Guide](docs/AUDIO_DEVICE_GUIDE.md).
 
 ### For Microphone Input (Testing Only):
 
@@ -229,16 +182,11 @@ Comprehensive documentation is available in the `docs/` folder:
 
 ### No audio captured / Getting static
 
-- **Click "Check System Audio" button** in the app for diagnostics
-- **Verify CABLE Input is set as Default Playback Device:**
-  - Windows Sound → Playback tab → CABLE Input should have green checkmark
-- **Check "Listen to this device" is enabled:**
-  - Windows Sound → Recording tab → CABLE Output → Properties → Listen tab
-  - Should be checked with headphones selected
+- Confirm the correct **WASAPI loopback** device is selected (your headphones/speakers)
+- Ensure **Start Capture** is active and the ML service is running
 - Verify audio is actually playing (check system volume)
-- Run `python diagnose_audio_routing.py` to test audio levels
-- If using Stereo Mix and getting errors, install VB-Audio Virtual Cable instead
-- See `docs/VB_AUDIO_SETUP_GUIDE.md` and `docs/FIX_AUDIO_ROUTING.md` for troubleshooting
+- Check status logs for RMS=0 warnings
+- See `docs/AUDIO_DEVICE_GUIDE.md` and `docs/FIX_AUDIO_ROUTING.md` for troubleshooting
 
 ### Translation not working
 
@@ -267,7 +215,7 @@ Comprehensive documentation is available in the `docs/` folder:
 
 ## Limitations
 
-- **Windows**: System audio capture requires WASAPI or virtual audio cable (VB-Audio Virtual Cable recommended)
+- **Windows**: System audio capture uses WASAPI loopback (Stereo Mix optional fallback)
 - Real-time processing may have <1 second delay with local models (faster than API)
 - Translation model download required on first run (~500MB-1GB, one-time download)
 - Whisper model download required on first run (~75MB for tiny model)
@@ -297,7 +245,7 @@ This is commercial software distributed through itch.io.
 
 See the `docs/` folder for detailed guides:
 
-- `VB_AUDIO_SETUP_GUIDE.md` - Complete VB-Audio Virtual Cable setup
+- `AUDIO_DEVICE_GUIDE.md` - WASAPI loopback and device selection
 - `FIX_AUDIO_ROUTING.md` - Troubleshooting audio routing issues
 - `AUDIO_RECORDING_GUIDE.md` - Using the audio recording feature
 - `QUICKSTART.md` - Quick start guide
@@ -309,4 +257,4 @@ See the `docs/` folder for detailed guides:
 - EasyNMT and Opus-MT models for local translation (offline, no API keys)
 - PyQt6 for GUI and overlay
 - PyAudio and sounddevice for audio capture
-- VB-Audio Virtual Cable for system audio routing
+- WASAPI loopback for system audio capture on Windows
