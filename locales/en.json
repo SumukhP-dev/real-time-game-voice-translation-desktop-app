@@ -62,7 +62,7 @@
     "translation_language_set": "Translation language set to: {language}",
     "voice_translation_enabled": "Voice translation enabled. Virtual mic: {device}",
     "voice_translation_disabled": "Voice translation disabled",
-    "vb_audio_not_found": "VB-Audio Cable Input not found. Voice translation may not work."
+    "vb_audio_not_found": "WASAPI loopback device not found. Voice translation may not work."
   },
   "setup_wizard": {
     "title": "Welcome - Setup Wizard",
@@ -94,14 +94,14 @@
     "exit_setup": "Exit Setup",
     "exit_confirm": "Are you sure you want to exit the setup wizard?",
     "already_installed": "Already Installed",
-    "already_installed_message": "VB-Audio Virtual Cable is already installed on your system.",
+    "already_installed_message": "WASAPI loopback capture is already installed on your system.",
     "installer_launched": "Installer Launched",
     "installer_launched_message": "The installer has been launched. Please follow the installation prompts, then click 'Refresh Status' when done.",
     "installation_error": "Installation Error",
     "installation_timeout": "Installation Timeout",
-    "installation_timeout_message": "The installation took too long. Please install VB-Audio Virtual Cable manually.",
+    "installation_timeout_message": "The installation took too long. Please install WASAPI loopback capture manually.",
     "macos_installer": "macOS Installer",
-    "macos_installer_message": "Please download and install VB-Audio Virtual Cable manually. After installation, click 'Refresh Status'.",
+    "macos_installer_message": "Please download and install WASAPI loopback capture manually. After installation, click 'Refresh Status'.",
     "no_audio_devices": "No Audio Devices",
     "no_audio_devices_message": "No audio devices found. Please check your audio setup and try again."
   },
@@ -152,7 +152,7 @@
   "messages": {
     "info": {
       "already_installed": "Already Installed",
-      "already_installed_message": "VB-Audio Virtual Cable is already installed on your system.",
+      "already_installed_message": "WASAPI loopback capture is already installed on your system.",
       "installer_launched": "Installer Launched",
       "installer_launched_message": "The installer has been launched. Please follow the installation prompts, then click 'Refresh Status' when done.",
       "audio_configured": "Audio Configured",
@@ -171,9 +171,9 @@
     "error": {
       "generic": "Error",
       "installation_error": "Installation Error",
-      "installation_error_message": "Failed to launch installer. Please install VB-Audio Virtual Cable manually.",
+      "installation_error_message": "Failed to launch installer. Please install WASAPI loopback capture manually.",
       "installation_timeout": "Installation Timeout",
-      "installation_timeout_message": "The installation took too long. Please install VB-Audio Virtual Cable manually.",
+      "installation_timeout_message": "The installation took too long. Please install WASAPI loopback capture manually.",
       "no_microphone": "No Microphone",
       "no_microphone_message": "No microphone found. Please connect a microphone and try again.",
       "microphone_error": "Error",
@@ -183,7 +183,7 @@
     },
     "question": {
       "macos_installer": "macOS Installer",
-      "macos_installer_message": "Please download and install VB-Audio Virtual Cable manually. After installation, click 'Refresh Status'.",
+      "macos_installer_message": "Please download and install WASAPI loopback capture manually. After installation, click 'Refresh Status'.",
       "exit_setup": "Exit Setup",
       "exit_setup_message": "Are you sure you want to exit the setup wizard?"
     }
@@ -218,15 +218,15 @@
     "title": "About",
     "app_name": "Real-Time Game Voice Translation",
     "version": "Version {version}",
-    "description": "Real-time voice translation for competitive gaming.\n\nWorks with CS:GO 2, Valorant, Apex Legends, Dota 2, and other multiplayer games.\n\nFeatures:\n• Real-time speech recognition using OpenAI Whisper\n• Automatic language detection\n• Live translation to your preferred language\n• On-screen subtitle overlay\n• Text-to-speech playback\n\nCredits:\n• OpenAI Whisper - Speech recognition\n• Google Translate - Translation services\n• PyQt6 - GUI framework\n• VB-Audio Virtual Cable - Audio routing"
+    "description": "Real-time voice translation for competitive gaming.\n\nWorks with CS:GO 2, Valorant, Apex Legends, Dota 2, and other multiplayer games.\n\nFeatures:\n• Real-time speech recognition using OpenAI Whisper\n• Automatic language detection\n• Live translation to your preferred language\n• On-screen subtitle overlay\n• Text-to-speech playback\n\nCredits:\n• OpenAI Whisper - Speech recognition\n• Google Translate - Translation services\n• PyQt6 - GUI framework\n• WASAPI loopback capture - Audio routing"
   },
   "help": {
     "title": "Real-Time Game Voice Translation - Help",
     "quick_start": "QUICK START:\n1. Click 'Auto-Configure' to set up audio\n2. Click 'Start Translation' to begin\n3. Play your game - translations will appear as subtitles!\n\nAUDIO SETUP:\n• Game Audio (Recommended) - Best for capturing game voice chat\n• System Audio - Captures all computer audio\n• Voice Input - Only captures microphone (not recommended for games)\n\nSETTINGS:\n• Translation Language - Choose what language to translate TO\n• Show Subtitles - Display translations on screen\n• Subtitle Size - Adjust subtitle text size\n• Speak Translations - Play translations as speech (disabled for game audio)",
     "run_setup_wizard": "Run Setup Wizard",
-    "voice_translation_help_text": "Voice Translation allows you to translate your own voice to teammates in real-time.\n\nHow it works:\n1. Your microphone captures your speech\n2. It's transcribed and translated to the target language\n3. The translated speech is routed to a virtual microphone\n4. Your game sees it as microphone input\n\nSetup:\n- Install VB-Audio Virtual Cable (free)\n- In your game, select 'CABLE Output' as your microphone\n- Enable voice translation and start playing!\n\nTarget Language Modes:\n- Auto-detect: Automatically uses the most common teammate language\n- Configurable: Manually select target language\n- Same as teammates: Uses your main translation target language",
+    "voice_translation_help_text": "Voice Translation allows you to translate your own voice to teammates in real-time.\n\nHow it works:\n1. Your microphone captures your speech\n2. It's transcribed and translated to the target language\n3. The translated speech is routed to a virtual microphone\n4. Your game uses that device as microphone input\n\nSetup:\n- Enable voice translation in settings\n- Select the virtual microphone device in your game's voice chat settings\n\nTarget Language Modes:\n- Auto-detect: Automatically uses the most common teammate language\n- Configurable: Manually select target language\n- Same as teammates: Uses your main translation target language",
     "voice_translation_setup_guide": "Voice Translation Setup Guide",
-    "download_vb_audio": "Download VB-Audio"
+    "download_vb_audio": "Audio setup help"
   },
   "log": {
     "starting": "Starting translation...",

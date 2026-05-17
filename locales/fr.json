@@ -55,7 +55,7 @@
     "translation_language_set": "Langue de traduction définie sur: {language}",
     "voice_translation_enabled": "Traduction vocale activée. Micro virtuel: {device}",
     "voice_translation_disabled": "Traduction vocale désactivée",
-    "vb_audio_not_found": "VB-Audio Cable Input introuvable. La traduction vocale peut ne pas fonctionner."
+    "vb_audio_not_found": "WASAPI loopback device introuvable. La traduction vocale peut ne pas fonctionner."
   },
   "setup_wizard": {
     "title": "Bienvenue - Assistant de Configuration",
@@ -87,14 +87,14 @@
     "exit_setup": "Quitter la Configuration",
     "exit_confirm": "Êtes-vous sûr de vouloir quitter l'assistant de configuration?",
     "already_installed": "Déjà Installé",
-    "already_installed_message": "VB-Audio Virtual Cable est déjà installé sur votre système.",
+    "already_installed_message": "WASAPI loopback capture est déjà installé sur votre système.",
     "installer_launched": "Installateur Lancé",
     "installer_launched_message": "L'installateur a été lancé. Veuillez suivre les invites d'installation, puis cliquez sur 'Actualiser le Statut' une fois terminé.",
     "installation_error": "Erreur d'Installation",
     "installation_timeout": "Délai d'Attente d'Installation",
-    "installation_timeout_message": "L'installation a pris trop de temps. Veuillez installer VB-Audio Virtual Cable manuellement.",
+    "installation_timeout_message": "L'installation a pris trop de temps. Veuillez installer WASAPI loopback capture manuellement.",
     "macos_installer": "Installateur macOS",
-    "macos_installer_message": "Veuillez télécharger et installer VB-Audio Virtual Cable manuellement. Après l'installation, cliquez sur 'Actualiser le Statut'.",
+    "macos_installer_message": "Veuillez télécharger et installer WASAPI loopback capture manuellement. Après l'installation, cliquez sur 'Actualiser le Statut'.",
     "no_audio_devices": "Aucun Dispositif Audio",
     "no_audio_devices_message": "Aucun dispositif audio trouvé. Veuillez vérifier votre configuration audio et réessayer."
   },
@@ -145,7 +145,7 @@
   "messages": {
     "info": {
       "already_installed": "Déjà Installé",
-      "already_installed_message": "VB-Audio Virtual Cable est déjà installé sur votre système.",
+      "already_installed_message": "WASAPI loopback capture est déjà installé sur votre système.",
       "installer_launched": "Installateur Lancé",
       "installer_launched_message": "L'installateur a été lancé. Veuillez suivre les invites d'installation, puis cliquez sur 'Actualiser le Statut' une fois terminé.",
       "audio_configured": "Audio Configuré",
@@ -164,9 +164,9 @@
     "error": {
       "generic": "Erreur",
       "installation_error": "Erreur d'Installation",
-      "installation_error_message": "Échec du lancement de l'installateur. Veuillez installer VB-Audio Virtual Cable manuellement.",
+      "installation_error_message": "Échec du lancement de l'installateur. Veuillez installer WASAPI loopback capture manuellement.",
       "installation_timeout": "Délai d'Attente d'Installation",
-      "installation_timeout_message": "L'installation a pris trop de temps. Veuillez installer VB-Audio Virtual Cable manuellement.",
+      "installation_timeout_message": "L'installation a pris trop de temps. Veuillez installer WASAPI loopback capture manuellement.",
       "no_microphone": "Aucun Microphone",
       "no_microphone_message": "Aucun microphone trouvé. Veuillez connecter un microphone et réessayer.",
       "microphone_error": "Erreur",
@@ -176,7 +176,7 @@
     },
     "question": {
       "macos_installer": "Installateur macOS",
-      "macos_installer_message": "Veuillez télécharger et installer VB-Audio Virtual Cable manuellement. Après l'installation, cliquez sur 'Actualiser le Statut'.",
+      "macos_installer_message": "Veuillez télécharger et installer WASAPI loopback capture manuellement. Après l'installation, cliquez sur 'Actualiser le Statut'.",
       "exit_setup": "Quitter la Configuration",
       "exit_setup_message": "Êtes-vous sûr de vouloir quitter l'assistant de configuration?"
     }
@@ -210,15 +210,15 @@
     "title": "À propos",
     "app_name": "Traduction Vocale de Jeu en Temps Réel",
     "version": "Version {version}",
-    "description": "Traduction vocale en temps réel pour les jeux compétitifs.\n\nFonctionne avec CS:GO 2, Valorant, Apex Legends, Dota 2 et d'autres jeux multijoueurs.\n\nFonctionnalités:\n• Reconnaissance vocale en temps réel utilisant OpenAI Whisper\n• Détection automatique de la langue\n• Traduction en direct vers votre langue préférée\n• Superposition de sous-titres à l'écran\n• Lecture de synthèse vocale\n\nCrédits:\n• OpenAI Whisper - Reconnaissance vocale\n• Google Translate - Services de traduction\n• PyQt6 - Framework d'interface graphique\n• VB-Audio Virtual Cable - Routage audio"
+    "description": "Traduction vocale en temps réel pour les jeux compétitifs.\n\nFonctionne avec CS:GO 2, Valorant, Apex Legends, Dota 2 et d'autres jeux multijoueurs.\n\nFonctionnalités:\n• Reconnaissance vocale en temps réel utilisant OpenAI Whisper\n• Détection automatique de la langue\n• Traduction en direct vers votre langue préférée\n• Superposition de sous-titres à l'écran\n• Lecture de synthèse vocale\n\nCrédits:\n• OpenAI Whisper - Reconnaissance vocale\n• Google Translate - Services de traduction\n• PyQt6 - Framework d'interface graphique\n• WASAPI loopback capture - Routage audio"
   },
   "help": {
     "title": "Traduction Vocale de Jeu en Temps Réel - Aide",
     "quick_start": "DÉMARRAGE RAPIDE:\n1. Cliquez sur 'Auto-Configurer' pour configurer l'audio\n2. Cliquez sur 'Démarrer la Traduction' pour commencer\n3. Jouez à votre jeu - les traductions apparaîtront sous forme de sous-titres!\n\nCONFIGURATION AUDIO:\n• Audio du Jeu (Recommandé) - Meilleur pour capturer le chat vocal du jeu\n• Audio du Système - Capture tout l'audio de l'ordinateur\n• Entrée Vocale - Capture uniquement le microphone (non recommandé pour les jeux)\n\nPARAMÈTRES:\n• Langue de Traduction - Choisissez la langue vers laquelle traduire\n• Afficher les Sous-titres - Afficher les traductions à l'écran\n• Taille des Sous-titres - Ajuster la taille du texte des sous-titres\n• Lire les Traductions - Lire les traductions comme voix (désactivé pour l'audio du jeu)",
     "run_setup_wizard": "Exécuter l'Assistant de Configuration",
-    "voice_translation_help_text": "La Traduction Vocale vous permet de traduire votre propre voix vers vos coéquipiers en temps réel.\n\nComment ça fonctionne:\n1. Votre microphone capture votre voix\n2. Elle est transcrite et traduite vers la langue cible\n3. La voix traduite est routée vers un microphone virtuel\n4. Votre jeu la voit comme entrée de microphone\n\nConfiguration:\n- Installez VB-Audio Virtual Cable (gratuit)\n- Dans votre jeu, sélectionnez 'CABLE Output' comme votre microphone\n- Activez la traduction vocale et commencez à jouer!\n\nModes de Langue Cible:\n- Détection automatique: Utilise automatiquement la langue la plus courante des coéquipiers\n- Configurable: Sélectionnez manuellement la langue cible\n- Identique aux coéquipiers: Utilise votre langue cible de traduction principale",
+    "voice_translation_help_text": "La Traduction Vocale vous permet de traduire votre propre voix vers vos coéquipiers en temps réel.\n\nComment ça fonctionne:\n1. Votre microphone capture votre voix\n2. Elle est transcrite et traduite vers la langue cible\n3. La voix traduite est routée vers un microphone virtuel\n4. Votre jeu la voit comme entrée de microphone\n\nConfiguration:\n- Installez WASAPI loopback capture (gratuit)\n- Dans votre jeu, sélectionnez 'virtual microphone' comme votre microphone\n- Activez la traduction vocale et commencez à jouer!\n\nModes de Langue Cible:\n- Détection automatique: Utilise automatiquement la langue la plus courante des coéquipiers\n- Configurable: Sélectionnez manuellement la langue cible\n- Identique aux coéquipiers: Utilise votre langue cible de traduction principale",
     "voice_translation_setup_guide": "Guide de Configuration de Traduction Vocale",
-    "download_vb_audio": "Télécharger VB-Audio"
+    "download_vb_audio": "Télécharger WASAPI"
   },
   "log": {
     "starting": "Démarrage de la traduction...",
