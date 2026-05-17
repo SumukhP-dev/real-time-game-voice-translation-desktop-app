@@ -37,7 +37,7 @@ Works with CS:GO 2, Valorant, Apex Legends, Dota 2, and other competitive multip
 ✓ **15+ Language Support** - Translate to English, Russian, Spanish, German, French, Portuguese, Polish, Turkish, Chinese, Japanese, Korean, Ukrainian, Italian, Arabic, Hindi (optimized for CS:GO 2, Valorant, Apex Legends playerbase)
 ✓ **Auto Language Detection** - Automatically detects source language and adjusts your translation target
 ✓ **Smart Language Tracking** - Automatically detects teammate languages and translates your voice accordingly
-✓ **Virtual Microphone Output** - Routes translated voice to VB-Audio Cable for seamless game integration
+✓ **Virtual Microphone Output** - Routes translated voice to WASAPI loopback for seamless game integration
 ✓ **Offline Translation** - Works without internet connection (no API keys needed)
 ✓ **Customizable Subtitles** - Adjust size, position, and appearance
 ✓ **Easy Setup** - Auto-configuration wizard gets you started in minutes
@@ -82,11 +82,11 @@ Works with CS:GO 2, Valorant, Apex Legends, Dota 2, and other competitive multip
 
 ### Setup
 
-The software requires VB-Audio Virtual Cable (free) for game audio capture. Complete setup instructions are included in the documentation.
+The software requires WASAPI loopback (free) for game audio capture. Complete setup instructions are included in the documentation.
 
 ### Support
 
-- **Email Support**: 1-9438889487_112@zohomail.com
+- **Email Support**: gaminglivevoicetranslationmod@gmail.com
 - **Documentation**: Comprehensive guides included
 - **Troubleshooting**: Step-by-step solutions provided
 
@@ -107,7 +107,7 @@ The software requires VB-Audio Virtual Cable (free) for game audio capture. Comp
 A: Yes! Works with CS:GO 2, Valorant, Apex Legends, Dota 2, and other competitive multiplayer games that use voice chat.
 
 **Q: Do I need to install anything else?**
-A: Yes, VB-Audio Virtual Cable (free) is required. Setup instructions included.
+A: Yes, WASAPI loopback (free) is required. Setup instructions included.
 
 **Q: Can I use this on multiple computers?**
 A: Each license is for one computer. Additional licenses available.

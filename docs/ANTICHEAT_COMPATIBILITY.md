@@ -80,7 +80,7 @@ If you experience any issues with anti-cheat systems, please contact support imm
 If you encounter any anti-cheat warnings or bans:
 
 1. **DO NOT** panic - this is extremely unlikely
-2. Contact our support: 1-9438889487_112@zohomail.com
+2. Contact our support: gaminglivevoicetranslationmod@gmail.com
 3. Provide:
    - Game name
    - Anti-cheat system
@@ -132,7 +132,7 @@ A: Yes. The application is safe to use in all game modes, including competitive.
 
 For questions or concerns about anti-cheat compatibility:
 
-- **Email**: 1-9438889487_112@zohomail.com
+- **Email**: gaminglivevoicetranslationmod@gmail.com
 - **Documentation**: See `docs/` folder
 - **Privacy Dashboard**: Check anti-cheat status in the application
 

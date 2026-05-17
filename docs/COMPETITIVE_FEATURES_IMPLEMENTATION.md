@@ -6,11 +6,11 @@ This document describes the competitive gaming features implemented to improve t
 
 ## Implemented Features
 
-### 1. Enhanced Auto-Configuration for VB-Audio ✅
+### 1. Enhanced Auto-Configuration for WASAPI ✅
 
 **File**: `src/utils/auto_config_audio.py`
 
-- Automatically detects VB-Audio Virtual Cable installation
+- Automatically detects WASAPI loopback installation
 - Attempts to configure Windows audio settings programmatically
 - Falls back to manual instructions if automatic configuration fails
 - Opens Windows Sound Settings for easy manual configuration
@@ -128,7 +128,7 @@ benchmark.stop_monitoring()
 
 **Integration**: `src/ui/setup_wizard.py` (already had auto-configuration)
 
-- Auto-detects VB-Audio installation
+- Auto-detects WASAPI installation
 - Auto-configures audio settings when possible
 - Provides clear instructions for manual setup
 - Refreshes status automatically
@@ -216,7 +216,7 @@ Game presets are automatically applied when a game is detected. No manual config
 
 1. **Official Anti-Cheat Certification**: Apply for whitelisting with VAC, EAC, BattlEye
 2. **Visual Setup Guide**: Add screenshots/videos to setup documentation
-3. **One-Click Setup**: Further automate VB-Audio configuration
+3. **One-Click Setup**: Further automate WASAPI configuration
 4. **Performance Dashboard**: Real-time UI showing CPU/GPU/FPS impact
 5. **Multi-Platform Support**: Add macOS/Linux support
 

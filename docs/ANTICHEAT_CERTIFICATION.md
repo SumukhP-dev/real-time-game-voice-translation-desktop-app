@@ -249,7 +249,7 @@ If you encounter any anti-cheat warnings or issues:
 
 ### Support Contact
 
-- **Email**: 1-9438889487_112@zohomail.com
+- **Email**: gaminglivevoicetranslationmod@gmail.com
 - **Subject**: "Anti-Cheat Issue - [Game Name]"
 
 ## Ongoing Monitoring

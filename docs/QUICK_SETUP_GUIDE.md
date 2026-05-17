@@ -4,7 +4,7 @@
 
 ### 1. **Audio Settings** (CRITICAL - Must Configure First)
    - **Audio Device**: Select your audio input device
-     - **For CS:GO 2 game audio**: Use **"CABLE Output (VB-Audio Virtual Cable)"**
+     - **For CS:GO 2 game audio**: Use **"virtual microphone (WASAPI loopback)"**
      - **For microphone**: Use your headset/microphone device
    - **Start Capture**: Click "Start Capture" to begin audio capture
    - Status should show: "Capturing audio..."
@@ -26,7 +26,7 @@
 
 1. **Start Audio Capture**
    - Go to "Audio Settings"
-   - Select "CABLE Output (VB-Audio Virtual Cable)" from dropdown
+   - Select "virtual microphone (WASAPI loopback)" from dropdown
    - Click "Start Capture"
    - Verify status shows "Capturing audio..."
 
@@ -57,7 +57,7 @@
 ### No Audio Being Captured
 - Verify the correct audio device is selected
 - Check Windows Sound Settings - ensure the device is set as default input
-- For game audio: Ensure VB-Audio Virtual Cable is set as your game's output device
+- For game audio: Ensure WASAPI loopback is set as your game's output device
 
 ### No Transcriptions
 - Check console (F12) for error messages
@@ -79,7 +79,7 @@
 ## Audio Device Recommendations
 
 - **For CS:GO 2 Game Audio**: 
-  - Use "CABLE Output (VB-Audio Virtual Cable)"
+  - Use "virtual microphone (WASAPI loopback)"
   - Set this as your game's audio output in Windows Sound Settings
   
 - **For Microphone/Headset**:

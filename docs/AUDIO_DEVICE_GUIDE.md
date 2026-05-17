@@ -32,14 +32,14 @@ The app searches for devices with these names:
 
 ---
 
-## For Standard Version (`main_tkinter.py`)
+## For Electron app (current)
 
-### Option 1: VB-Audio Virtual Cable (RECOMMENDED)
+### Option 1: WASAPI loopback (RECOMMENDED on Windows)
 
-1. Install VB-Audio Virtual Cable (free): https://vb-audio.com/Cable/
-2. Restart your computer
-3. In the app, select **"CABLE Input (VB-Audio Virtual Cable)"** from the dropdown
-4. Click **"Select Stereo Mix"** button - it will auto-select VB-Audio Cable if available
+1. Open the app → **Audio Settings**
+2. Select your **headphones or speakers** (name includes **WASAPI loopback**)
+3. Click **Start Capture**
+4. Play game or system audio; status logs should show non-zero RMS
 
 ### Option 2: Stereo Mix
 
@@ -54,7 +54,7 @@ The app searches for devices with these names:
 | Version | Device to Use | How to Get It |
 |---------|--------------|---------------|
 | **FREE Version** | **Stereo Mix** | Enable in Windows Sound settings (Recording tab) |
-| **Standard Version** | **VB-Audio Virtual Cable** OR **Stereo Mix** | Install VB-Audio OR enable Stereo Mix |
+| **Electron app** | **WASAPI loopback** OR **Stereo Mix** | Built-in on Windows 10/11, or enable Stereo Mix |
 
 ---
 
@@ -73,7 +73,7 @@ The app searches for devices with these names:
 **Solution:** 
 1. Make sure Stereo Mix is enabled (see above)
 2. Click **"Refresh Devices"** button in the app
-3. Or use VB-Audio Virtual Cable instead
+3. Or use WASAPI loopback instead
 
 ### "Device selected but no audio captured"
 
@@ -81,7 +81,7 @@ The app searches for devices with these names:
 1. Is audio actually playing on your computer? (Test with YouTube)
 2. Is the correct device selected in the app?
 3. For FREE version: Is Stereo Mix enabled and working?
-4. For Standard version: Is VB-Audio Virtual Cable set as default playback device?
+4. For Standard version: Is WASAPI loopback set as default playback device?
 
 ---
 
@@ -89,7 +89,7 @@ The app searches for devices with these names:
 
 **FREE Version:** Just enable **"Stereo Mix"** in Windows - the app will find it automatically!
 
-**Standard Version:** Use **"VB-Audio Virtual Cable"** (recommended) or **"Stereo Mix"** - click "Select Stereo Mix" button to auto-select.
+**Standard Version:** Use **"WASAPI loopback"** (recommended) or **"Stereo Mix"** - click "Select Stereo Mix" button to auto-select.
 
 ---
 

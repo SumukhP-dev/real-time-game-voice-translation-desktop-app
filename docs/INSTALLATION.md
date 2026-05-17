@@ -52,18 +52,18 @@
 
 The application needs to capture game audio. Choose one of these methods:
 
-#### Method 1: VB-Audio Virtual Cable (Recommended)
+#### Method 1: WASAPI loopback (Recommended)
 
-1. **Download and install VB-Audio Virtual Cable**
+1. **Download and install WASAPI loopback**
 
-   - Download from: https://vb-audio.com/Cable/
+   - Download from: https://
    - Install and **restart your computer** (required!)
 
 2. **Configure Windows Audio**
 
    - Right-click the speaker icon in system tray → "Sounds"
-   - **Playback tab**: Set "CABLE Input" as default device
-   - **Recording tab**: Right-click "CABLE Output" → Properties → Listen tab
+   - **Playback tab**: Set "your output device" as default device
+   - **Recording tab**: Right-click "virtual microphone" → Properties → Listen tab
      - Check "Listen to this device"
      - Select your headphones in the dropdown
      - Click Apply
@@ -114,7 +114,7 @@ The application needs to capture game audio. Choose one of these methods:
 
 - Verify audio is actually playing on your computer
 - Check that the correct audio device is selected
-- For VB-Audio: Make sure "CABLE Input" is set as default playback device
+- For WASAPI: Make sure "your output device" is set as default playback device
 - For Stereo Mix: Make sure it's enabled in Windows Sound settings
 - Try clicking "Test Audio" button for diagnostics
 
@@ -164,7 +164,7 @@ The application needs to capture game audio. Choose one of these methods:
 ## Getting Help
 
 - **Documentation**: Check the `docs/` folder in the installation directory
-- **Support Email**: 1-9438889487_112@zohomail.com
+- **Support Email**: gaminglivevoicetranslationmod@gmail.com
 - **FAQ**: See `docs/SOLUTIONS.md` for common issues
 
 ## Next Steps

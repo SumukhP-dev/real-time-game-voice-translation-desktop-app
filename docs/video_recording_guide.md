@@ -15,7 +15,7 @@
 
 ### 2. Application Setup
 - Install and configure the CSGO2 Voice Translation Mod
-- Test all audio capture methods (VB-Audio Cable recommended)
+- Test all audio capture methods (WASAPI loopback recommended)
 - Verify translation services are running
 - Prepare sample audio files in multiple languages
 

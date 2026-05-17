@@ -21,16 +21,16 @@ This is the current implementation that tries multiple methods in order:
 
 ### 2. Alternative Solutions
 
-#### Solution A: VB-Audio Virtual Cable (RECOMMENDED)
+#### Solution A: WASAPI loopback (RECOMMENDED)
 **Best for: System audio capture**
 
-1. Download: https://vb-audio.com/Cable/
-2. Install VB-Audio Virtual Cable
+1. Download: https://
+2. Install WASAPI loopback
 3. Set it as default playback device in Windows:
    - Right-click speaker icon → Sounds → Playback tab
-   - Set "CABLE Input" as default
+   - Set "your output device" as default
 4. Route your game/system audio to the virtual cable
-5. In the app, select "CABLE Input" as the audio device
+5. In the app, select "your output device" as the audio device
 6. ✅ System audio will now be captured!
 
 **Pros:**
@@ -67,7 +67,7 @@ The app now uses `audio_capture_multi.py` which:
 ## Recommended Action
 
 **For system audio capture:**
-1. Install VB-Audio Virtual Cable (5 minutes)
+1. Install WASAPI loopback (5 minutes)
 2. Configure it as default playback device
 3. Select it in the app
 4. ✅ Done!
@@ -92,7 +92,7 @@ The app now uses `audio_capture_multi.py` which:
 ## Next Steps
 
 1. **Try the app now** - It will use microphone if system audio fails
-2. **Install VB-Audio Virtual Cable** - For system audio capture
+2. **Install WASAPI loopback** - For system audio capture
 3. **Test with microphone** - Verify translation features work
 4. **Switch to virtual cable** - When ready for system audio
 

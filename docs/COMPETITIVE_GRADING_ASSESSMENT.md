@@ -60,7 +60,7 @@ The product demonstrates strong technical capabilities and unique differentiator
 
 #### Weaknesses:
 
-- ❌ **Complex Audio Setup**: Requires VB-Audio Virtual Cable installation and configuration
+- ❌ **Complex Audio Setup**: Requires WASAPI loopback installation and configuration
 - ❌ **Windows-Only**: No macOS/Linux support
 - ❌ **No One-Click Setup**: Multiple manual steps required
 - ❌ **Limited Troubleshooting**: Basic diagnostics, but complex issues require technical knowledge
@@ -155,7 +155,7 @@ The product demonstrates strong technical capabilities and unique differentiator
 
 - ✅ **Low Latency**: <1 second with local models
 - ✅ **Efficient Processing**: Optimized audio buffering
-- ✅ **Multiple Audio Methods**: VB-Audio, Stereo Mix, WASAPI fallbacks
+- ✅ **Multiple Audio Methods**: WASAPI, Stereo Mix, WASAPI fallbacks
 - ✅ **Resource Efficient**: Low CPU/memory usage
 
 #### Weaknesses:
@@ -379,7 +379,7 @@ The product demonstrates strong technical capabilities and unique differentiator
 
 ### Weaknesses (What Holds It Back):
 
-1. **Complex Setup**: VB-Audio requirement creates friction
+1. **Complex Setup**: WASAPI requirement creates friction
 2. **Windows-Only**: Excludes significant portion of gaming market
 3. **Feature Gap**: Many planned features not yet implemented
 4. **No Anti-Cheat Certification**: Uncertainty may deter competitive players
@@ -405,7 +405,7 @@ The product demonstrates strong technical capabilities and unique differentiator
    - **Effort**: Medium (testing + applications)
    - **Grade Impact**: +5 points (C+ → B)
 
-2. **Simplify Audio Setup**: Create automated VB-Audio setup or alternative method
+2. **Simplify Audio Setup**: Create automated WASAPI setup or alternative method
 
    - **Impact**: Reduces friction, increases adoption
    - **Effort**: High (requires audio engineering)

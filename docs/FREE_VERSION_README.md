@@ -1,6 +1,6 @@
 # FREE VERSION - No Third-Party Software Required! 🆓
 
-This is the **FREE version** that uses Windows native WASAPI loopback to capture system audio. **No VB-Audio Virtual Cable or any paid software needed!**
+This is the **FREE version** that uses Windows native WASAPI loopback to capture system audio. **No WASAPI loopback or any paid software needed!**
 
 ## What's Different?
 
@@ -12,7 +12,7 @@ This is the **FREE version** that uses Windows native WASAPI loopback to capture
 - ✅ Works on Windows 10/11
 
 ### Standard Version (`main_tkinter.py`)
-- Requires VB-Audio Virtual Cable (free but third-party)
+- Requires WASAPI loopback (free but third-party)
 - Or uses Stereo Mix (may not work on all systems)
 - More compatible with different audio setups
 
@@ -75,7 +75,7 @@ pip install sounddevice
 
 | Feature | FREE Version | Standard Version |
 |---------|-------------|-----------------|
-| Third-party software | ❌ None needed | ✅ VB-Audio Virtual Cable |
+| Third-party software | ❌ None needed | ✅ WASAPI loopback |
 | Cost | 🆓 Free | 🆓 Free (but requires setup) |
 | Setup complexity | ⭐ Easy | ⭐⭐ Medium |
 | Compatibility | Windows 10/11 only | All Windows versions |
@@ -91,7 +91,7 @@ pip install sounddevice
 **Use Standard Version if:**
 - You have issues with WASAPI loopback
 - You want maximum compatibility
-- You don't mind installing VB-Audio Virtual Cable
+- You don't mind installing WASAPI loopback
 
 ## Technical Details
 
@@ -109,7 +109,7 @@ If you encounter issues with the FREE version:
 2. Try enabling "Stereo Mix" in Windows Sound settings (Recording tab)
 3. Check Windows audio drivers are up to date
 4. Try running as administrator
-5. If issues persist, use the standard version with VB-Audio Virtual Cable
+5. If issues persist, use the standard version with WASAPI loopback
 
 ---
 

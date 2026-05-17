@@ -46,7 +46,7 @@ You need to select **"Stereo Mix"** to capture system/computer audio.
 ### "Stereo Mix" not in the dropdown?
 - Make sure you enabled it in Windows Sound settings (see step 1 above)
 - Some audio drivers don't support Stereo Mix
-- **Alternative**: Install VB-Audio Virtual Cable (free)
+- **Alternative**: Select your headphones/speakers (WASAPI loopback) in Audio Settings
 
 ### Still not capturing audio?
 - Make sure audio is actually playing (check volume)

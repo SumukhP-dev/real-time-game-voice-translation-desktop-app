@@ -25,7 +25,7 @@ All notable changes to Real-Time Game Voice Translation will be documented in th
 - On-screen subtitle overlay with customizable positioning and size
 - Text-to-speech playback (optional)
 - Support for 15+ languages (English, Russian, Spanish, German, French, Portuguese, Polish, Turkish, Chinese, Japanese, Korean, Ukrainian, Italian, Arabic, Hindi) - optimized for gaming playerbase
-- Multiple audio capture methods (VB-Audio Virtual Cable, Stereo Mix, WASAPI)
+- Multiple audio capture methods (WASAPI loopback, Stereo Mix, WASAPI)
 - Auto-configuration wizard for first-time setup
 - Modern, intuitive user interface
 - Comprehensive activity logging
@@ -39,7 +39,7 @@ All notable changes to Real-Time Game Voice Translation will be documented in th
 #### Documentation
 
 - Installation Guide (INSTALLATION.md)
-- Audio Setup Guide (VB_AUDIO_SETUP_GUIDE.md)
+- Audio Setup Guide (AUDIO_DEVICE_GUIDE.md)
 - Troubleshooting Guide (SOLUTIONS.md)
 - Quick Start Guide (QUICKSTART.md)
 

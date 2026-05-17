@@ -21,7 +21,7 @@ This document tracks the implementation status of all features from the Competit
 - **Status**: Implemented (with auto-detection)
 - **Files**: `src/ui/setup_wizard.py`
 - **Features**:
-  - Auto-detect VB-Audio Virtual Cable
+  - Auto-detect WASAPI loopback
   - Auto-configure audio settings
   - Visual setup guide
   - One-click setup

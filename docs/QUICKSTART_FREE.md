@@ -19,13 +19,13 @@ python main_tkinter_free.py
 
 ## That's It! 🎉
 
-No VB-Audio Virtual Cable needed. No paid software. Just Python libraries!
+No WASAPI loopback needed. No paid software. Just Python libraries!
 
 ## If It Doesn't Work
 
 If you get errors, try:
 1. Enable "Stereo Mix" in Windows Sound settings → Recording tab
-2. Or use the standard version: `python main_tkinter.py` (requires VB-Audio Virtual Cable)
+2. Or use the standard version: `python main_tkinter.py` (requires WASAPI loopback)
 
 ## See Also
 

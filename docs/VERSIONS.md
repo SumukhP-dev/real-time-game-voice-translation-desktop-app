@@ -8,7 +8,7 @@ This project now has **TWO versions** - choose the one that works best for you!
 
 ### Features:
 - ✅ Uses Windows WASAPI (native Windows API)
-- ✅ **No VB-Audio Virtual Cable needed**
+- ✅ **No WASAPI loopback needed**
 - ✅ **No paid software required**
 - ✅ Simpler setup
 - ✅ Uses `sounddevice` library (free Python package)
@@ -35,7 +35,7 @@ python main_tkinter_free.py
 **Best for:** Maximum compatibility and reliability
 
 ### Features:
-- ✅ Works with VB-Audio Virtual Cable (free but third-party)
+- ✅ Works with WASAPI loopback (free but third-party)
 - ✅ Works with Stereo Mix (if not on WDM-KS)
 - ✅ Multi-method fallback system
 - ✅ Better error handling
@@ -43,7 +43,7 @@ python main_tkinter_free.py
 
 ### Requirements:
 - Windows 10/11
-- VB-Audio Virtual Cable (free download) - recommended
+- WASAPI loopback (free download) - recommended
 - OR Stereo Mix enabled in Windows
 
 ### How to Run:
@@ -69,7 +69,7 @@ python main_tkinter.py
 
 ### Use STANDARD VERSION if:
 - ✅ You want maximum reliability
-- ✅ You don't mind installing VB-Audio Virtual Cable (free)
+- ✅ You don't mind installing WASAPI loopback (free)
 - ✅ You want better diagnostics and error messages
 - ✅ You want the most compatible solution
 
@@ -79,12 +79,12 @@ python main_tkinter.py
 
 | Feature | FREE Version | Standard Version |
 |---------|-------------|------------------|
-| **Third-party software** | ❌ None | ✅ VB-Audio (free) |
+| **Third-party software** | ❌ None | ✅ WASAPI (free) |
 | **Setup complexity** | ⭐ Easy | ⭐⭐ Medium |
 | **Reliability** | ⭐⭐⭐ Good | ⭐⭐⭐⭐ Excellent |
 | **Diagnostics** | ⭐⭐ Basic | ⭐⭐⭐⭐ Advanced |
 | **Compatibility** | Windows 10/11 | All Windows |
-| **WDM-KS support** | ❌ Limited | ✅ Via VB-Audio |
+| **WDM-KS support** | ❌ Limited | ✅ Via WASAPI |
 
 ---
 
@@ -97,7 +97,7 @@ pip install -r requirements.txt
 
 The main difference is:
 - **FREE version**: Uses `sounddevice` with WASAPI (already included)
-- **Standard version**: Can use VB-Audio Virtual Cable (optional but recommended)
+- **Standard version**: Can use WASAPI loopback (optional but recommended)
 
 ---
 
@@ -105,17 +105,17 @@ The main difference is:
 
 ### FREE Version Issues:
 1. If WASAPI loopback doesn't work, enable "Stereo Mix" in Windows
-2. If still not working, try the Standard Version with VB-Audio Virtual Cable
+2. If still not working, try the Standard Version with WASAPI loopback
 
 ### Standard Version Issues:
-1. Install VB-Audio Virtual Cable (see `VB_AUDIO_SETUP_GUIDE.md`)
+1. Install WASAPI loopback (see `AUDIO_DEVICE_GUIDE.md`)
 2. Use "Check System Audio" button for diagnostics
 
 ---
 
 ## Recommendation
 
-**For most users:** Start with the **FREE version**. If it doesn't work on your system, switch to the **Standard version** with VB-Audio Virtual Cable.
+**For most users:** Start with the **FREE version**. If it doesn't work on your system, switch to the **Standard version** with WASAPI loopback.
 
 Both are completely free - the only difference is whether you need to install third-party software or not!
 

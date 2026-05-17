@@ -23,12 +23,12 @@ All features have been implemented and documentation is ready.
 ### ✅ User Experience Improvements
 - "Check System Audio" button for diagnostics
 - "Select Stereo Mix" button for quick device selection
-- Auto-detection of VB-Audio Virtual Cable (preferred)
+- Auto-detection of WASAPI loopback (preferred)
 - Clear warnings when microphone is selected instead of system audio
 - Comprehensive logging and status messages
 
 ### ✅ Documentation
-- **VB_AUDIO_SETUP_GUIDE.md**: Complete step-by-step guide for VB-Audio Virtual Cable
+- **AUDIO_DEVICE_GUIDE.md**: Complete step-by-step guide for WASAPI loopback
 - **QUICKSTART.md**: 5-minute quick start guide
 - **README.md**: Updated with comprehensive instructions
 - **SOLUTIONS.md**: Troubleshooting guide
@@ -41,10 +41,10 @@ All features have been implemented and documentation is ready.
    pip install -r requirements.txt
    ```
 
-2. **Install VB-Audio Virtual Cable** (for system audio):
-   - Download: https://vb-audio.com/Cable/
+2. **Install WASAPI loopback** (for system audio):
+   - Download: https://
    - Install and restart
-   - See `VB_AUDIO_SETUP_GUIDE.md` for details
+   - See `AUDIO_DEVICE_GUIDE.md` for details
 
 3. **Run the app:**
    ```bash
@@ -53,7 +53,7 @@ All features have been implemented and documentation is ready.
 
 4. **Configure:**
    - Click "Check System Audio" to verify setup
-   - Select "CABLE Input" from dropdown
+   - Select "your output device" from dropdown
    - Click "Start Translation"
 
 ## File Structure
@@ -71,7 +71,7 @@ CSGO2_Live_Voice_Translation_Mod/
 ├── requirements.txt            # Dependencies
 ├── README.md                   # Main documentation
 ├── QUICKSTART.md               # Quick start guide
-├── VB_AUDIO_SETUP_GUIDE.md     # VB-Audio setup guide
+├── AUDIO_DEVICE_GUIDE.md     # WASAPI setup guide
 ├── AUDIO_SETUP_GUIDE.md        # General audio setup
 ├── SOLUTIONS.md                # Troubleshooting
 └── SETUP_COMPLETE.md           # This file
@@ -96,17 +96,17 @@ CSGO2_Live_Voice_Translation_Mod/
 
 **No system audio captured?**
 - Click "Check System Audio" button in the app
-- Install VB-Audio Virtual Cable (see `VB_AUDIO_SETUP_GUIDE.md`)
-- Make sure "CABLE Input" is selected in the app
+- Install WASAPI loopback (see `AUDIO_DEVICE_GUIDE.md`)
+- Make sure "your output device" is selected in the app
 
 **Getting errors?**
 - See `SOLUTIONS.md` for common issues
-- See `VB_AUDIO_SETUP_GUIDE.md` for audio setup
+- See `AUDIO_DEVICE_GUIDE.md` for audio setup
 - Check terminal output for detailed error messages
 
 ## Next Steps
 
-1. Install VB-Audio Virtual Cable for system audio capture
+1. Install WASAPI loopback for system audio capture
 2. Run the app and test with a YouTube video
 3. Configure overlay position and styling in `config.json`
 4. Adjust Whisper model size for speed vs accuracy
@@ -114,7 +114,7 @@ CSGO2_Live_Voice_Translation_Mod/
 ## Support
 
 - **Quick Start**: See `QUICKSTART.md`
-- **Audio Setup**: See `VB_AUDIO_SETUP_GUIDE.md`
+- **Audio Setup**: See `AUDIO_DEVICE_GUIDE.md`
 - **Full Docs**: See `README.md`
 - **Troubleshooting**: See `SOLUTIONS.md`
 

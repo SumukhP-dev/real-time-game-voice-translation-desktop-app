@@ -24,18 +24,18 @@
 **Solution:**
 - Check Windows Sound settings
 - Ensure audio drivers are installed
-- For game audio capture, install VB-Audio Virtual Cable
+- For game audio capture, install WASAPI loopback
 
 ### Issue: Audio device not capturing
 **Possible causes:**
 1. **Wrong device selected** - Make sure you select the correct device:
    - For microphone: Select your microphone
-   - For game audio: Select "Stereo Mix" or "CABLE Output (VB-Audio Virtual Cable)"
+   - For game audio: Select "Stereo Mix" or "virtual microphone (WASAPI loopback)"
 
 2. **Device not enabled** - Check Windows Sound settings:
    - Right-click speaker icon → Sounds → Recording tab
    - Enable "Stereo Mix" if using it (right-click → Enable)
-   - For VB-Audio Cable, ensure it's installed and enabled
+   - For WASAPI loopback, ensure it's installed and enabled
 
 3. **No audio playing** - Make sure audio is actually playing through the selected device
 
@@ -51,7 +51,7 @@
    - Open the app
    - Go to Audio Settings
    - Check if your desired device appears in the list
-   - Look for devices like "Stereo Mix" or "CABLE Output"
+   - Look for devices like "Stereo Mix" or "virtual microphone"
 
 2. **Check console logs:**
    - Open browser DevTools (F12) in the app
@@ -75,10 +75,10 @@
    - Check if audio chunks are received
 
 5. **Test with system audio:**
-   - Install VB-Audio Virtual Cable
-   - Set CABLE Input as default playback device
-   - Enable "Listen to this device" on CABLE Output
-   - Select "CABLE Output" in the app
+   - Install WASAPI loopback
+   - Set your output device as default playback device
+   - Enable "Listen to this device" on virtual microphone
+   - Select "virtual microphone" in the app
    - Play audio (YouTube, game, etc.)
    - Check if audio chunks are received
 

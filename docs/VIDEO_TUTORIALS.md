@@ -7,13 +7,13 @@ This document provides links to video tutorials for the CS:GO 2 Live Voice Trans
 ### Complete Setup Guide (5 minutes)
 
 **Coming Soon**: Step-by-step video walkthrough of the entire setup process:
-- Installing VB-Audio Virtual Cable
+- Installing WASAPI loopback
 - Configuring Windows audio settings
 - Setting up the application
 - Testing the translation
 
 **Topics Covered**:
-- VB-Audio installation
+- WASAPI installation
 - Windows audio configuration
 - Application setup wizard
 - First-time configuration
@@ -113,7 +113,7 @@ Subscribe for:
 ## Video Requests
 
 Have a topic you'd like to see covered? Contact us:
-- **Email**: 1-9438889487_112@zohomail.com
+- **Email**: gaminglivevoicetranslationmod@gmail.com
 - **Subject**: "Video Tutorial Request - [Topic]"
 
 ---

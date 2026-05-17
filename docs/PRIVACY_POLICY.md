@@ -100,7 +100,7 @@ We may update this Privacy Policy from time to time. Changes will be posted in t
 
 If you have questions about this Privacy Policy, contact us at:
 
-- **Email**: 1-9438889487_112@zohomail.com
+- **Email**: gaminglivevoicetranslationmod@gmail.com
 - **Website**: [Your website]
 
 ## Compliance

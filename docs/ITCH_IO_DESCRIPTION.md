@@ -36,7 +36,7 @@ Works with CS:GO 2, Valorant, Apex Legends, Dota 2, and other competitive multip
 **Easy Setup**
 
 - Auto-configuration wizard
-- Works with VB-Audio Virtual Cable (free)
+- Works with WASAPI loopback (free)
 - Intuitive interface designed for gamers
 - Comprehensive documentation
 
@@ -95,7 +95,7 @@ See included documentation for detailed setup instructions.
 
 ### Support
 
-- Email: 1-9438889487_112@zohomail.com
+- Email: gaminglivevoicetranslationmod@gmail.com
 - Documentation included
 - Troubleshooting guide provided
 
@@ -109,7 +109,7 @@ Single-user license. Hardware-bound to one computer. See EULA for complete terms
 
 ---
 
-**Note**: This software requires VB-Audio Virtual Cable (free) for game audio capture. Full setup instructions included.
+**Note**: This software requires WASAPI loopback (free) for game audio capture. Full setup instructions included.
 
 ---
 

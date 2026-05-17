@@ -201,7 +201,7 @@ Real-Time Game Voice Translation is a Windows desktop app that captures in-game 
 Real-Time Game Voice Translation is a desktop app that breaks the language barrier in competitive games. It captures in-game voice chat, transcribes speech in real time, and translates it to your language (and your voice to teammates’ languages) with on-screen subtitles and optional virtual microphone output. Built for CS2, Valorant, Apex Legends, Dota 2, and other multiplayer games. Translation runs locally on your PC—no subscription, works offline after a one-time model download. One license per purchase; lifetime use on one Windows 10/11 machine.
 
 **Long (full product description)**  
-Real-Time Game Voice Translation is a professional desktop application for Windows that translates in-game voice chat in real time. It captures voice from your game (or system audio), transcribes it using advanced speech recognition, and translates to your preferred language with on-screen subtitles—and can translate your voice back to teammates via a virtual microphone so everyone understands each other. Supports 15+ languages and works with CS2, Valorant, Apex Legends, Dota 2, and other competitive multiplayer games. Processing runs locally where possible: no subscription, works offline after initial setup, and your voice is not sent to the cloud when using default settings. Includes customizable subtitles, auto language detection, and easy setup with VB-Audio Virtual Cable (free). One-time purchase, lifetime license per computer. Digital delivery; no physical shipment.
+Real-Time Game Voice Translation is a professional desktop application for Windows that translates in-game voice chat in real time. It captures voice from your game (or system audio), transcribes it using advanced speech recognition, and translates to your preferred language with on-screen subtitles—and can translate your voice back to teammates via a virtual microphone so everyone understands each other. Supports 15+ languages and works with CS2, Valorant, Apex Legends, Dota 2, and other competitive multiplayer games. Processing runs locally where possible: no subscription, works offline after initial setup, and your voice is not sent to the cloud when using default settings. Includes customizable subtitles, auto language detection, and easy setup with WASAPI loopback (free). One-time purchase, lifetime license per computer. Digital delivery; no physical shipment.
 
 ---
 
@@ -314,7 +314,7 @@ A: Only for the initial download and one-time model setup. After that, transcrip
 A: When using the default local models, no. Speech is processed on your machine. We don't store or stream your voice to external servers for the core translation feature.
 
 **Q: What do I need to install besides the app?**  
-A: On Windows, VB-Audio Virtual Cable (free) is required to capture game audio. Full setup instructions are included with the app.
+A: On Windows, WASAPI loopback (free) is required to capture game audio. Full setup instructions are included with the app.
 
 **Q: When do I get my license key?**  
 A: Digital delivery via email and/or the Pledge Manager within 30 days after the campaign ends successfully.

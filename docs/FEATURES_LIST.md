@@ -26,13 +26,13 @@
 
 ### Audio Features
 - ✅ Multiple audio capture methods
-  - VB-Audio Virtual Cable (recommended)
+  - WASAPI loopback (recommended)
   - Windows Stereo Mix
   - WASAPI loopback
 - ✅ Automatic audio device detection
 - ✅ Audio level monitoring
 - ✅ Optional text-to-speech playback
-- ✅ **Virtual Microphone Output**: Routes translated voice to VB-Audio Cable Input for game compatibility
+- ✅ **Virtual Microphone Output**: Routes translated voice to WASAPI loopback device for game compatibility
 - ✅ **Microphone Capture**: Separate microphone input capture for voice translation
 - ✅ **Output Routing**: Choose speakers, virtual mic, or both for translated voice output
 

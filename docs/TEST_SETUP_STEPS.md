@@ -59,9 +59,9 @@ The setup wizard has 3 main steps:
 
 - [ ] "Setting Up Audio" title displays
 - [ ] Status message shows correct state:
-  - ✓ "Audio is ready!" (if VB-Audio is configured)
+  - ✓ "Audio is ready!" (if WASAPI is configured)
   - "Configuring audio..." (if needs auto-config)
-  - "Installation needed" (if VB-Audio not installed)
+  - "Installation needed" (if WASAPI not installed)
 - [ ] Install button appears when needed
 - [ ] Auto-configuration runs when appropriate
 - [ ] "← Back" button is enabled
@@ -70,20 +70,20 @@ The setup wizard has 3 main steps:
 
 **Test Scenarios:**
 
-#### Scenario A: VB-Audio Already Installed & Configured
+#### Scenario A: WASAPI Already Installed & Configured
 
 - [ ] Status shows "✓ Audio is ready!"
 - [ ] No install button appears
 - [ ] Can proceed to next step
 
-#### Scenario B: VB-Audio Installed But Not Configured
+#### Scenario B: WASAPI Installed But Not Configured
 
 - [ ] Status shows "Configuring audio..."
 - [ ] Auto-configuration runs automatically
 - [ ] Status updates to "✓ Audio is ready!"
 - [ ] Can proceed to next step
 
-#### Scenario C: VB-Audio Not Installed
+#### Scenario C: WASAPI Not Installed
 
 - [ ] Status shows "Installation needed"
 - [ ] "📥 Install Audio Driver" button appears
@@ -177,7 +177,7 @@ The setup wizard has 3 main steps:
 
 **How to Test:**
 
-1. Uninstall VB-Audio Virtual Cable (if installed)
+1. Uninstall WASAPI loopback (if installed)
 2. Restart computer
 3. Launch application and trigger setup wizard
 4. Go to Audio Setup step
@@ -237,7 +237,7 @@ This will print detailed test procedures for each step.
 ### Test Audio Device Detection
 
 ```bash
-python scripts/check_cable_setup.py
+python scripts/check_wasapi_setup.py
 ```
 
 ### Test All Audio Devices
@@ -263,7 +263,7 @@ print(f"Setup complete: {config.get('app', 'setup_complete', default=False)}")
 
 2. **Audio setup step shows wrong status**
 
-   - Verify VB-Audio detection logic
+   - Verify WASAPI detection logic
    - Check platform-specific code paths
 
 3. **Installation fails silently**
@@ -291,15 +291,15 @@ print(f"Setup complete: {config.get('app', 'setup_complete', default=False)}")
 3. Launch application
 4. Test setup wizard flow
 
-### With VB-Audio Installed
+### With WASAPI Installed
 
-1. Ensure VB-Audio Virtual Cable is installed
+1. Ensure WASAPI loopback is installed
 2. Configure it properly
 3. Test setup wizard with pre-configured audio
 
-### Without VB-Audio
+### Without WASAPI
 
-1. Uninstall VB-Audio Virtual Cable
+1. Uninstall WASAPI loopback
 2. Restart computer
 3. Test installation flow in setup wizard
 
@@ -309,9 +309,9 @@ Before considering setup testing complete:
 
 - [ ] All automated tests pass
 - [ ] All manual test procedures completed
-- [ ] Tested on clean system (no VB-Audio)
-- [ ] Tested with VB-Audio pre-installed
-- [ ] Tested with VB-Audio installed but not configured
+- [ ] Tested on clean system (no WASAPI)
+- [ ] Tested with WASAPI pre-installed
+- [ ] Tested with WASAPI installed but not configured
 - [ ] Configuration persistence verified
 - [ ] Error handling tested
 - [ ] UI/UX verified on different screen sizes

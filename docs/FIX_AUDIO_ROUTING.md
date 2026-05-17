@@ -1,7 +1,7 @@
-# Fix: Can't Hear Audio with VB-Audio Virtual Cable
+# Fix: Can't Hear Audio with WASAPI loopback
 
 ## Problem
-You've set CABLE Input as default, but you can't hear anything through headphones.
+You've set your output device as default, but you can't hear anything through headphones.
 
 ## Solution: Fix "Listen to this device"
 
@@ -14,12 +14,12 @@ You've set CABLE Input as default, but you can't hear anything through headphone
 2. **Go to Recording Tab**
    - Click the "Recording" tab at the top
 
-3. **Find CABLE Output**
-   - Look for "CABLE Output (VB-Audio Virtual Cable)"
+3. **Find virtual microphone**
+   - Look for "virtual microphone (WASAPI loopback)"
    - If you don't see it, right-click empty space → "Show Disabled Devices"
 
 4. **Open Properties**
-   - Right-click "CABLE Output" → "Properties"
+   - Right-click "virtual microphone" → "Properties"
 
 5. **Go to Listen Tab**
    - Click the "Listen" tab
@@ -30,7 +30,7 @@ You've set CABLE Input as default, but you can't hear anything through headphone
 7. **Select Your Headphones**
    - In the dropdown "Playback through this device"
    - Select your headphones: **"Headset (Bose QC Headphones)"** or your actual headphones
-   - Make sure it's NOT "CABLE Input" or "Default Device"
+   - Make sure it's NOT "your output device" or "Default Device"
 
 8. **Apply Settings**
    - Click "Apply"
@@ -40,22 +40,15 @@ You've set CABLE Input as default, but you can't hear anything through headphone
    - Play a YouTube video
    - You should NOW hear it through your headphones!
 
-## Alternative: Use VoiceMeeter (Easier Solution)
+## Alternative: WASAPI loopback (recommended)
 
-If "Listen to this device" doesn't work, use VoiceMeeter instead:
+The Electron app captures game audio directly from your headphones/speakers output via **WASAPI loopback** — you do not need to change Windows default devices or install a virtual cable.
 
-1. **Download VoiceMeeter** (FREE): https://vb-audio.com/Voicemeeter/
-2. **Install and restart**
-3. **Setup:**
-   - Set VoiceMeeter Input as default playback device
-   - Route VoiceMeeter Output to both:
-     - Your headphones (for listening)
-     - CABLE Input (for capture)
-4. **In translation app:** Select CABLE Output
+1. Audio Settings → select **(WASAPI loopback)** device
+2. Start Capture → play audio → check RMS in status logs
 
 ## Quick Check
 
-After enabling "Listen to this device":
-- Play a YouTube video
-- Do you hear it? ✅ = Working | ❌ = Try VoiceMeeter
+- Play a YouTube video or game voice chat
+- Status logs show non-zero RMS → capture is working
 

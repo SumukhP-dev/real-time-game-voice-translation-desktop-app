@@ -64,7 +64,7 @@ All documentation is included in the `docs/` folder:
 
 ### Support
 
-- Email: 1-9438889487_112@zohomail.com
+- Email: gaminglivevoicetranslationmod@gmail.com
 - Documentation: Included in installation
 - Refund Policy: 7-day money-back guarantee
 

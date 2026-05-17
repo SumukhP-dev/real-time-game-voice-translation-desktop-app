@@ -49,7 +49,7 @@ Open browser console (F12) and look for:
 ### Step 3: Check Audio
 - Audio level should be above 0.01 threshold
 - Check console for "Current audio level" messages
-- Ensure audio is playing through VB-Audio Virtual Cable
+- Ensure audio is playing through WASAPI loopback
 
 ### Step 4: Test Translation Manually
 Run this in browser console:

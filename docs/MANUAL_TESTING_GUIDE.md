@@ -18,8 +18,8 @@ This guide provides step-by-step instructions for manually testing all applicati
    -  App: Window should open
 
 3. **Audio Setup**:
-   - VB-Audio Virtual Cable should be installed
-   - Set Windows default playback device to VB-Audio Virtual Cable
+   - WASAPI loopback should be installed
+   - Set Windows default playback device to WASAPI loopback
    - Have audio source ready (game, music, etc.)
 
 ---
@@ -51,7 +51,7 @@ This guide provides step-by-step instructions for manually testing all applicati
 
 **Expected Results**:
 - [ ] Audio devices are listed
-- [ ] VB-Audio Virtual Cable appears in list
+- [ ] WASAPI loopback appears in list
 - [ ] Device shows sample rate and channels
 - [ ] Can select different devices
 
@@ -62,7 +62,7 @@ This guide provides step-by-step instructions for manually testing all applicati
 ### ✅ Test 3: Audio Capture Start/Stop
 
 **Steps**:
-1. Select an audio device (preferably VB-Audio Virtual Cable)
+1. Select an audio device (preferably WASAPI loopback)
 2. Click "Start Capture" button
 3. Wait 5 seconds
 4. Check status message
@@ -145,7 +145,7 @@ This guide provides step-by-step instructions for manually testing all applicati
 1. Ensure audio capture is running
 2. Verify "Enable Text Overlay" checkbox is checked in Translation Settings
 3. Set target language to something different from source (e.g., English → Spanish)
-4. Play audio with speech through VB-Audio Virtual Cable
+4. Play audio with speech through WASAPI loopback
 5. Wait for transcription and translation
 6. Check for overlay window
 
