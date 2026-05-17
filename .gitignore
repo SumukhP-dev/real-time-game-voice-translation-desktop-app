@@ -64,6 +64,7 @@ LICENSE_KEYS.txt
 # Model files (large binary files - should not be in git)
 models/whisper/
 models/translation/
+models/models--*/
 *.pt
 *.bin
 *.onnx
