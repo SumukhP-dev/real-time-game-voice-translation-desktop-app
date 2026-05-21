@@ -12,7 +12,7 @@ const defaultExe = path.join(
   projectDir,
   'dist',
   'win-unpacked',
-  'Real-Time Voice Translation Tool.exe'
+  'SquadSpeak.exe'
 );
 
 const exePath = path.resolve(process.argv[2] || defaultExe);

@@ -63,7 +63,7 @@
   },
   "setup_wizard": {
     "title": "Bienvenido - Asistente de Configuración",
-    "welcome_title": "¡Bienvenido a Traducción de Voz en Tiempo Real para Juegos!",
+    "welcome_title": "¡Bienvenido a SquadSpeak!",
     "welcome_subtitle": "Te ayudaremos a configurarlo en solo unos pasos",
     "step": "Paso {current} de {total}: {name}",
     "step_getting_started": "Primeros Pasos",
@@ -213,7 +213,7 @@
   },
   "about": {
     "title": "Acerca de",
-    "app_name": "Traducción de Voz en Tiempo Real para Juegos",
+    "app_name": "SquadSpeak",
     "version": "Versión {version}",
     "description": "Traducción de voz en tiempo real para juegos competitivos.\n\nFunciona con CS:GO 2, Valorant, Apex Legends, Dota 2 y otros juegos multijugador.\n\nCaracterísticas:\n• Reconocimiento de voz en tiempo real usando OpenAI Whisper\n• Detección automática de idioma\n• Traducción en vivo a tu idioma preferido\n• Superposición de subtítulos en pantalla\n• Reproducción de texto a voz\n\nCréditos:\n• OpenAI Whisper - Reconocimiento de voz\n• Google Translate - Servicios de traducción\n• PyQt6 - Marco de interfaz gráfica\n• WASAPI loopback capture - Enrutamiento de audio"
   },

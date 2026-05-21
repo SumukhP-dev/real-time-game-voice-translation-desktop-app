@@ -1,6 +1,6 @@
 {
   "main_window": {
-    "title": "Real-Time Game Voice Translation v{version}",
+    "title": "SquadSpeak v{version}",
     "status": "Status:",
     "status_stopped": "Stopped",
     "status_running": "Running",
@@ -66,7 +66,7 @@
   },
   "setup_wizard": {
     "title": "Welcome - Setup Wizard",
-    "welcome_title": "Welcome to Real-Time Game Voice Translation!",
+    "welcome_title": "Welcome to SquadSpeak!",
     "welcome_subtitle": "Let's get you set up in just a few steps",
     "step": "Step {current} of {total}: {name}",
     "step_getting_started": "Getting Started",
@@ -216,12 +216,12 @@
   },
   "about": {
     "title": "About",
-    "app_name": "Real-Time Game Voice Translation",
+    "app_name": "SquadSpeak",
     "version": "Version {version}",
     "description": "Real-time voice translation for competitive gaming.\n\nWorks with CS:GO 2, Valorant, Apex Legends, Dota 2, and other multiplayer games.\n\nFeatures:\n• Real-time speech recognition using OpenAI Whisper\n• Automatic language detection\n• Live translation to your preferred language\n• On-screen subtitle overlay\n• Text-to-speech playback\n\nCredits:\n• OpenAI Whisper - Speech recognition\n• Google Translate - Translation services\n• PyQt6 - GUI framework\n• WASAPI loopback capture - Audio routing"
   },
   "help": {
-    "title": "Real-Time Game Voice Translation - Help",
+    "title": "SquadSpeak - Help",
     "quick_start": "QUICK START:\n1. Click 'Auto-Configure' to set up audio\n2. Click 'Start Translation' to begin\n3. Play your game - translations will appear as subtitles!\n\nAUDIO SETUP:\n• Game Audio (Recommended) - Best for capturing game voice chat\n• System Audio - Captures all computer audio\n• Voice Input - Only captures microphone (not recommended for games)\n\nSETTINGS:\n• Translation Language - Choose what language to translate TO\n• Show Subtitles - Display translations on screen\n• Subtitle Size - Adjust subtitle text size\n• Speak Translations - Play translations as speech (disabled for game audio)",
     "run_setup_wizard": "Run Setup Wizard",
     "voice_translation_help_text": "Voice Translation allows you to translate your own voice to teammates in real-time.\n\nHow it works:\n1. Your microphone captures your speech\n2. It's transcribed and translated to the target language\n3. The translated speech is routed to a virtual microphone\n4. Your game uses that device as microphone input\n\nSetup:\n- Enable voice translation in settings\n- Select the virtual microphone device in your game's voice chat settings\n\nTarget Language Modes:\n- Auto-detect: Automatically uses the most common teammate language\n- Configurable: Manually select target language\n- Same as teammates: Uses your main translation target language",

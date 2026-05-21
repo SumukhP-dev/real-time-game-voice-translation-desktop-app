@@ -1,11 +1,11 @@
-; Inno Setup Script for Real-Time Game Voice Translation
+; Inno Setup Script for SquadSpeak
 ; Compile with: iscc installer.iss
 
-#define AppName "Real-Time Game Voice Translation"
+#define AppName "SquadSpeak"
 #define AppVersion "1.0.0"
-#define AppPublisher "Game Voice Translator"
+#define AppPublisher "SquadSpeak"
 #define AppURL "https://example.com"
-#define AppExeName "GameVoiceTranslator.exe"
+#define AppExeName "SquadSpeak.exe"
 
 [Setup]
 ; App info
@@ -21,7 +21,7 @@ DefaultGroupName={#AppName}
 AllowNoIcons=yes
 LicenseFile=
 OutputDir=dist
-OutputBaseFilename=GameVoiceTranslator_Setup
+OutputBaseFilename=SquadSpeak_Setup
 SetupIconFile=app_icon.ico
 Compression=lzma
 SolidCompression=yes
@@ -37,7 +37,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1
 
 [Files]
-Source: "dist\GameVoiceTranslator.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\SquadSpeak.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion; DestName: "README.txt"
 Source: "docs\LICENSE_ACTIVATION.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "docs\INSTALLATION.md"; DestDir: "{app}\docs"; Flags: ignoreversion

@@ -208,7 +208,7 @@ function createWindow() {
         : []
     },
     icon: path.join(__dirname, 'app_icon.png'),
-    title: 'Real-Time Voice Translation Tool',
+    title: 'SquadSpeak',
     show: false, // Don't show until ready-to-show
     autoHideMenuBar: true
   });

@@ -59,7 +59,7 @@
   },
   "setup_wizard": {
     "title": "Willkommen - Einrichtungsassistent",
-    "welcome_title": "Willkommen bei Echtzeit-Sprachübersetzung für Spiele!",
+    "welcome_title": "Willkommen bei SquadSpeak!",
     "welcome_subtitle": "Lassen Sie uns Sie in nur wenigen Schritten einrichten",
     "step": "Schritt {current} von {total}: {name}",
     "step_getting_started": "Erste Schritte",
@@ -208,7 +208,7 @@
   },
   "about": {
     "title": "Über",
-    "app_name": "Echtzeit-Sprachübersetzung für Spiele",
+    "app_name": "SquadSpeak",
     "version": "Version {version}",
     "description": "Echtzeit-Sprachübersetzung für kompetitive Spiele.\n\nFunktioniert mit CS:GO 2, Valorant, Apex Legends, Dota 2 und anderen Mehrspieler-Spielen.\n\nFunktionen:\n• Echtzeit-Spracherkennung mit OpenAI Whisper\n• Automatische Spracherkennung\n• Live-Übersetzung in Ihre bevorzugte Sprache\n• Bildschirm-Untertitel-Overlay\n• Text-zu-Sprache-Wiedergabe\n\nCredits:\n• OpenAI Whisper - Spracherkennung\n• Google Translate - Übersetzungsdienste\n• PyQt6 - GUI-Framework\n• WASAPI loopback capture - Audio-Routing"
   },

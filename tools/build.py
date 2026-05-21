@@ -1,5 +1,5 @@
 """
-Build script for Real-Time Game Voice Translation
+Build script for Rankcall
 Creates Windows executable using PyInstaller
 """
 import os
@@ -69,7 +69,7 @@ def check_dependencies():
 def build_executable():
     """Build the executable using PyInstaller"""
     print("\n" + "="*60)
-    print("Building Real-Time Game Voice Translation")
+    print("Building Rankcall")
     print("="*60 + "\n")
 
     # Clean previous builds
@@ -132,7 +132,7 @@ def create_distribution_package():
 
 def main():
     """Main build process"""
-    print("Real-Time Game Voice Translation - Build Script")
+    print("Rankcall - Build Script")
     print("="*60)
 
     if not build_executable():

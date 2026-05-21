@@ -1,7 +1,7 @@
 {
-  "name": "csgo2-translation-electron",
+  "name": "squadspeak-electron",
   "version": "1.0.0",
-  "description": "Real-Time Voice Translation Tool - Electron Edition",
+  "description": "SquadSpeak - Electron Edition",
   "main": "main.js",
   "homepage": "./",
   "scripts": {
@@ -31,7 +31,7 @@
   "build": {
     "afterPack": "./electron-builder-after-pack.cjs",
     "appId": "com.csgo2.translation",
-    "productName": "Real-Time Voice Translation Tool",
+    "productName": "SquadSpeak",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -86,7 +86,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Real-Time Voice Translation Tool",
+      "shortcutName": "SquadSpeak",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico",
@@ -128,7 +128,7 @@
     }
   },
   "author": {
-    "name": "Real-Time Voice Translation Tool Team",
+    "name": "SquadSpeak Team",
     "email": "support@realtime-voice-translation.com"
   },
   "license": "Commercial"
