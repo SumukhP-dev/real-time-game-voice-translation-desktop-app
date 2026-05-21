@@ -29,7 +29,7 @@
 
 3. **Launch the application**
    - The installer will offer to launch the app when finished
-   - Or find "Real-Time Game Voice Translation" in your Start Menu
+   - Or find "SquadSpeak" in your Start Menu
    - Or double-click the desktop shortcut (if created)
 
 ### Option 2: Portable Version
@@ -143,14 +143,14 @@ The application needs to capture game audio. Choose one of these methods:
 ### Using Windows Settings
 
 1. Open Windows Settings → Apps
-2. Find "Real-Time Game Voice Translation"
+2. Find "SquadSpeak"
 3. Click "Uninstall"
 4. Follow the prompts
 
 ### Using Control Panel
 
 1. Open Control Panel → Programs and Features
-2. Find "Real-Time Game Voice Translation"
+2. Find "SquadSpeak"
 3. Click "Uninstall"
 4. Follow the prompts
 

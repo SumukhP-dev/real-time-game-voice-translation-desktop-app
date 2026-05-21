@@ -1,4 +1,4 @@
-# Real-Time Game Voice Translation
+# SquadSpeak
 
 **Version 1.0.0** - Commercial Release
 

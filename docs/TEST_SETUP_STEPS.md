@@ -38,7 +38,7 @@ The setup wizard has 3 main steps:
 
 - [ ] Wizard window opens when triggered
 - [ ] Window is properly sized and centered
-- [ ] Title displays: "Welcome to Real-Time Game Voice Translation!"
+- [ ] Title displays: "Welcome to SquadSpeak!"
 - [ ] Welcome text is readable and properly formatted
 - [ ] "Next →" button is enabled
 - [ ] "← Back" button is disabled (first step)
