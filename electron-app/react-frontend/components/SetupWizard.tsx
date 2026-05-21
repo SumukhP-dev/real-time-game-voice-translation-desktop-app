@@ -49,8 +49,9 @@ export function SetupWizard({ onComplete, onClose }: SetupWizardProps) {
       content: (
         <div className="space-y-4">
           <p className="text-gray-300">
-            Select your audio device. For game or system audio, choose
-            your headphones or speakers.
+            Choose the headset or speakers you use while playing—the device
+            that plays your game audio. We capture voice chat from that
+            output (no virtual cable needed on Windows 10/11).
           </p>
 
           {audioDevices.length > 0 ? (
