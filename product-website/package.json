@@ -2,7 +2,7 @@
   "name": "rt-game-voice-translation-website",
   "version": "1.0.0",
   "private": true,
-  "description": "Next.js landing page for Real-Time Game Voice Translation.",
+  "description": "Next.js landing page for SquadSpeak.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

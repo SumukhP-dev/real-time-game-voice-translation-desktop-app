@@ -1,6 +1,7 @@
 # Website
 
-Next.js landing page for `Real-Time Game Voice Translation`.
+Next.js landing page for SquadSpeak.
+
 
 ## Purpose
 

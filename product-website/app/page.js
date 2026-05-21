@@ -6,42 +6,42 @@ const heroPoints = [
 ];
 
 const proofStats = [
-  { value: "350,255", label: "Impressions" },
-  { value: "1,126", label: "Clicks" },
-  { value: "4", label: "Waitlist signups" },
+  { value: "612,956", label: "Impressions" },
+  { value: "2,214", label: "Clicks" },
+  { value: "6", label: "Waitlist signups" },
   { value: "2", label: "Backers" },
 ];
 
 const tractionStats = [
   {
-    value: "350,255",
+    value: "612,956",
     label: "Impressions",
     sub: "Reddit reach across FPS communities",
   },
   {
-    value: "1,126",
+    value: "2,214",
     label: "Clicks",
     sub: "Players who clicked to learn more",
   },
   {
-    value: "~$350",
+    value: "~$695",
     label: "Ad spend",
-    sub: "Lean validation budget",
+    sub: "Lean validation budget across RTGVT campaigns",
   },
   {
-    value: "$0.32",
+    value: "$0.31",
     label: "CPC",
     sub: "Efficient click cost",
   },
   {
-    value: "0.321%",
+    value: "0.36%",
     label: "CTR",
     sub: "Messaging resonance on Reddit",
   },
   {
-    value: "4 / 2",
+    value: "6 / 2",
     label: "Signups / backers",
-    sub: "4 waitlist signups, 2 Kickstarter backers",
+    sub: "6 waitlist signups, 2 Kickstarter backers",
   },
 ];
 
@@ -116,7 +116,7 @@ export default function HomePage() {
                 aria-hidden="true"
               />
               <div className="brand-copy">
-                <strong>Real-Time Game Voice Translation</strong>
+                <strong>SquadSpeak</strong>
                 <span>
                   Live subtitles and translated speech for multiplayer voice
                   chat
@@ -234,7 +234,7 @@ export default function HomePage() {
                     <div className="screenshot-wrap">
                       <Image
                         src="/ui-main-window.png"
-                        alt="Real-Time Game Voice Translation desktop app main window"
+                        alt="SquadSpeak desktop app main window"
                         width={1600}
                         height={900}
                         className="product-screenshot"
@@ -415,7 +415,7 @@ export default function HomePage() {
 
       <footer className="footer">
         <div className="container">
-          Real-Time Game Voice Translation • Built for global multiplayer voice
+          SquadSpeak • Built for global multiplayer voice
           chat
         </div>
       </footer>
