@@ -4,19 +4,38 @@ Audio capture using OS-native loopback where available.
 On Windows, `soundcard` opens WASAPI loopback on each speaker/output device (no VB-Cable
 or Stereo Mix required) and lists physical microphones after those entries.
 
+On macOS, `soundcard` exposes loopback/monitor devices for each output (Core Audio).
+
 If `soundcard` is not installed, falls back to PortAudio (`sounddevice`) input devices only.
 """
 from __future__ import annotations
 
 import queue
+import sys
 import threading
 import time
-from typing import Any, List, Optional, Tuple
+from contextlib import contextmanager
+from typing import Any, Iterator, List, Optional, Tuple
 
 import numpy as np
 
 # WASAPI/COM: apartment-threaded mode is more stable for some headphone / loopback endpoints.
 _COINIT_APARTMENTTHREADED = 2
+
+
+@contextmanager
+def _soundcard_com_context() -> Iterator[None]:
+    """Initialize COM on Windows before soundcard WASAPI calls."""
+    if sys.platform != "win32":
+        yield
+        return
+    from ctypes import windll
+
+    windll.ole32.CoInitializeEx(None, _COINIT_APARTMENTTHREADED)
+    try:
+        yield
+    finally:
+        windll.ole32.CoUninitialize()
 
 try:
     import sounddevice as sd
@@ -108,10 +127,7 @@ def probe_soundcard_capture(
     if not soundcard_capture_available():
         raise RuntimeError("soundcard module not available")
 
-    from ctypes import windll
-
-    windll.ole32.CoInitializeEx(None, _COINIT_APARTMENTTHREADED)
-    try:
+    with _soundcard_com_context():
         mics = sc.all_microphones(include_loopback=True)
         if not (0 <= device_index < len(mics)):
             raise RuntimeError(f"Invalid device index {device_index}")
@@ -129,8 +145,6 @@ def probe_soundcard_capture(
             if arr.size == 0:
                 raise RuntimeError("soundcard probe empty buffer")
         return effective
-    finally:
-        windll.ole32.CoUninitialize()
 
 
 def _to_mono_float32(data: Any) -> np.ndarray:
@@ -176,14 +190,17 @@ def list_capture_devices() -> List[dict]:
     if mics:
         for i, mic in enumerate(mics):
             sample_rate = soundcard_preferred_samplerate(i, default_rate=48000)
+            name = mic.name or ""
+            name_lower = name.lower()
+            is_loopback = bool(getattr(mic, "isloopback", False)) or "loopback" in name_lower
             result.append(
                 {
                     "index": i,
-                    "name": mic.name,
+                    "name": name,
                     "channels": int(mic.channels),
                     "sample_rate": sample_rate,
                     "is_input": True,
-                    "is_loopback": bool(getattr(mic, "isloopback", False)),
+                    "is_loopback": is_loopback,
                 }
             )
         return result
@@ -222,57 +239,60 @@ class SoundcardCaptureController:
     def _run(self) -> None:
         if not soundcard_capture_available():
             return
-        from ctypes import windll
-
-        windll.ole32.CoInitializeEx(None, _COINIT_APARTMENTTHREADED)
         try:
-            mics = sc.all_microphones(include_loopback=True)
-            if not (0 <= self._device_index < len(mics)):
-                print(f"[AUDIO] Invalid soundcard index {self._device_index}", flush=True)
-                return
-            mic = mics[self._device_index]
-            recorder_ctx = _open_soundcard_recorder(mic, self._samplerate, self._block_size)
+            with _soundcard_com_context():
+                mics = sc.all_microphones(include_loopback=True)
+                if not (0 <= self._device_index < len(mics)):
+                    print(f"[AUDIO] Invalid soundcard index {self._device_index}", flush=True)
+                    return
+                mic = mics[self._device_index]
+                recorder_ctx = _open_soundcard_recorder(mic, self._samplerate, self._block_size)
 
-            with recorder_ctx as rec:
-                effective_rate = int(getattr(rec, "samplerate", self._samplerate))
-                drop_log_t = 0.0
-                while not self._stop.is_set():
-                    try:
-                        data = rec.record(numframes=self._block_size)
-                    except Exception as e:
-                        print(f"[AUDIO] soundcard record() error: {e}", flush=True)
-                        time.sleep(0.02)
-                        continue
+                with recorder_ctx as rec:
+                    effective_rate = int(getattr(rec, "samplerate", self._samplerate))
+                    drop_log_t = 0.0
+                    while not self._stop.is_set():
+                        try:
+                            data = rec.record(numframes=self._block_size)
+                        except Exception as e:
+                            print(f"[AUDIO] soundcard record() error: {e}", flush=True)
+                            time.sleep(0.02)
+                            continue
 
-                    if data is None:
-                        time.sleep(0.001)
-                        continue
+                        if data is None:
+                            time.sleep(0.001)
+                            continue
 
-                    mono = _to_mono_float32(data)
-                    if mono.size == 0:
-                        time.sleep(0.001)
-                        continue
+                        mono = _to_mono_float32(data)
+                        if mono.size == 0:
+                            time.sleep(0.001)
+                            continue
 
-                    if mono.size > MAX_SAMPLES_PER_WS_CHUNK:
-                        mono = mono[:MAX_SAMPLES_PER_WS_CHUNK]
+                        if mono.size > MAX_SAMPLES_PER_WS_CHUNK:
+                            mono = mono[:MAX_SAMPLES_PER_WS_CHUNK]
 
-                    try:
-                        self._queue.put_nowait((mono.tolist(), effective_rate))
-                    except queue.Full:
-                        now = time.monotonic()
-                        if now - drop_log_t > 2.0:
-                            print(
-                                "[AUDIO] Chunk queue full; dropping audio (slow consumer)",
-                                flush=True,
+                        peak = float(np.max(np.abs(mono))) if mono.size else 0.0
+                        if 0.0 < peak < 0.02:
+                            gain = min(8.0, 0.02 / max(peak, 1e-9))
+                            mono = np.clip(mono * gain, -1.0, 1.0).astype(
+                                np.float32, copy=False
                             )
-                            drop_log_t = now
+
+                        try:
+                            self._queue.put_nowait((mono.tolist(), effective_rate))
+                        except queue.Full:
+                            now = time.monotonic()
+                            if now - drop_log_t > 2.0:
+                                print(
+                                    "[AUDIO] Chunk queue full; dropping audio (slow consumer)",
+                                    flush=True,
+                                )
+                                drop_log_t = now
         except Exception as e:
             print(f"[AUDIO] soundcard capture thread error: {e}", flush=True)
             import traceback
 
             traceback.print_exc()
-        finally:
-            windll.ole32.CoUninitialize()
 
 
 class SounddeviceInputController:

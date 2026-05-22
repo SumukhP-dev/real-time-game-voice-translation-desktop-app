@@ -21,5 +21,5 @@ soundfile>=0.12.0
 
 # Real-time audio capture (for live streaming to UI)
 sounddevice>=0.4.6
-# Windows (and others): WASAPI loopback / monitor devices without extra drivers
+# Loopback / monitor devices (WASAPI on Windows, Core Audio on macOS)
 soundcard>=0.4.3

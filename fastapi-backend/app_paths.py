@@ -6,7 +6,12 @@ from pathlib import Path
 
 def get_app_data_dir() -> Path:
     if getattr(sys, "frozen", False):
-        root = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "RealTimeVoiceTranslation"
+        if sys.platform == "darwin":
+            root = Path.home() / "Library" / "Application Support" / "RealTimeVoiceTranslation"
+        elif sys.platform == "win32":
+            root = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "RealTimeVoiceTranslation"
+        else:
+            root = Path.home() / ".local" / "share" / "RealTimeVoiceTranslation"
     else:
         root = Path(__file__).resolve().parent.parent
     root.mkdir(parents=True, exist_ok=True)

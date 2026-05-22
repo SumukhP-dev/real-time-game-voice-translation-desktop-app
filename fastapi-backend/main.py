@@ -3,12 +3,11 @@ FastAPI service for ML models (Whisper and Translation)
 """
 import sys
 
-if sys.platform == "win32":
-    for stream in (sys.stdout, sys.stderr):
-        try:
-            stream.reconfigure(encoding="utf-8")
-        except Exception:
-            pass
+for stream in (sys.stdout, sys.stderr):
+    try:
+        stream.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 import asyncio
 import functools
@@ -777,6 +776,7 @@ def _default_config() -> dict:
     return {
         "audio": {
             "device_index": None,
+            "microphone_device_index": None,
             "chunk_size": 4096,
             "sample_rate": 16000,
             "channels": 1,
