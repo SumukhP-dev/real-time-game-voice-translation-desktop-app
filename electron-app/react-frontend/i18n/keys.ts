@@ -69,6 +69,9 @@ export const I18N_KEYS = {
   TEAM_AUTO_DETECT: "team.auto_detect",
   TEAM_MANUAL: "team.manual",
   TEAM_TARGET_LANGUAGE: "team.target_language",
+  TEAM_MICROPHONE: "team.microphone",
+  TEAM_MICROPHONE_HELP: "team.microphone_help",
+  TEAM_NO_MICROPHONES: "team.no_microphones",
 } as const;
 
 export type I18NKey = typeof I18N_KEYS[keyof typeof I18N_KEYS];

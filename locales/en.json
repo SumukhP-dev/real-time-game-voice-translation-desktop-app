@@ -101,7 +101,7 @@
     "installation_timeout": "Installation Timeout",
     "installation_timeout_message": "The installation took too long. Please install WASAPI loopback capture manually.",
     "macos_installer": "macOS Installer",
-    "macos_installer_message": "Please download and install WASAPI loopback capture manually. After installation, click 'Refresh Status'.",
+    "macos_installer_message": "On macOS, loopback capture is built in. Open Audio Settings, select your headphones or speakers (marked [Loopback]), then click Refresh Status.",
     "no_audio_devices": "No Audio Devices",
     "no_audio_devices_message": "No audio devices found. Please check your audio setup and try again."
   },
@@ -183,7 +183,7 @@
     },
     "question": {
       "macos_installer": "macOS Installer",
-      "macos_installer_message": "Please download and install WASAPI loopback capture manually. After installation, click 'Refresh Status'.",
+      "macos_installer_message": "On macOS, loopback capture is built in. Open Audio Settings, select your headphones or speakers (marked [Loopback]), then click Refresh Status.",
       "exit_setup": "Exit Setup",
       "exit_setup_message": "Are you sure you want to exit the setup wizard?"
     }

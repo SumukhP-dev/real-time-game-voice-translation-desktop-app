@@ -25,7 +25,13 @@ export const DEFAULT_OVERLAY = {
 } as const;
 
 export const DEFAULT_CONFIG: Config = {
-  audio: { device_index: null, chunk_size: 4096, sample_rate: 16000, channels: 1 },
+  audio: {
+    device_index: null,
+    microphone_device_index: null,
+    chunk_size: 4096,
+    sample_rate: 16000,
+    channels: 1,
+  },
   whisper: {
     model: "base",
     language: "en",

@@ -11,8 +11,8 @@ interface FAQItem {
 const FAQ_DATA: FAQItem[] = [
   {
     category: "Setup",
-    question: "How do I set up audio capture (WASAPI)?",
-    answer: "In Audio Settings, select your headphones or speakers from the list. Click Start Capture, then play game or system audio. No virtual audio cable is required on Windows 10/11.",
+    question: "How do I set up audio capture?",
+    answer: "In Audio Settings, select your headphones or speakers (look for [Loopback] on Windows/macOS). Click Start Capture, then play game or system audio. No virtual audio cable is required on Windows 10/11 or macOS.",
   },
   {
     category: "Setup",

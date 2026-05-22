@@ -79,6 +79,11 @@ export const translations: TranslationMap = {
     [I18N_KEYS.TEAM_AUTO_DETECT]: "Auto-detect from Teammates",
     [I18N_KEYS.TEAM_MANUAL]: "Manual",
     [I18N_KEYS.TEAM_TARGET_LANGUAGE]: "Target Language",
+    [I18N_KEYS.TEAM_MICROPHONE]: "Microphone",
+    [I18N_KEYS.TEAM_MICROPHONE_HELP]:
+      "The mic you speak into. Shared with Setup Wizard — changing it here updates the wizard too.",
+    [I18N_KEYS.TEAM_NO_MICROPHONES]:
+      "No microphones found. Connect a mic and click Retry.",
   },
   es: {
     [I18N_KEYS.COMMON_SAVE]: "Guardar",
@@ -137,6 +142,11 @@ export const translations: TranslationMap = {
     [I18N_KEYS.TEAM_AUTO_DETECT]: "Detección automática de Compañeros",
     [I18N_KEYS.TEAM_MANUAL]: "Manual",
     [I18N_KEYS.TEAM_TARGET_LANGUAGE]: "Idioma Objetivo",
+    [I18N_KEYS.TEAM_MICROPHONE]: "Micrófono",
+    [I18N_KEYS.TEAM_MICROPHONE_HELP]:
+      "El micrófono en el que hablas. Compartido con el Asistente de configuración.",
+    [I18N_KEYS.TEAM_NO_MICROPHONES]:
+      "No se encontraron micrófonos. Conecta uno y haz clic en Reintentar.",
   },
   fr: {
     [I18N_KEYS.COMMON_SAVE]: "Enregistrer",
@@ -195,6 +205,11 @@ export const translations: TranslationMap = {
     [I18N_KEYS.TEAM_AUTO_DETECT]: "Détection automatique des Coéquipiers",
     [I18N_KEYS.TEAM_MANUAL]: "Manuel",
     [I18N_KEYS.TEAM_TARGET_LANGUAGE]: "Langue Cible",
+    [I18N_KEYS.TEAM_MICROPHONE]: "Microphone",
+    [I18N_KEYS.TEAM_MICROPHONE_HELP]:
+      "Le micro dans lequel vous parlez. Partagé avec l'assistant de configuration.",
+    [I18N_KEYS.TEAM_NO_MICROPHONES]:
+      "Aucun microphone trouvé. Branchez-en un et cliquez sur Réessayer.",
   },
   de: {
     [I18N_KEYS.COMMON_SAVE]: "Speichern",
@@ -253,6 +268,11 @@ export const translations: TranslationMap = {
     [I18N_KEYS.TEAM_AUTO_DETECT]: "Automatisch von Teamkollegen Erkennen",
     [I18N_KEYS.TEAM_MANUAL]: "Manuell",
     [I18N_KEYS.TEAM_TARGET_LANGUAGE]: "Zielsprache",
+    [I18N_KEYS.TEAM_MICROPHONE]: "Mikrofon",
+    [I18N_KEYS.TEAM_MICROPHONE_HELP]:
+      "Das Mikrofon, in das du sprichst. Geteilt mit dem Einrichtungsassistenten.",
+    [I18N_KEYS.TEAM_NO_MICROPHONES]:
+      "Keine Mikrofone gefunden. Mikrofon anschließen und Erneut versuchen.",
   },
   ru: {
     [I18N_KEYS.COMMON_SAVE]: "Сохранить",
@@ -311,6 +331,11 @@ export const translations: TranslationMap = {
     [I18N_KEYS.TEAM_AUTO_DETECT]: "Автоопределение от Сокомандников",
     [I18N_KEYS.TEAM_MANUAL]: "Вручную",
     [I18N_KEYS.TEAM_TARGET_LANGUAGE]: "Целевой Язык",
+    [I18N_KEYS.TEAM_MICROPHONE]: "Микрофон",
+    [I18N_KEYS.TEAM_MICROPHONE_HELP]:
+      "Микрофон, в который вы говорите. Общий с мастером настройки.",
+    [I18N_KEYS.TEAM_NO_MICROPHONES]:
+      "Микрофоны не найдены. Подключите микрофон и нажмите Повторить.",
   },
   // Add remaining languages with English as fallback for missing translations
   zh: {
@@ -370,6 +395,10 @@ export const translations: TranslationMap = {
     [I18N_KEYS.TEAM_AUTO_DETECT]: "自动检测队友",
     [I18N_KEYS.TEAM_MANUAL]: "手动",
     [I18N_KEYS.TEAM_TARGET_LANGUAGE]: "目标语言",
+    [I18N_KEYS.TEAM_MICROPHONE]: "麦克风",
+    [I18N_KEYS.TEAM_MICROPHONE_HELP]:
+      "您说话的麦克风。与设置向导共享。",
+    [I18N_KEYS.TEAM_NO_MICROPHONES]: "未找到麦克风。请连接麦克风后点击重试。",
   },
   ja: {
     [I18N_KEYS.COMMON_SAVE]: "保存",
@@ -428,6 +457,11 @@ export const translations: TranslationMap = {
     [I18N_KEYS.TEAM_AUTO_DETECT]: "チームメイトから自動検出",
     [I18N_KEYS.TEAM_MANUAL]: "手動",
     [I18N_KEYS.TEAM_TARGET_LANGUAGE]: "ターゲット言語",
+    [I18N_KEYS.TEAM_MICROPHONE]: "マイク",
+    [I18N_KEYS.TEAM_MICROPHONE_HELP]:
+      "話すマイク。セットアップウィザードと共有されます。",
+    [I18N_KEYS.TEAM_NO_MICROPHONES]:
+      "マイクが見つかりません。接続して再試行をクリックしてください。",
   },
   // Add remaining languages - using English as base for now (can be translated later)
   ko: {} as Translations,

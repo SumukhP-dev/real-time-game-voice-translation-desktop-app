@@ -1,8 +1,13 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useConfig } from "../hooks/useConfig";
 import { useTeammates } from "../hooks/useTeammates";
 import { useI18n } from "../hooks/useI18n";
 import { I18N_KEYS } from "../i18n/keys";
+import electronService, { type AudioDevice } from "../services/electron";
+import {
+  filterDevicesByCaptureSource,
+  findPreferredMicrophoneDevice,
+} from "../utils/audioDevices";
 
 const LANGUAGES = [
   { code: "en", name: "English" },
@@ -29,8 +34,65 @@ export function TranslationToTeam() {
   const [teamTargetLanguage, setTeamTargetLanguage] = useState<string>(
     config?.translation?.team_target_language || "en"
   );
+  const [audioDevices, setAudioDevices] = useState<AudioDevice[]>([]);
+  const [devicesLoading, setDevicesLoading] = useState(false);
+  const [devicesError, setDevicesError] = useState<string | null>(null);
+
   const useAutoDetect =
     config?.translation?.use_auto_detect_team_language ?? false;
+
+  const microphoneDevices = useMemo(
+    () => filterDevicesByCaptureSource(audioDevices, "microphone"),
+    [audioDevices]
+  );
+
+  const selectedMicIndex = config?.audio?.microphone_device_index ?? null;
+  const micSelected =
+    selectedMicIndex !== null &&
+    microphoneDevices.some((d) => d.index === selectedMicIndex);
+
+  const loadAudioDevices = useCallback(async () => {
+    setDevicesLoading(true);
+    setDevicesError(null);
+    try {
+      const devices = await electronService.getAudioDevices();
+      setAudioDevices(devices);
+
+      if (!config) return;
+
+      const micFiltered = filterDevicesByCaptureSource(devices, "microphone");
+      let micIndex = config.audio?.microphone_device_index ?? null;
+      if (
+        micIndex == null ||
+        !micFiltered.some((d) => d.index === micIndex)
+      ) {
+        micIndex =
+          findPreferredMicrophoneDevice(micFiltered)?.index ??
+          micFiltered[0]?.index ??
+          null;
+      }
+
+      if (
+        micIndex !== null &&
+        micIndex !== config.audio?.microphone_device_index
+      ) {
+        await updateConfig({
+          ...config,
+          audio: {
+            ...config.audio,
+            microphone_device_index: micIndex,
+          },
+        });
+      }
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to load audio devices";
+      setDevicesError(msg);
+      setAudioDevices([]);
+    } finally {
+      setDevicesLoading(false);
+    }
+  }, [config, updateConfig]);
 
   // Sync state with config changes
   useEffect(() => {
@@ -38,6 +100,14 @@ export function TranslationToTeam() {
       setTeamTargetLanguage(config.translation.team_target_language);
     }
   }, [config?.translation?.team_target_language]);
+
+  const isEnabled = config?.translation?.translate_to_teammates ?? false;
+
+  useEffect(() => {
+    if (isEnabled) {
+      loadAudioDevices();
+    }
+  }, [isEnabled, loadAudioDevices]);
 
   // Calculate most common language from teammates
   const mostCommonLanguage = useMemo(() => {
@@ -85,6 +155,21 @@ export function TranslationToTeam() {
     }
   };
 
+  const handleMicrophoneChange = async (deviceIndex: number) => {
+    if (!config) return;
+    try {
+      await updateConfig({
+        ...config,
+        audio: {
+          ...config.audio,
+          microphone_device_index: deviceIndex,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to update microphone_device_index:", error);
+    }
+  };
+
   const handleTargetLanguageChange = async (language: string) => {
     setTeamTargetLanguage(language);
     if (!config) return;
@@ -118,8 +203,6 @@ export function TranslationToTeam() {
     }
   };
 
-  const isEnabled = config?.translation?.translate_to_teammates ?? false;
-
   return (
     <div className="p-6 bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700">
       <h2 className="text-xl font-bold mb-4 text-white">
@@ -147,6 +230,74 @@ export function TranslationToTeam() {
 
         {isEnabled && (
           <>
+            {/* Microphone — shared with Setup Wizard via config.audio.microphone_device_index */}
+            <div className="border-t border-gray-700 pt-3 space-y-2">
+              <label className="block text-sm font-medium text-gray-300">
+                {t(I18N_KEYS.TEAM_MICROPHONE)}
+              </label>
+              <p className="text-xs text-gray-400">
+                {t(I18N_KEYS.TEAM_MICROPHONE_HELP)}
+              </p>
+
+              {devicesLoading && (
+                <p className="text-gray-400 text-sm">Loading audio devices...</p>
+              )}
+
+              {devicesError && (
+                <div className="space-y-2">
+                  <p className="text-sm text-red-300">{devicesError}</p>
+                  <button
+                    type="button"
+                    onClick={() => loadAudioDevices()}
+                    className="px-3 py-1.5 text-sm bg-gray-600 hover:bg-gray-500 text-white rounded-md"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {!devicesLoading &&
+                !devicesError &&
+                microphoneDevices.length > 0 && (
+                  <select
+                    className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={micSelected ? selectedMicIndex ?? "" : ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value !== "") {
+                        handleMicrophoneChange(parseInt(value, 10));
+                      }
+                    }}
+                  >
+                    <option value="">Select a device...</option>
+                    {microphoneDevices.map((device) => (
+                      <option key={device.index} value={device.index}>
+                        {device.name} ({device.sample_rate}Hz, {device.channels}
+                        ch)
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+              {!devicesLoading &&
+                !devicesError &&
+                audioDevices.length > 0 &&
+                microphoneDevices.length === 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-yellow-300">
+                      {t(I18N_KEYS.TEAM_NO_MICROPHONES)}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => loadAudioDevices()}
+                      className="px-3 py-1.5 text-sm bg-gray-600 hover:bg-gray-500 text-white rounded-md"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+            </div>
+
             {/* Language Selection Mode */}
             <div className="border-t border-gray-700 pt-3">
               <div className="text-sm font-semibold text-gray-300 mb-3">
@@ -216,4 +367,3 @@ export function TranslationToTeam() {
     </div>
   );
 }
-
