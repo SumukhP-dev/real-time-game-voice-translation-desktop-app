@@ -57,11 +57,27 @@ export function MainWindow() {
     isCapturing,
     loading: audioLoading,
     error: audioError,
+    errorSource: audioErrorSource,
+    loadDevices,
     startCapture,
     stopCapture,
     selectDevice,
-  } = useAudio();
+  } = useAudio(config?.audio?.device_index);
   const { teammates } = useTeammates();
+
+  const handleSelectDevice = useCallback(
+    async (deviceIndex: number) => {
+      selectDevice(deviceIndex);
+      if (!config || config.audio?.device_index === deviceIndex) {
+        return;
+      }
+      await updateConfig({
+        ...config,
+        audio: { ...config.audio, device_index: deviceIndex },
+      });
+    },
+    [config, selectDevice, updateConfig]
+  );
 
   // Use refs to persist values across renders without causing re-renders
   const lastProcessTimeRef = useRef<number>(0);
@@ -235,7 +251,12 @@ export function MainWindow() {
 
         // Provide helpful status message
         if (lowAudioCount === audioChunkCount && audioChunkCount > 0) {
-          const statusMsg = `Receiving audio but it's very quiet (${audioChunkCount} chunks). Check: 1) Audio device is correct, 2) Game audio is playing, 3) Device volume is up`;
+          const dev = devices.find((d) => d.index === selectedDevice);
+          const loopbackHint =
+            dev && !dev.is_loopback && dev.channels <= 1
+              ? " Pick a [Loopback] device (2ch) in Audio Settings."
+              : "";
+          const statusMsg = `Receiving audio but it's very quiet (${audioChunkCount} chunks). Check: 1) [Loopback] headphones/speakers selected, 2) Game audio is playing, 3) Windows volume is up.${loopbackHint}`;
           setStatus(statusMsg);
           addLog(statusMsg);
         } else {
@@ -380,9 +401,8 @@ export function MainWindow() {
         return;
       }
 
-      // Only skip completely silent audio (RMS = 0 or extremely close to 0)
-      // Let Whisper decide if there's speech in quiet audio
-      if (audioLevel < 0.0001 && peakLevel < 0.0005) {
+      // Skip near-silence (Bluetooth loopback can be very quiet but still usable)
+      if (audioLevel < 0.000008 && peakLevel < 0.000015) {
         // Essentially silent - skip but keep buffer for a bit
         lowAudioCount++;
         if (lowAudioCount % 50 === 0) {
@@ -1184,7 +1204,7 @@ export function MainWindow() {
         console.error("Error cleaning up audio listener:", err);
       }
     };
-  }, [isCapturing]);
+  }, [isCapturing, selectedDevice, devices]);
 
   // Cleanup only when the window/component is destroyed (not when isCapturing toggles)
   useEffect(() => {
@@ -1231,29 +1251,18 @@ export function MainWindow() {
         color: '#ffffff'
       }}
     >
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-6 pt-8">
         <header className="mb-8">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h1 
-                className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent"
-                style={{
-                  fontSize: '2.5rem',
-                  fontWeight: 'bold',
-                  marginBottom: '0.5rem',
-                  background: 'linear-gradient(90deg, #60a5fa 0%, #a855f7 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text'
-                }}
-              >
+          <div className="flex flex-col gap-4 mb-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="relative z-10 min-w-0 shrink-0">
+              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-blue-400">
                 {t(I18N_KEYS.MAIN_TITLE)}
               </h1>
               <p className="text-gray-300 text-lg">
                 Real-time voice translation for gaming
               </p>
             </div>
-            <div className="flex gap-3 items-center flex-shrink-0">
+            <div className="flex flex-wrap gap-2 items-center lg:justify-end lg:max-w-[55%]">
               <button
                 onClick={() => setShowHelpCenter(true)}
                 className="px-5 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
@@ -1348,7 +1357,9 @@ export function MainWindow() {
               isCapturing={isCapturing}
               loading={audioLoading}
               error={audioError}
-              selectDevice={selectDevice}
+              errorSource={audioErrorSource}
+              selectDevice={handleSelectDevice}
+              loadDevices={loadDevices}
               startCapture={startCapture}
               stopCapture={stopCapture}
             />
@@ -1394,6 +1405,16 @@ export function MainWindow() {
             setStatus("Setup complete! Ready to translate.");
           }}
           onClose={() => setShowSetupWizard(false)}
+          onStartCapture={async () => {
+            const deviceIndex =
+              config?.audio?.device_index ?? selectedDevice ?? undefined;
+            if (deviceIndex == null) {
+              throw new Error(
+                "No audio device selected. Pick your headphones or speakers in Audio Setup."
+              );
+            }
+            await startCapture(deviceIndex);
+          }}
         />
       )}
 
