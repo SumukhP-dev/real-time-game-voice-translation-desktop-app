@@ -1,5 +1,4 @@
-# Audio capture
-pyaudio>=0.2.14
+# Audio capture (pyaudio is optional — see requirements-optional.txt)
 sounddevice>=0.4.6
 soundcard>=0.4.3  # WASAPI loopback / monitor (Windows) without virtual cable
 
@@ -9,10 +8,10 @@ openai-whisper>=20231117
 # Translation
 deep-translator>=1.11.4  # Fallback option
 googletrans==4.0.0rc1
-easynmt>=2.0.0  # Local translation model (primary)
-transformers>=4.30.0  # Required by EasyNMT
-torch>=2.0.0  # Required by EasyNMT
-sentencepiece>=0.1.99  # Required by EasyNMT
+# easynmt (optional, pulls fasttext) — see requirements-optional.txt
+transformers>=4.30.0
+torch>=2.0.0
+sentencepiece>=0.1.99
 
 # Text-to-speech
 pyttsx3>=2.90

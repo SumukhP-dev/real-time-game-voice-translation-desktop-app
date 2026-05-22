@@ -97,3 +97,7 @@ startup_log.txt
 # Python bundled dependencies
 python_deps/
 */python_deps/
+
+# Local assets and pitch materials (not tracked)
+batch/
+docs/pitch_files/interviews/

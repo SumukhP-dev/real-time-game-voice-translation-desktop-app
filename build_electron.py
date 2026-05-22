@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
 Build script for CSGO2 Voice Translation - Electron Edition
-Creates distributable packages for the Electron application
+Creates distributable packages for the Electron application (Windows, macOS, Linux).
 """
 
+import argparse
 import sys
 import os
 import subprocess
 import shutil
 from pathlib import Path
+from typing import List, Optional
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).parent
@@ -16,14 +18,43 @@ ELECTRON_DIR = PROJECT_ROOT / "electron-app"
 REACT_DIR = PROJECT_ROOT / "electron-app/react-frontend"
 ML_SERVICE_DIR = PROJECT_ROOT / "fastapi-backend"
 
-def check_build_dependencies():
 
+def ml_service_binary_name() -> str:
+    return "ml-service.exe" if sys.platform == "win32" else "ml-service"
+
+
+def ml_service_bundle_dir() -> Path:
+    return ML_SERVICE_DIR / "dist" / "ml-service"
+
+
+def ml_service_binary_path() -> Path:
+    return ml_service_bundle_dir() / ml_service_binary_name()
+
+
+def resolve_npm() -> Optional[str]:
+    npm = shutil.which("npm")
+    if npm:
+        return npm
+    if sys.platform == "win32":
+        for candidate in (
+            r"C:\Program Files\nodejs\npm.cmd",
+            r"C:\Program Files (x86)\nodejs\npm.cmd",
+        ):
+            if os.path.exists(candidate):
+                return candidate
+    return None
+
+
+def npm_cmd(*args: str) -> List[str]:
+    return [resolve_npm() or "npm", *args]
+
+
+def check_build_dependencies():
     """Check if build dependencies are available"""
     print("[CHECK] Verifying build dependencies...")
 
-    # Check Node.js
     try:
-        result = subprocess.run(['node', '--version'], capture_output=True, text=True)
+        result = subprocess.run(["node", "--version"], capture_output=True, text=True)
         if result.returncode != 0:
             print("[ERROR] Node.js not found")
             return False
@@ -32,21 +63,25 @@ def check_build_dependencies():
         print("[ERROR] Node.js not found")
         return False
 
-    # Check npm
+    npm = resolve_npm()
+    if not npm:
+        print("[ERROR] npm not found")
+        return False
     try:
-        result = subprocess.run(['npm', '--version'], capture_output=True, text=True)
+        result = subprocess.run([npm, "--version"], capture_output=True, text=True)
         if result.returncode != 0:
             print("[ERROR] npm not found")
             return False
-        print(f"[CHECK] npm: {result.stdout.strip()}")
+        print(f"[CHECK] npm: {result.stdout.strip()} ({npm})")
     except FileNotFoundError:
         print("[ERROR] npm not found")
         return False
 
     return True
 
-def build_ml_service_exe():
-    """Bundle FastAPI backend as ml-service.exe for electron-builder extraResources."""
+
+def build_ml_service():
+    """Bundle FastAPI backend as ml-service for electron-builder extraResources."""
     print("[BUILD] Bundling ML service (PyInstaller)...")
 
     try:
@@ -75,36 +110,33 @@ def build_ml_service_exe():
         print("[ERROR] PyInstaller failed for ML service")
         return False
 
-    exe_path = ML_SERVICE_DIR / "dist" / "ml-service" / "ml-service.exe"
+    exe_path = ml_service_binary_path()
     if not exe_path.exists():
         print(f"[ERROR] Expected executable not found: {exe_path}")
         return False
 
     folder_mb = sum(
-        f.stat().st_size for f in (ML_SERVICE_DIR / "dist" / "ml-service").rglob("*") if f.is_file()
+        f.stat().st_size for f in ml_service_bundle_dir().rglob("*") if f.is_file()
     ) / (1024 * 1024)
     print(f"[BUILD] ML service bundle ready ({folder_mb:.1f} MB): {exe_path}")
     return True
 
-def build_react_app():
 
+def build_react_app():
     """Build the React application"""
     print("[BUILD] Building React application...")
 
-    # Change to React directory
     os.chdir(REACT_DIR)
 
-    # Install Node.js dependencies
     if not (REACT_DIR / "node_modules").exists():
         print("[BUILD] Installing Node.js dependencies...")
-        result = subprocess.run(['npm', 'install'])
+        result = subprocess.run(npm_cmd("install"))
         if result.returncode != 0:
             print("[ERROR] npm install failed")
             return False
 
-    # Build the React app
     print("[BUILD] Building React application...")
-    result = subprocess.run(['npm', 'run', 'build'])
+    result = subprocess.run(npm_cmd("run", "build"))
     if result.returncode != 0:
         print("[ERROR] React build failed")
         return False
@@ -112,27 +144,33 @@ def build_react_app():
     print("[BUILD] React application built successfully")
     return True
 
-def build_electron_app():
 
-    """Build the Electron application"""
+def build_electron_app(target_platform: Optional[str] = None):
+    """Build the Electron application for the current or requested platform."""
     print("[BUILD] Building Electron application...")
 
-    # Change to Electron directory
     os.chdir(ELECTRON_DIR)
 
-    # Install Node.js dependencies
     if not (ELECTRON_DIR / "node_modules").exists():
         print("[BUILD] Installing Electron dependencies...")
-        result = subprocess.run(['npm', 'install'])
+        result = subprocess.run(npm_cmd("install"))
         if result.returncode != 0:
             print("[ERROR] npm install failed")
             return False
 
-    # Build the Electron app (skip code signing — avoids Windows symlink errors)
-    print("[BUILD] Building Electron application...")
     env = os.environ.copy()
     env["CSC_IDENTITY_AUTO_DISCOVERY"] = "false"
-    result = subprocess.run(['npm', 'run', 'dist'], env=env)
+
+    npm_script = "dist"
+    if target_platform == "mac":
+        npm_script = "dist:mac"
+    elif target_platform == "win":
+        npm_script = "dist:win"
+    elif target_platform == "linux":
+        npm_script = "dist:linux"
+
+    print(f"[BUILD] Running npm run {npm_script} ...")
+    result = subprocess.run(npm_cmd("run", npm_script), env=env)
     if result.returncode != 0:
         print("[ERROR] Electron build failed")
         return False
@@ -140,23 +178,20 @@ def build_electron_app():
     print("[BUILD] Electron application built successfully")
     return True
 
-def create_installer():
 
-    """Create installer packages"""
+def create_installer():
+    """Copy build artifacts to ./dist at repo root."""
     print("[INSTALLER] Creating installer packages...")
 
-    # Find built executables
     dist_dir = ELECTRON_DIR / "dist"
 
     if not dist_dir.exists():
         print("[ERROR] Build artifacts not found")
         return False
 
-    # Create distribution directory
     final_dist_dir = PROJECT_ROOT / "dist"
     final_dist_dir.mkdir(exist_ok=True)
 
-    # Copy all bundles to distribution directory
     for item in dist_dir.glob("*"):
         if item.is_file() or item.is_dir():
             target = final_dist_dir / item.name
@@ -175,35 +210,57 @@ def create_installer():
     print("[INSTALLER] Installer packages created")
     return True
 
-def main():
 
-    """Main build process"""
+def main():
+    parser = argparse.ArgumentParser(description="Build SquadSpeak Electron distributables")
+    parser.add_argument(
+        "--platform",
+        choices=["win", "mac", "linux"],
+        default=None,
+        help="Target platform (default: current OS). Cross-compiling macOS DMG requires building on macOS.",
+    )
+    args = parser.parse_args()
+
+    target = args.platform
+    if target is None:
+        if sys.platform == "darwin":
+            target = "mac"
+        elif sys.platform == "win32":
+            target = "win"
+        else:
+            target = "linux"
+
     print("=" * 60)
     print("CSGO2 Voice Translation - Electron Edition")
     print("Build Script")
+    print(f"Host: {sys.platform}  Target: {target}")
     print("=" * 60)
 
-    # Check dependencies
+    if target == "mac" and sys.platform != "darwin":
+        print(
+            "[ERROR] macOS DMG builds must run on macOS (Intel or Apple Silicon)."
+        )
+        print("  On a Mac, from the repo root:")
+        print("    python3 build_electron.py --platform mac")
+        print("  Or: ./scripts/build-macos.sh")
+        sys.exit(1)
+
     if not check_build_dependencies():
         print("[ERROR] Build dependency check failed")
         sys.exit(1)
 
-    # Bundle ML service for packaged Electron app
-    if not build_ml_service_exe():
+    if not build_ml_service():
         print("[ERROR] Failed to bundle ML service")
         sys.exit(1)
 
-    # Build React application
     if not build_react_app():
         print("[ERROR] Failed to build React application")
         sys.exit(1)
 
-    # Build Electron application
-    if not build_electron_app():
+    if not build_electron_app(target):
         print("[ERROR] Failed to build Electron application")
         sys.exit(1)
 
-    # Create installer packages
     if not create_installer():
         print("[ERROR] Failed to create installer packages")
         sys.exit(1)
@@ -212,6 +269,7 @@ def main():
     print("BUILD SUCCESSFUL!")
     print("Distribution packages are available in ./dist/")
     print("=" * 60)
+
 
 if __name__ == "__main__":
     main()

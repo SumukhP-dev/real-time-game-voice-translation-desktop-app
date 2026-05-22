@@ -1,5 +1,5 @@
 const electron = require('electron');
-const { BrowserWindow, ipcMain, shell, dialog, screen } = electron;
+const { BrowserWindow, ipcMain, shell, dialog, screen, Menu } = electron;
 const app = electron.app;
 const path = require('path');
 const fs = require('fs');
@@ -85,11 +85,15 @@ function appendMLServiceLog(chunk) {
   logToFile(chunk.trimEnd(), 'ml-service.log');
 }
 
-function getBundledMLServiceExePath() {
+function getBundledMLServiceBinaryName() {
+  return process.platform === 'win32' ? 'ml-service.exe' : 'ml-service';
+}
+
+function getBundledMLServicePath() {
   // electron-builder places extraResources under:
   //   <install>/resources/<to>
   // where process.resourcesPath points at <install>/resources
-  return path.join(process.resourcesPath, 'ml-service', 'ml-service.exe');
+  return path.join(process.resourcesPath, 'ml-service', getBundledMLServiceBinaryName());
 }
 
 function getReactDevPort() {
@@ -190,6 +194,11 @@ function destroyOverlayWindow() {
 }
 
 function createWindow() {
+  // Prevent the auto-hidden menu bar from overlapping the top of the UI (Windows/Linux).
+  if (process.platform !== 'darwin') {
+    Menu.setApplicationMenu(null);
+  }
+
   // Create the browser window
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -311,19 +320,22 @@ async function startMLService() {
         }
       );
     } else {
-      const exePath = getBundledMLServiceExePath();
-      if (!fs.existsSync(exePath)) {
-        const msg = `ML service not found at ${exePath}`;
+      const servicePath = getBundledMLServicePath();
+      if (!fs.existsSync(servicePath)) {
+        const msg = `ML service not found at ${servicePath}`;
         logToFile(msg, 'ml-service.log');
         finish(new Error(msg));
         return;
       }
-      logToFile(`Spawning ${exePath}`, 'ml-service.log');
-      child = spawn(exePath, [], {
-        cwd: path.dirname(exePath),
-        stdio: ['ignore', 'pipe', 'pipe'],
-        windowsHide: true
-      });
+      logToFile(`Spawning ${servicePath}`, 'ml-service.log');
+      const spawnOptions = {
+        cwd: path.dirname(servicePath),
+        stdio: ['ignore', 'pipe', 'pipe']
+      };
+      if (process.platform === 'win32') {
+        spawnOptions.windowsHide = true;
+      }
+      child = spawn(servicePath, [], spawnOptions);
     }
 
     mlServiceProcess = child;

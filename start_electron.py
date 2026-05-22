@@ -10,6 +10,7 @@ import subprocess
 import time
 import signal
 import atexit
+import shutil
 from pathlib import Path
 
 # Add project root to path
@@ -38,30 +39,40 @@ def _log(msg):
         pass
 
 def free_port(port: int) -> None:
-    """Stop processes listening on a TCP port (Windows best-effort)."""
-    if sys.platform != "win32":
-        return
+    """Stop processes listening on a TCP port (best-effort)."""
     try:
-        result = subprocess.run(
-            ["netstat", "-ano"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        pids = set()
-        needle = f":{port} "
-        for line in result.stdout.splitlines():
-            if "LISTENING" in line and needle in line:
-                parts = line.split()
-                if parts and parts[-1].isdigit():
-                    pids.add(parts[-1])
-        for pid in pids:
-            subprocess.run(
-                ["taskkill", "/F", "/PID", pid],
+        if sys.platform == "win32":
+            result = subprocess.run(
+                ["netstat", "-ano"],
                 capture_output=True,
+                text=True,
                 check=False,
             )
-            _log(f"[CLEANUP] Freed port {port} (stopped PID {pid})")
+            pids = set()
+            needle = f":{port} "
+            for line in result.stdout.splitlines():
+                if "LISTENING" in line and needle in line:
+                    parts = line.split()
+                    if parts and parts[-1].isdigit():
+                        pids.add(parts[-1])
+            for pid in pids:
+                subprocess.run(
+                    ["taskkill", "/F", "/PID", pid],
+                    capture_output=True,
+                    check=False,
+                )
+                _log(f"[CLEANUP] Freed port {port} (stopped PID {pid})")
+        elif sys.platform in ("darwin", "linux"):
+            result = subprocess.run(
+                ["lsof", "-ti", f"tcp:{port}"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            for pid in result.stdout.strip().split():
+                if pid.isdigit():
+                    subprocess.run(["kill", "-9", pid], capture_output=True, check=False)
+                    _log(f"[CLEANUP] Freed port {port} (stopped PID {pid})")
     except Exception as exc:
         _log(f"[WARN] Could not free port {port}: {exc}")
 
@@ -107,15 +118,17 @@ def check_dependencies():
 
     # Check npm
     try:
-        # Try npm with full path or just check if it exists
-        result = subprocess.run(['where', 'npm'], capture_output=True, text=True, shell=True)
+        npm_path = get_npm_path()
+        result = subprocess.run(
+            [npm_path, "--version"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
         if result.returncode != 0:
-            # Try without where command
-            result = subprocess.run(['npm', '--version'], capture_output=True, text=True, shell=True)
-            if result.returncode != 0:
-                _log("[ERROR] npm not found")
-                return False
-        _log(f"[CHECK] npm: {result.stdout.strip() if result.stdout else 'Available'}")
+            _log("[ERROR] npm not found")
+            return False
+        _log(f"[CHECK] npm: {result.stdout.strip()}")
     except (FileNotFoundError, Exception) as e:
         _log(f"[ERROR] npm not found: {e}")
         return False
@@ -139,36 +152,21 @@ def check_dependencies():
     return True
 
 def get_npm_path():
-    """Get the full path to npm executable"""
-    try:
-        result = subprocess.run(['cmd', '/c', 'where npm'], capture_output=True, text=True, shell=True)
-        if result.returncode == 0:
-            # Get all lines and find the first .cmd file
-            lines = result.stdout.strip().split('\n')
-            for line in lines:
-                line = line.strip()
-                if line and line.endswith('.cmd') and os.path.exists(line):
-                    return line
-            # If no .cmd found, use the first valid path
-            for line in lines:
-                line = line.strip()
-                if line and os.path.exists(line):
-                    return line
-    except:
-        pass
-    
-    # Fallback to common locations - look for .cmd files on Windows
-    common_paths = [
-        r'C:\Program Files\nodejs\npm.cmd',
-        r'C:\Program Files (x86)\nodejs\npm.cmd'
-    ]
-    
-    for path in common_paths:
-        if os.path.exists(path):
-            return path
-    
-    # Try using 'npm' directly as last resort
-    return 'npm'
+    """Resolve npm executable (cross-platform)."""
+    npm = shutil.which("npm")
+    if npm:
+        return npm
+
+    if sys.platform == "win32":
+        common_paths = [
+            r"C:\Program Files\nodejs\npm.cmd",
+            r"C:\Program Files (x86)\nodejs\npm.cmd",
+        ]
+        for candidate in common_paths:
+            if os.path.exists(candidate):
+                return candidate
+
+    return "npm"
 
 def start_react_dev():
 
