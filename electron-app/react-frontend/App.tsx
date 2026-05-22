@@ -1,11 +1,14 @@
-import React, { useEffect, Component, ErrorInfo, ReactNode } from "react";
+import React, { useCallback, useEffect, useState, Component, ErrorInfo, ReactNode } from "react";
 import { MainWindow } from "./components/MainWindow";
+import { MLServiceStartupScreen } from "./components/MLServiceStartupScreen";
 import { I18nProvider } from "./hooks/useI18n";
 import { OnboardingProvider } from "./components/OnboardingTooltips";
 import { TranslationProvider } from "./hooks/useTranslation";
 import { ConfigProvider } from "./hooks/useConfig";
 import { MatchHistoryProvider } from "./hooks/useMatchHistory";
-import electronService from "./services/electron";
+import electronService, {
+  type MLServiceStartupState,
+} from "./services/electron";
 import "./index.css";
 
 interface ErrorBoundaryState {
@@ -60,28 +63,72 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
   }
 }
 
+const INITIAL_STARTUP_STATE: MLServiceStartupState = {
+  progress: 0,
+  message: "First launch: models loading (~1 min)",
+  phase: "connecting",
+};
+
 function App() {
+  const [mlReady, setMlReady] = useState(false);
+  const [startupState, setStartupState] =
+    useState<MLServiceStartupState>(INITIAL_STARTUP_STATE);
+  const [startupError, setStartupError] = useState<string | null>(null);
+  const [startupAttempt, setStartupAttempt] = useState(0);
+
+  const runStartup = useCallback(() => {
+    setStartupError(null);
+    setStartupState(INITIAL_STARTUP_STATE);
+
+    void electronService
+      .waitForMLServiceReady(setStartupState)
+      .then(() => {
+        setMlReady(true);
+        console.log("ML service ready for translation");
+      })
+      .catch((err: unknown) => {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "Translation backend failed to start";
+        console.warn("ML service startup failed:", err);
+        setStartupError(msg);
+        setStartupState((prev) => ({
+          ...prev,
+          phase: "error",
+          message: "Could not load AI models",
+        }));
+      });
+  }, []);
+
   useEffect(() => {
     console.log("App component mounted");
     console.log("React version:", React.version);
     console.log("Running in Electron:", electronService.isElectronApp());
-    
-    // Check ML service health on app load
-    const checkMLService = async () => {
-      try {
-        const health = await electronService.healthCheck();
-        console.log("ML service health check:", health);
-      } catch (error) {
-        console.warn("ML service not available:", error);
-      }
-    };
+    runStartup();
+  }, [runStartup, startupAttempt]);
 
-    checkMLService();
-  }, []);
+  const handleRetryStartup = () => {
+    electronService.resetMLServiceStartup();
+    setMlReady(false);
+    setStartupAttempt((n) => n + 1);
+  };
 
   console.log("App component rendering");
 
   try {
+    if (!mlReady) {
+      return (
+        <ErrorBoundary>
+          <MLServiceStartupScreen
+            state={startupState}
+            error={startupError}
+            onRetry={handleRetryStartup}
+          />
+        </ErrorBoundary>
+      );
+    }
+
     return (
       <ErrorBoundary>
         <ConfigProvider>

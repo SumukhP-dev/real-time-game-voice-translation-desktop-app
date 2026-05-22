@@ -12,7 +12,10 @@ export interface AudioDevice {
 
 export interface Config {
   audio: {
+    /** Loopback device for game / teammate audio (subtitles). */
     device_index: number | null;
+    /** Physical microphone for your voice (voice translation). */
+    microphone_device_index?: number | null;
     chunk_size: number;
     sample_rate: number;
     channels: number;
@@ -73,22 +76,47 @@ export interface Config {
   };
 }
 
+export interface MLServiceHealth {
+  status?: string;
+  ready?: boolean;
+  whisper_loaded?: boolean;
+  translation_loaded?: boolean;
+}
+
+export type MLServiceStartupPhase =
+  | "connecting"
+  | "loading_models"
+  | "ready"
+  | "error";
+
+export interface MLServiceStartupState {
+  progress: number;
+  message: string;
+  phase: MLServiceStartupPhase;
+  whisperLoaded?: boolean;
+  translationLoaded?: boolean;
+}
+
 class ElectronService {
   private isElectron: boolean;
   private isDev: boolean;
   private mlServiceURL: string;
   private mlServiceReady: boolean;
-  private mlServiceReadyPromise: Promise<void> | null;
+  private mlServiceStartupPromise: Promise<void> | null;
+  private mlServiceStartupGeneration: number;
 
   private static readonly ML_SERVICE_STARTUP_TIMEOUT_MS = 120000;
   private static readonly ML_SERVICE_POLL_INTERVAL_MS = 500;
+  /** Expected first-launch model load duration for progress UI (~1 min). */
+  private static readonly ML_SERVICE_EXPECTED_LOAD_MS = 60000;
 
   constructor() {
     this.isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI;
     this.isDev = (window as any).nodeEnv?.NODE_ENV === 'development' || false;
     this.mlServiceURL = 'http://127.0.0.1:8000';
     this.mlServiceReady = false;
-    this.mlServiceReadyPromise = null;
+    this.mlServiceStartupPromise = null;
+    this.mlServiceStartupGeneration = 0;
   }
 
   // Check if running in Electron
@@ -182,45 +210,195 @@ class ElectronService {
     });
   }
 
-  private async waitForMLService(
+  private async parseMLServiceErrorResponse(response: Response): Promise<string> {
+    let detail = response.statusText;
+    try {
+      const errBody = await response.json();
+      detail =
+        typeof errBody.detail === 'string'
+          ? errBody.detail
+          : JSON.stringify(errBody);
+    } catch {
+      try {
+        const text = await response.text();
+        if (text) {
+          detail = text;
+        }
+      } catch {
+        // keep statusText
+      }
+    }
+    return detail;
+  }
+
+  private isMLHealthReady(health: MLServiceHealth): boolean {
+    return !!(
+      health.ready ||
+      (health.whisper_loaded && health.translation_loaded)
+    );
+  }
+
+  /** Poll /health without waiting for models (used during startup UI). */
+  async fetchMLHealth(): Promise<MLServiceHealth | null> {
+    try {
+      const baseUrl = await this.getMLServiceURL();
+      const response = await fetch(`${baseUrl}/health`);
+      if (!response.ok) {
+        return null;
+      }
+      return (await response.json()) as MLServiceHealth;
+    } catch {
+      return null;
+    }
+  }
+
+  private computeStartupProgress(
+    health: MLServiceHealth | null,
+    elapsedMs: number
+  ): number {
+    const timeCap = Math.min(
+      92,
+      (elapsedMs / ElectronService.ML_SERVICE_EXPECTED_LOAD_MS) * 92
+    );
+    if (!health) {
+      return Math.min(18, timeCap * 0.2);
+    }
+    let modelProgress = 22;
+    if (health.whisper_loaded) {
+      modelProgress = 58;
+    }
+    if (health.translation_loaded) {
+      modelProgress = Math.max(modelProgress, 78);
+    }
+    if (this.isMLHealthReady(health)) {
+      return 100;
+    }
+    return Math.max(modelProgress, timeCap);
+  }
+
+  private startupMessage(health: MLServiceHealth | null): string {
+    if (!health) {
+      return "Starting SquadSpeak translation backend...";
+    }
+    if (this.isMLHealthReady(health)) {
+      return "Ready to translate";
+    }
+    if (health.whisper_loaded && !health.translation_loaded) {
+      return "First launch: loading translation models (~1 min)";
+    }
+    if (!health.whisper_loaded) {
+      return "First launch: loading speech models (~1 min)";
+    }
+    return "First launch: models loading (~1 min)";
+  }
+
+  /** Reset startup state after a failed load (e.g. user clicks Retry). */
+  resetMLServiceStartup(): void {
+    this.mlServiceReady = false;
+    this.mlServiceStartupPromise = null;
+    this.mlServiceStartupGeneration += 1;
+  }
+
+  /**
+   * Wait until /health reports models ready; drives cold-start progress UI.
+   */
+  async waitForMLServiceReady(
+    onProgress?: (state: MLServiceStartupState) => void,
     timeoutMs: number = ElectronService.ML_SERVICE_STARTUP_TIMEOUT_MS
   ): Promise<void> {
     if (this.mlServiceReady) {
+      onProgress?.({
+        progress: 100,
+        message: "Ready to translate",
+        phase: "ready",
+        whisperLoaded: true,
+        translationLoaded: true,
+      });
       return;
     }
 
-    if (!this.mlServiceReadyPromise) {
-      this.mlServiceReadyPromise = (async () => {
-        const baseUrl = await this.getMLServiceURL();
-        const deadline = Date.now() + timeoutMs;
+    if (!this.mlServiceStartupPromise) {
+      const generation = this.mlServiceStartupGeneration;
+      this.mlServiceStartupPromise = (async () => {
+        const startedAt = Date.now();
+        const deadline = startedAt + timeoutMs;
         let lastError: unknown = null;
 
         while (Date.now() < deadline) {
-          try {
-            const response = await fetch(`${baseUrl}/health`);
-            if (response.ok) {
-              this.mlServiceReady = true;
-              return;
-            }
+          if (generation !== this.mlServiceStartupGeneration) {
+            return;
+          }
 
-            lastError = new Error(`Health check returned ${response.status}`);
+          const elapsed = Date.now() - startedAt;
+          let health: MLServiceHealth | null = null;
+
+          try {
+            health = await this.fetchMLHealth();
           } catch (error) {
             lastError = error;
+          }
+
+          if (generation !== this.mlServiceStartupGeneration) {
+            return;
+          }
+
+          if (health && this.isMLHealthReady(health)) {
+            this.mlServiceReady = true;
+            onProgress?.({
+              progress: 100,
+              message: "Ready to translate",
+              phase: "ready",
+              whisperLoaded: health.whisper_loaded,
+              translationLoaded: health.translation_loaded,
+            });
+            return;
+          }
+
+          onProgress?.({
+            progress: this.computeStartupProgress(health, elapsed),
+            message: this.startupMessage(health),
+            phase: health ? "loading_models" : "connecting",
+            whisperLoaded: health?.whisper_loaded,
+            translationLoaded: health?.translation_loaded,
+          });
+
+          if (health && !this.isMLHealthReady(health)) {
+            lastError = new Error("Models still loading");
+          } else if (!health) {
+            lastError = new Error("Backend not reachable");
           }
 
           await this.delay(ElectronService.ML_SERVICE_POLL_INTERVAL_MS);
         }
 
-        const reason = lastError instanceof Error ? `: ${lastError.message}` : "";
-        throw new Error(`ML service did not become ready within ${timeoutMs}ms${reason}`);
+        if (generation !== this.mlServiceStartupGeneration) {
+          return;
+        }
+
+        const reason =
+          lastError instanceof Error ? `: ${lastError.message}` : "";
+        onProgress?.({
+          progress: 0,
+          message: `Startup timed out after ${Math.round(timeoutMs / 1000)}s`,
+          phase: "error",
+        });
+        throw new Error(
+          `ML service did not become ready within ${timeoutMs}ms${reason}`
+        );
       })();
     }
 
     try {
-      await this.mlServiceReadyPromise;
+      await this.mlServiceStartupPromise;
     } finally {
-      this.mlServiceReadyPromise = null;
+      this.mlServiceStartupPromise = null;
     }
+  }
+
+  private async waitForMLService(
+    timeoutMs: number = ElectronService.ML_SERVICE_STARTUP_TIMEOUT_MS
+  ): Promise<void> {
+    return this.waitForMLServiceReady(undefined, timeoutMs);
   }
 
   // ML Service API calls (via HTTP)
@@ -239,7 +417,8 @@ class ElectronService {
       }
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const detail = await this.parseMLServiceErrorResponse(response);
+        throw new Error(detail || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       this.mlServiceReady = true;
@@ -266,36 +445,13 @@ class ElectronService {
 
   // Audio device operations (via ML service)
   async getAudioDevices(): Promise<AudioDevice[]> {
-    try {
-      return await this.callMLService('/audio/devices');
-    } catch (error) {
-      console.error('Failed to get audio devices from ML service, using fallback:', error);
-      // Fallback to common devices
-      return [
-        {
-          index: 0,
-          name: "Default Audio Device",
-          channels: 2,
-          sample_rate: 44100,
-          is_input: true
-        },
-        {
-          index: 1,
-          name: "Default Output",
-          channels: 2,
-          sample_rate: 48000,
-          is_input: true,
-          is_loopback: true,
-        },
-        {
-          index: 2,
-          name: "Microphone",
-          channels: 1,
-          sample_rate: 48000,
-          is_input: true
-        }
-      ];
+    const devices = await this.callMLService('/audio/devices');
+    if (!Array.isArray(devices) || devices.length === 0) {
+      throw new Error(
+        'No audio capture devices found. Wait for the translation backend to finish starting, then retry.'
+      );
     }
+    return devices;
   }
 
   async startAudioCapture(deviceIndex: number): Promise<void> {
@@ -315,8 +471,11 @@ class ElectronService {
       // Send an empty JSON body so the transport uses POST.
       await this.callMLService('/audio/stop', {});
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (/not active/i.test(msg)) {
+        return;
+      }
       console.error('Failed to stop audio capture via ML service:', error);
-      // Surface the failure so callers can react appropriately
       throw error;
     }
   }
@@ -521,9 +680,13 @@ class ElectronService {
     return await this.callMLService('/config/save', config);
   }
 
-  // Health check
-  async healthCheck(): Promise<any> {
-    return await this.callMLService('/health');
+  // Health check (does not require models to be loaded)
+  async healthCheck(): Promise<MLServiceHealth> {
+    const health = await this.fetchMLHealth();
+    if (!health) {
+      throw new Error("ML service health endpoint unreachable");
+    }
+    return health;
   }
 
   // Event listeners (simulated for Electron)
