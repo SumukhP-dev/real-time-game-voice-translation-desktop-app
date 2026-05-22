@@ -1,7 +1,7 @@
 # Gumroad Product Description
 
 ## Product Name
-Rankcall
+SquadSpeak
 
 ## Tagline
 Real-time voice translation for competitive gaming - Break the language barrier!
@@ -10,7 +10,7 @@ Real-time voice translation for competitive gaming - Break the language barrier!
 
 ### Communicate with Players Worldwide
 
-Rankcall is a professional desktop application that translates in-game voice chat in real-time. Never miss important callouts or team communication again, regardless of language!
+SquadSpeak is a professional desktop application that translates in-game voice chat in real-time. Never miss important callouts or team communication again, regardless of language!
 
 Works with CS:GO 2, Valorant, Apex Legends, Dota 2, and other competitive multiplayer games.
 

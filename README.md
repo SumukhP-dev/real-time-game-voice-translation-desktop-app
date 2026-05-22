@@ -37,7 +37,7 @@ This software is available for purchase at:
 
 ## System Requirements
 
-- **Operating System**: Windows 10 or Windows 11 (64-bit)
+- **Operating System**: Windows 10/11 (64-bit), **macOS 12+** (Intel or Apple Silicon), or Linux (development)
 - **RAM**: 4 GB minimum (8 GB recommended)
 - **Storage**: 2 GB free space (for translation models, one-time download)
 - **Internet Connection**: Optional (only needed for initial model download, translation works offline)
@@ -48,16 +48,18 @@ This software is available for purchase at:
 
 ### 1. Installation
 
-**Using the Installer (Recommended)**:
+**Windows — installer (recommended)**:
 
-1. Download `GameVoiceTranslator_Setup.exe`
+1. Download `SquadSpeak_Setup.exe` (or your build’s NSIS installer)
 2. Run the installer and follow the wizard
 3. Launch from Start Menu or desktop shortcut
 
-**Portable Version**:
+**Windows — portable**: Extract the portable ZIP and run `SquadSpeak.exe`
 
-1. Extract the ZIP file to a folder
-2. Run `GameVoiceTranslator.exe`
+**macOS**:
+
+1. Download `SquadSpeak-<version>.dmg`
+2. Drag the app to Applications and open it (see [macOS Setup Guide](docs/MACOS_SETUP.md) for permissions and audio)
 
 **Development Setup**:
 
@@ -70,10 +72,14 @@ See [Installation Guide](docs/INSTALLATION.md) for detailed instructions.
 
 ### 2. Audio Setup
 
-**Windows (recommended): WASAPI loopback**
+**Windows / macOS (recommended): loopback capture**
+
+- **Windows**: WASAPI loopback via your headphones/speakers device name  
+- **macOS**: Core Audio loopback — pick the device marked **[Loopback]** in Audio Settings  
+  See [macOS Setup Guide](docs/MACOS_SETUP.md) for permissions and troubleshooting.
 
 1. Launch the app and open **Audio Settings**
-2. Select your **headphones or speakers** (listed with **WASAPI loopback**)
+2. Select your **headphones or speakers** (look for **[Loopback]** on Windows/macOS)
 3. Click **Start Capture**
 4. Play game or system audio — status logs should show non-zero audio levels
 
@@ -132,8 +138,12 @@ npm run  dev
 
 **Building for Distribution**:
 ```bash
-# Build distributable packages
+# Build for the current OS (Windows, macOS, or Linux)
 python build_electron.py
+
+# Or target explicitly (macOS DMG must be built on a Mac)
+python build_electron.py --platform mac
+python build_electron.py --platform win
 ```
 
 ### Architecture
@@ -216,6 +226,7 @@ If no loopback device appears, enable **Stereo Mix** in Windows Sound → Record
 ## Limitations
 
 - **Windows**: System audio capture uses WASAPI loopback (Stereo Mix optional fallback)
+- **macOS**: Loopback capture via Core Audio; virtual mic / outgoing voice routing is limited compared to Windows
 - Real-time processing may have <1 second delay with local models (faster than API)
 - Translation model download required on first run (~500MB-1GB, one-time download)
 - Whisper model download required on first run (~75MB for tiny model)
@@ -257,4 +268,4 @@ See the `docs/` folder for detailed guides:
 - EasyNMT and Opus-MT models for local translation (offline, no API keys)
 - PyQt6 for GUI and overlay
 - PyAudio and sounddevice for audio capture
-- WASAPI loopback for system audio capture on Windows
+- WASAPI / Core Audio loopback for system audio capture (Windows and macOS)

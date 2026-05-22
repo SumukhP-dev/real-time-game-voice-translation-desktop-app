@@ -1,6 +1,6 @@
 ---
 name: Fall 2026 Accelerator Readiness
-overview: A May–September 2026 roadmap to make Rankcall competitive for top fall accelerators by pairing CX Pre-Accelerator customer discovery with a narrow MVP (activation + retention), quantified traction, and reusable application materials—leading with GVT only.
+overview: A May–September 2026 roadmap to make SquadSpeak competitive for top fall accelerators by pairing CX Pre-Accelerator customer discovery with a narrow MVP (activation + retention), quantified traction, and reusable application materials—leading with GVT only.
 todos:
   - id: confirm-cx-preaccel
     content: Confirm CX Pre-Accelerator spot and calendar all four workshop dates (May 28–Jul 30)
@@ -38,7 +38,7 @@ isProject: false
 
 You have a **real shipped product** (Electron + FastAPI, v1.0.0 installers in [`dist/`](dist/)) and strong **technical differentiation** (offline, bidirectional, privacy-first) documented in [`docs/COMPETITIVE_GRADING_ASSESSMENT.md`](docs/COMPETITIVE_GRADING_ASSESSMENT.md). What top programs (YC F26, Techstars, gaming-focused labs) will weigh most heavily is still **missing**: **behavioral traction** (activated users who return), **customer-discovery evidence** (not ad clicks), and **application assets** (deck, demo video, metrics one-pager).
 
-Your positioning for fall 2026: **Rankcall only** — one problem, one ICP, one product.
+Your positioning for fall 2026: **SquadSpeak only** — one problem, one ICP, one product.
 
 The **CX Pre-Accelerator** (May 28 → July 30 capstone) is the validation engine; **June–August** is product hardening for activation; **July–September** is materials + applications.
 
@@ -76,12 +76,12 @@ gantt
 ## Strategic narrative (GVT only)
 
 **One-liner (draft for all apps):**  
-*Rankcall: real-time, offline voice translation for competitive gamers—subtitles from in-game voice chat without sending audio to the cloud.*
+*SquadSpeak: real-time, offline voice translation for competitive gamers—subtitles from in-game voice chat without sending audio to the cloud.*
 
 **ICP hypothesis to validate (narrow until interviews say otherwise):**  
 Competitive PC players (Valorant / CS2 / Apex) in **mixed-language ranked stacks**, English + one other language, Windows, headset + in-game VC, pain **weekly+**.
 
-**Do not lead with:** Dreamflow, VoiceHired, generic “AI platform,” or broad “15+ languages” before problem proof. Company name: **Rankcall**.
+**Do not lead with:** Dreamflow, VoiceHired, generic “AI platform,” or broad “15+ languages” before problem proof. Company name: **SquadSpeak**.
 
 **Competitive frame:** LiveTranslate / EzDubs = cloud + friction; you = **in-match latency + offline + game-native overlay** ([`docs/COMPETITIVE_GRADING_ASSESSMENT.md`](docs/COMPETITIVE_GRADING_ASSESSMENT.md) sections 1–2).
 

@@ -4,7 +4,7 @@
 
 ## Introduction
 
-This Privacy Policy describes how Rankcall ("we", "our", or "the Software") collects, uses, and protects information when you use our software.
+This Privacy Policy describes how SquadSpeak ("we", "our", or "the Software") collects, uses, and protects information when you use our software.
 
 ## Information We Collect
 

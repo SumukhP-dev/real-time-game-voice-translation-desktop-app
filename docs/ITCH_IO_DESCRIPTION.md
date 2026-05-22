@@ -2,7 +2,7 @@
 
 ## Title
 
-Rankcall
+SquadSpeak
 
 ## Short Description
 
@@ -12,7 +12,7 @@ Real-time voice translation for competitive gaming. Translate in-game voice chat
 
 ### Break the Language Barrier in Competitive Gaming
 
-Communicate with players from around the world! Rankcall captures in-game voice chat, transcribes speech in real-time, and translates it to your preferred language with on-screen subtitles.
+Communicate with players from around the world! SquadSpeak captures in-game voice chat, transcribes speech in real-time, and translates it to your preferred language with on-screen subtitles.
 
 Works with CS:GO 2, Valorant, Apex Legends, Dota 2, and other competitive multiplayer games.
 
