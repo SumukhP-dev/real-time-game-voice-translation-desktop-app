@@ -9,6 +9,7 @@ interface TeammateProfile {
   detected_language?: string;
   primary_language?: string;
   detected_languages?: Record<string, number>;
+  translation_count?: number;
   translations: Array<{
     text: string;
     timestamp: Date;
@@ -22,13 +23,22 @@ export function useTeammates() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const normalizeTeammate = (t: TeammateProfile): TeammateProfile => {
+    const translations = Array.isArray(t.translations) ? t.translations : [];
+    return {
+      ...t,
+      translations,
+      translation_count: translations.length,
+      detected_languages: t.detected_languages ?? {},
+    };
+  };
+
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // Mock implementation - return empty array for now
-      const list: TeammateProfile[] = [];
-      setTeammates(list);
+      const list = await electronService.getTeammates();
+      setTeammates(list.map(normalizeTeammate));
     } catch (err: any) {
       setError(err?.toString?.() || "Failed to load teammates");
     } finally {
@@ -39,6 +49,19 @@ export function useTeammates() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handler = (event: Event) => {
+      const customEvent = event as CustomEvent<{ teammates: TeammateProfile[] }>;
+      const updated = customEvent.detail?.teammates ?? [];
+      setTeammates(updated.map(normalizeTeammate));
+    };
+
+    window.addEventListener("teammates:updated", handler);
+    return () => window.removeEventListener("teammates:updated", handler);
+  }, []);
 
   const saveProfile = useCallback(
     async (profile: TeammateProfile) => {

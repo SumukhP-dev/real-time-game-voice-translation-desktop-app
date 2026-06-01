@@ -1,14 +1,29 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useConfig } from "../hooks/useConfig";
-import electronService, { type AudioDevice } from "../services/electron";
+import electronService, {
+  type AudioDevice,
+  type PlaybackDevice,
+} from "../services/electron";
 import {
   filterDevicesByCaptureSource,
   findPreferredCaptureDevice,
   findPreferredMicrophoneDevice,
+  findPreferredVirtualCableDevice,
+  hasVirtualCablePlaybackDevice,
 } from "../utils/audioDevices";
+import { VbAudioCableInstallPanel } from "./VbAudioCableInstallPanel";
+import { useI18n } from "../hooks/useI18n";
+import { TRANSLATION_LANGUAGE_OPTIONS } from "../i18n/languages";
 
-const STEP_LOOPBACK_DEVICE = 1;
-const STEP_MICROPHONE_DEVICE = 2;
+type SetupStepId =
+  | "welcome"
+  | "loopback"
+  | "microphone"
+  | "translation"
+  | "virtual_cable"
+  | "complete";
+
+type VoiceOutIntent = "subtitles" | "voice";
 
 interface SetupWizardProps {
   onComplete?: () => void;
@@ -21,6 +36,7 @@ export function SetupWizard({
   onClose,
   onStartCapture,
 }: SetupWizardProps) {
+  const { t } = useI18n();
   const { config, updateConfig } = useConfig();
   const [currentStep, setCurrentStep] = useState(0);
   const [audioDevices, setAudioDevices] = useState<AudioDevice[]>([]);
@@ -28,6 +44,10 @@ export function SetupWizard({
   const [devicesError, setDevicesError] = useState<string | null>(null);
   const [startingCapture, setStartingCapture] = useState(false);
   const [captureError, setCaptureError] = useState<string | null>(null);
+  const [playbackDevices, setPlaybackDevices] = useState<PlaybackDevice[]>([]);
+  const [voiceOutIntent, setVoiceOutIntent] = useState<VoiceOutIntent | null>(
+    null
+  );
 
   const platform = electronService.getPlatform();
   const isWindows = platform === "win32";
@@ -86,7 +106,7 @@ export function SetupWizard({
       }
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : "Failed to load audio devices";
+        err instanceof Error ? err.message : t("audio.load_failed");
       setDevicesError(msg);
       setAudioDevices([]);
     } finally {
@@ -94,9 +114,42 @@ export function SetupWizard({
     }
   };
 
+  const loadPlaybackDevices = useCallback(async () => {
+    try {
+      const outputs = await electronService.getPlaybackDevices();
+      setPlaybackDevices(outputs);
+      if (!config) return;
+      let outputIndex = config.audio?.tts_output_device_index ?? null;
+      if (
+        outputIndex == null ||
+        !outputs.some((d) => d.index === outputIndex)
+      ) {
+        outputIndex =
+          findPreferredVirtualCableDevice(outputs)?.index ??
+          outputs[0]?.index ??
+          null;
+      }
+      if (
+        outputIndex !== null &&
+        outputIndex !== config.audio?.tts_output_device_index
+      ) {
+        await updateConfig({
+          ...config,
+          audio: {
+            ...config.audio,
+            tts_output_device_index: outputIndex,
+          },
+        });
+      }
+    } catch {
+      setPlaybackDevices([]);
+    }
+  }, [config, updateConfig]);
+
   useEffect(() => {
     if (isWindows) {
       loadAudioDevices();
+      loadPlaybackDevices();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load once when wizard opens on Windows
   }, [isWindows]);
@@ -113,6 +166,34 @@ export function SetupWizard({
     !isWindows || (loopbackSelected && loopbackDevices.length > 0);
   const canAdvanceFromMicrophone =
     !isWindows || (micSelected && microphoneDevices.length > 0);
+  const virtualCableReady = hasVirtualCablePlaybackDevice(playbackDevices);
+  const wantsVoiceOut = voiceOutIntent === "voice";
+  const canAdvanceFromWelcome = voiceOutIntent !== null;
+
+  const applyVoiceOutConfig = useCallback(async () => {
+    if (!config) return;
+    await updateConfig({
+      ...config,
+      translation: {
+        ...config.translation,
+        translate_to_teammates: true,
+        tts_for_team_translations: true,
+      },
+      voice_output: {
+        ...config.voice_output,
+        mode: "virtual_mic",
+        preset: config.voice_output?.preset ?? "game",
+      },
+    });
+  }, [config, updateConfig]);
+
+  const handleVoiceOutIntent = async (intent: VoiceOutIntent) => {
+    setVoiceOutIntent(intent);
+    if (intent === "voice") {
+      await applyVoiceOutConfig();
+      await loadPlaybackDevices();
+    }
+  };
 
   const renderDeviceSelect = (
     label: string,
@@ -134,7 +215,7 @@ export function SetupWizard({
           if (deviceIndex !== undefined) onSelect(deviceIndex);
         }}
       >
-        <option value="">Select a device...</option>
+        <option value="">{t("setup_wizard.select_device")}</option>
         {devices.map((device) => (
           <option key={device.index} value={device.index}>
             {device.name}
@@ -164,7 +245,7 @@ export function SetupWizard({
         await onStartCapture();
       } catch (err) {
         const msg =
-          err instanceof Error ? err.message : "Failed to start capture";
+          err instanceof Error ? err.message : t("audio.start_failed");
         setCaptureError(msg);
         setStartingCapture(false);
         return;
@@ -174,58 +255,87 @@ export function SetupWizard({
     onComplete?.();
   };
 
-  const steps = [
+  const steps: { id: SetupStepId; title: string; content: React.ReactNode }[] = [
     {
-      title: "Welcome",
+      id: "welcome",
+      title: t("setup_wizard.welcome_title_short"),
       content: (
         <div className="space-y-4">
           <p className="text-gray-300">
-            Welcome to SquadSpeak. This short setup configures your headphones,
-            microphone, and translation language so subtitles work in your next match.
+            {t("setup_wizard.welcome_intro")}
           </p>
           {!isWindows && (
             <div className="bg-red-900/50 border border-red-600 p-4 rounded-lg">
               <h3 className="font-semibold text-red-200 mb-2">
-                Windows required
+                {t("setup_wizard.windows_required_title")}
               </h3>
               <p className="text-sm text-red-100">
-                SquadSpeak currently supports Windows 10/11 only (WASAPI loopback
-                capture). macOS and Linux are on the roadmap. You can finish this
-                wizard to explore settings, but capture will not work on this
-                device yet.
+                {t("setup_wizard.windows_required_message")}
               </p>
             </div>
           )}
           <div className="bg-blue-900 bg-opacity-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-2 text-white">What this app does:</h3>
+            <h3 className="font-semibold mb-2 text-white">
+              {t("setup_wizard.what_this_app_does")}
+            </h3>
             <ul className="list-disc list-inside space-y-1 text-sm text-gray-300">
-              <li>Captures in-game or system voice chat from your speakers/headset</li>
-              <li>Transcribes speech locally with AI</li>
-              <li>Translates to your preferred language</li>
-              <li>Shows subtitles on your screen</li>
+              <li>{t("setup_wizard.feature_capture_audio")}</li>
+              <li>{t("setup_wizard.feature_transcribe")}</li>
+              <li>{t("setup_wizard.feature_translate")}</li>
+              <li>{t("setup_wizard.feature_subtitles")}</li>
             </ul>
           </div>
           {isWindows && (
             <p className="text-sm text-gray-400">
-              You will need headphones or speakers, a microphone, and a few
-              minutes for the AI models to finish loading on first launch.
+              {t("setup_wizard.windows_requirements")}
             </p>
+          )}
+          {isWindows && (
+            <div className="rounded-lg border border-gray-600 bg-gray-900/60 p-4 space-y-3">
+              <p className="text-sm font-semibold text-white">
+                {t("setup_wizard.usage_intent_title")}
+              </p>
+              <label className="flex items-start gap-3 text-sm text-gray-300 cursor-pointer">
+                <input
+                  type="radio"
+                  name="setup-usage-intent"
+                  checked={voiceOutIntent === "subtitles"}
+                  onChange={() => handleVoiceOutIntent("subtitles")}
+                  className="mt-1"
+                />
+                <span>{t("setup_wizard.usage_subtitles_only")}</span>
+              </label>
+              <label className="flex items-start gap-3 text-sm text-gray-300 cursor-pointer">
+                <input
+                  type="radio"
+                  name="setup-usage-intent"
+                  checked={voiceOutIntent === "voice"}
+                  onChange={() => handleVoiceOutIntent("voice")}
+                  className="mt-1"
+                />
+                <span>{t("setup_wizard.usage_voice_out")}</span>
+              </label>
+              {voiceOutIntent === null && (
+                <p className="text-xs text-amber-300">
+                  {t("setup_wizard.usage_intent_required")}
+                </p>
+              )}
+            </div>
           )}
         </div>
       ),
     },
     {
-      title: "Headphones / speakers",
+      id: "loopback",
+      title: t("setup_wizard.step_audio_output"),
       content: (
         <div className="space-y-4">
           <p className="text-gray-300">
-            Choose the headset or speakers you use while playing — the device that
-            plays your game audio. We capture voice chat from that output (WASAPI
-            loopback on Windows; no virtual cable required).
+            {t("setup_wizard.audio_output_help")}
           </p>
 
           {devicesLoading && (
-            <p className="text-gray-400 text-sm">Loading audio devices...</p>
+            <p className="text-gray-400 text-sm">{t("audio.loading_devices")}</p>
           )}
 
           {devicesError && (
@@ -236,7 +346,7 @@ export function SetupWizard({
                 onClick={() => loadAudioDevices()}
                 className="px-3 py-1.5 text-sm bg-gray-600 hover:bg-gray-500 text-white rounded-md"
               >
-                Retry
+                {t("common.refresh")}
               </button>
             </div>
           )}
@@ -246,7 +356,7 @@ export function SetupWizard({
             loopbackDevices.length > 0 &&
             config &&
             renderDeviceSelect(
-              "Game audio device (speakers / headphones):",
+              t("setup_wizard.game_audio_device"),
               loopbackDevices,
               selectedLoopbackIndex,
               loopbackSelected,
@@ -268,8 +378,7 @@ export function SetupWizard({
                   ) {
                     return (
                       <p className="text-xs text-amber-400">
-                        Tip: Pick your speakers or headphones (loopback), not a
-                        microphone entry.
+                        {t("setup_wizard.loopback_tip")}
                       </p>
                     );
                   }
@@ -282,31 +391,29 @@ export function SetupWizard({
             audioDevices.length > 0 &&
             loopbackDevices.length === 0 && (
               <p className="text-sm text-yellow-300">
-                No loopback devices found. Click Retry after connecting headphones
-                or speakers.
+                {t("setup_wizard.no_loopback_devices")}
               </p>
             )}
 
           {!devicesLoading && !devicesError && audioDevices.length === 0 && (
             <p className="text-sm text-yellow-300">
-              No capture devices found. Restart the app after the translation
-              backend finishes loading, then click Retry.
+              {t("setup_wizard.no_capture_devices")}
             </p>
           )}
         </div>
       ),
     },
     {
-      title: "Microphone",
+      id: "microphone",
+      title: t("setup_wizard.step_microphone"),
       content: (
         <div className="space-y-4">
           <p className="text-gray-300">
-            Choose the microphone you speak into. This is separate from your
-            game audio device and is used when voice translation is enabled.
+            {t("setup_wizard.microphone_help")}
           </p>
 
           {devicesLoading && (
-            <p className="text-gray-400 text-sm">Loading audio devices...</p>
+            <p className="text-gray-400 text-sm">{t("audio.loading_devices")}</p>
           )}
 
           {devicesError && (
@@ -317,7 +424,7 @@ export function SetupWizard({
                 onClick={() => loadAudioDevices()}
                 className="px-3 py-1.5 text-sm bg-gray-600 hover:bg-gray-500 text-white rounded-md"
               >
-                Retry
+                {t("common.refresh")}
               </button>
             </div>
           )}
@@ -327,7 +434,7 @@ export function SetupWizard({
             microphoneDevices.length > 0 &&
             config &&
             renderDeviceSelect(
-              "Microphone device:",
+              t("setup_wizard.microphone_device"),
               microphoneDevices,
               selectedMicIndex,
               micSelected,
@@ -347,29 +454,29 @@ export function SetupWizard({
             audioDevices.length > 0 &&
             microphoneDevices.length === 0 && (
               <p className="text-sm text-yellow-300">
-                No microphones found. Connect a mic and click Retry.
+                {t("team.no_microphones")}
               </p>
             )}
 
           {!devicesLoading && !devicesError && audioDevices.length === 0 && (
             <p className="text-sm text-yellow-300">
-              No capture devices found. Restart the app after the translation
-              backend finishes loading, then click Retry.
+              {t("setup_wizard.no_capture_devices")}
             </p>
           )}
         </div>
       ),
     },
     {
-      title: "Translation Settings",
+      id: "translation",
+      title: t("setup_wizard.step_translation_settings"),
       content: (
         <div className="space-y-4">
           <p className="text-gray-300">
-            Choose your target language for translations.
+            {t("setup_wizard.translation_help")}
           </p>
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-300">
-              Target Language:
+              {t("translation.target_language")}
             </label>
             <select
               className="w-full p-2 bg-gray-700 text-white border border-gray-600 rounded-md"
@@ -385,37 +492,60 @@ export function SetupWizard({
                 });
               }}
             >
-              <option value="en">English</option>
-              <option value="es">Spanish</option>
-              <option value="fr">French</option>
-              <option value="de">German</option>
-              <option value="ru">Russian</option>
-              <option value="zh">Chinese</option>
-              <option value="ja">Japanese</option>
-              <option value="ko">Korean</option>
+              {TRANSLATION_LANGUAGE_OPTIONS.map((languageOption) => (
+                <option key={languageOption.code} value={languageOption.code}>
+                  {t(languageOption.labelKey)}
+                </option>
+              ))}
             </select>
           </div>
         </div>
       ),
     },
+    ...(isWindows && wantsVoiceOut
+      ? [
+          {
+            id: "virtual_cable" as const,
+            title: t("setup_wizard.step_virtual_cable"),
+            content: (
+              <div className="space-y-4">
+                <p className="text-gray-300">
+                  {t("setup_wizard.virtual_cable_help")}
+                </p>
+                {virtualCableReady ? (
+                  <p className="text-sm text-green-300">
+                    {t("setup_wizard.virtual_cable_detected_continue")}
+                  </p>
+                ) : (
+                  <VbAudioCableInstallPanel
+                    playbackDevices={playbackDevices}
+                    onDevicesRefresh={loadPlaybackDevices}
+                  />
+                )}
+              </div>
+            ),
+          },
+        ]
+      : []),
     {
-      title: "Complete",
+      id: "complete",
+      title: t("setup_wizard.complete_title_short"),
       content: (
         <div className="space-y-4">
           <div className="bg-green-900 bg-opacity-50 p-4 rounded-lg">
             <h3 className="font-semibold text-green-300 mb-2">
-              Setup complete
+              {t("setup_wizard.complete_heading")}
             </h3>
             <p className="text-sm text-green-200">
               {isWindows
-                ? "Start capture before you queue, then join a match with voice chat playing."
-                : "Settings saved. Install on Windows 10/11 to use live capture."}
+                ? t("setup_wizard.complete_windows_message")
+                : t("setup_wizard.complete_non_windows_message")}
             </p>
             {isWindows && (
               <ol className="list-decimal list-inside space-y-1 text-sm text-green-200 mt-2">
-                <li>Click &quot;Start capture now&quot; below (or use Audio Settings later)</li>
-                <li>Launch your game and join a match</li>
-                <li>Translations appear as subtitles when teammates speak</li>
+                <li>{t("setup_wizard.complete_step_1")}</li>
+                <li>{t("setup_wizard.complete_step_2")}</li>
+                <li>{t("setup_wizard.complete_step_3")}</li>
               </ol>
             )}
           </div>
@@ -424,24 +554,52 @@ export function SetupWizard({
           )}
           <div className="bg-yellow-900 bg-opacity-50 p-4 rounded-lg">
             <p className="text-sm text-yellow-200">
-              <strong>Tip:</strong> If subtitles do not appear within 30 seconds,
-              confirm game audio is playing and you selected your headphones or
-              speakers (not a mic-only device).
+              <strong>{t("setup_wizard.tip_label")}</strong>{" "}
+              {t("setup_wizard.final_tip")}
             </p>
           </div>
+          {isWindows && wantsVoiceOut && !virtualCableReady && (
+            <div className="bg-amber-900/40 border border-amber-600/50 p-4 rounded-lg">
+              <p className="text-sm text-amber-100">
+                {t("setup_wizard.complete_voice_out_pending")}
+              </p>
+            </div>
+          )}
+          {isWindows && wantsVoiceOut && config?.voice_output?.preset === "discord" && (
+            <div className="bg-blue-900 bg-opacity-50 p-4 rounded-lg">
+              <p className="text-sm text-blue-100">
+                <strong>Discord:</strong> Set Discord output to your normal
+                headphones or speakers, then set Discord input to{" "}
+                <strong>CABLE Output</strong> if you want translated outgoing
+                voice to go through Discord.
+              </p>
+            </div>
+          )}
         </div>
       ),
     },
   ];
 
+  const currentStepId = steps[currentStep]?.id;
+  const isVirtualCableStep = currentStepId === "virtual_cable";
+
   const handleNext = () => {
-    if (currentStep === STEP_LOOPBACK_DEVICE && !canAdvanceFromLoopback) {
+    if (currentStepId === "welcome" && !canAdvanceFromWelcome && isWindows) {
       return;
     }
-    if (currentStep === STEP_MICROPHONE_DEVICE && !canAdvanceFromMicrophone) {
+    if (currentStepId === "loopback" && !canAdvanceFromLoopback) {
+      return;
+    }
+    if (currentStepId === "microphone" && !canAdvanceFromMicrophone) {
       return;
     }
     if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handleSkipVirtualCable = () => {
+    if (isVirtualCableStep && currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -453,7 +611,6 @@ export function SetupWizard({
   };
 
   const handleSkip = async () => {
-    await markSetupComplete();
     onClose?.();
   };
 
@@ -471,7 +628,7 @@ export function SetupWizard({
               type="button"
               onClick={handleSkip}
               className="text-gray-400 hover:text-gray-200 text-2xl"
-              aria-label="Close setup"
+              aria-label={t("setup_wizard.close_setup")}
             >
               {"\u00D7"}
             </button>
@@ -480,7 +637,10 @@ export function SetupWizard({
           <div className="mb-6">
             <div className="flex justify-between text-sm text-gray-300 mb-2">
               <span>
-                Step {currentStep + 1} of {steps.length}
+                {t("setup_wizard.progress", {
+                  current: currentStep + 1,
+                  total: steps.length,
+                })}
               </span>
               <span>
                 {Math.round(((currentStep + 1) / steps.length) * 100)}%
@@ -506,7 +666,7 @@ export function SetupWizard({
                   onClick={handlePrevious}
                   className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md"
                 >
-                  Previous
+                  {t("setup_wizard.previous")}
                 </button>
               )}
             </div>
@@ -517,7 +677,7 @@ export function SetupWizard({
                   onClick={handleSkip}
                   className="px-4 py-2 text-gray-400 hover:text-gray-200"
                 >
-                  Skip
+                  {t("setup_wizard.skip")}
                 </button>
               )}
               {isLastStep ? (
@@ -528,7 +688,7 @@ export function SetupWizard({
                     disabled={startingCapture}
                     className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md disabled:opacity-50"
                   >
-                    Done for now
+                    {t("setup_wizard.done_for_now")}
                   </button>
                   {isWindows && onStartCapture && (
                     <button
@@ -541,7 +701,9 @@ export function SetupWizard({
                       }
                       className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md disabled:opacity-50"
                     >
-                      {startingCapture ? "Starting..." : "Start capture now"}
+                      {startingCapture
+                        ? t("audio.starting")
+                        : t("setup_wizard.start_capture_now")}
                     </button>
                   )}
                   {(!isWindows || !onStartCapture) && (
@@ -550,24 +712,37 @@ export function SetupWizard({
                       onClick={() => handleFinish(false)}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
                     >
-                      Complete
+                      {t("setup_wizard.complete_button")}
                     </button>
                   )}
                 </>
               ) : (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={
-                    (currentStep === STEP_LOOPBACK_DEVICE &&
-                      !canAdvanceFromLoopback) ||
-                    (currentStep === STEP_MICROPHONE_DEVICE &&
-                      !canAdvanceFromMicrophone)
-                  }
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
+                <>
+                  {isVirtualCableStep && (
+                    <button
+                      type="button"
+                      onClick={handleSkipVirtualCable}
+                      className="px-4 py-2 text-gray-300 hover:text-white"
+                    >
+                      {t("setup_wizard.virtual_cable_skip_button")}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={
+                      (currentStepId === "welcome" &&
+                        isWindows &&
+                        !canAdvanceFromWelcome) ||
+                      (currentStepId === "loopback" && !canAdvanceFromLoopback) ||
+                      (currentStepId === "microphone" &&
+                        !canAdvanceFromMicrophone)
+                    }
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {t("setup_wizard.next")}
+                  </button>
+                </>
               )}
             </div>
           </div>

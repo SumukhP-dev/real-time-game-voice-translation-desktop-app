@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import electronService from "../services/electron";
+import { isSameLanguagePassthroughTranslation } from "../utils/translationFiltering";
 
 export interface Translation {
   original: string;
@@ -65,7 +66,10 @@ function useTranslationState(): TranslationContextValue {
           timestamp: Date.now(),
         };
 
-        if (!overrideTargetLanguage) {
+        if (
+          !overrideTargetLanguage &&
+          !isSameLanguagePassthroughTranslation(translation)
+        ) {
           setTranslations((prev) => [translation, ...prev].slice(0, 50));
         }
         return translation;

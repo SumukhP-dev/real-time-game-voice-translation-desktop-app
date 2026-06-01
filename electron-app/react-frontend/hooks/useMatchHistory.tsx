@@ -9,10 +9,12 @@ import {
 } from "react";
 import {
   computeCommunicationStats,
+  EMPTY_COMMUNICATION_STATS,
   type CommunicationStats,
   type MatchSession,
   type TranslationRecord,
 } from "../utils/communicationStats";
+import { isSameLanguagePassthroughTranslation } from "../utils/translationFiltering";
 
 const STORAGE_KEY = "rtvt_match_history_v1";
 
@@ -28,6 +30,7 @@ type RecordTranslationInput = {
 type MatchHistoryContextValue = {
   history: MatchSession[];
   stats: CommunicationStats;
+  activeSessionStats: CommunicationStats;
   loading: boolean;
   error: string | null;
   refresh: () => void;
@@ -41,13 +44,24 @@ const MatchHistoryContext = createContext<MatchHistoryContextValue | null>(null)
 
 function parseSessions(raw: unknown): MatchSession[] {
   if (!Array.isArray(raw)) return [];
-  return raw.filter(
-    (s): s is MatchSession =>
-      s &&
-      typeof s === "object" &&
-      typeof (s as MatchSession).id === "string" &&
-      Array.isArray((s as MatchSession).translations)
-  );
+  return raw
+    .filter(
+      (s): s is MatchSession =>
+        s &&
+        typeof s === "object" &&
+        typeof (s as MatchSession).id === "string" &&
+        Array.isArray((s as MatchSession).translations)
+    )
+    .map((session) => {
+      const translations = session.translations.filter(
+        (translation) => !isSameLanguagePassthroughTranslation(translation)
+      );
+      return {
+        ...session,
+        translations,
+        total_translations: translations.length,
+      };
+    });
 }
 
 function loadStoredHistory(): MatchSession[] {
@@ -99,6 +113,12 @@ export function MatchHistoryProvider({ children }: { children: ReactNode }) {
     () => computeCommunicationStats(history),
     [history]
   );
+  const activeSessionStats = useMemo(() => {
+    const activeSession = history.find((session) => !session.end_time);
+    return activeSession
+      ? computeCommunicationStats([activeSession])
+      : EMPTY_COMMUNICATION_STATS;
+  }, [history]);
 
   const startMatchSession = useCallback(
     async (gameMode: string) => {
@@ -132,6 +152,10 @@ export function MatchHistoryProvider({ children }: { children: ReactNode }) {
 
   const recordTranslation = useCallback(
     async (translation: RecordTranslationInput) => {
+      if (isSameLanguagePassthroughTranslation(translation)) {
+        return;
+      }
+
       const sessions = loadStoredHistory();
       let id = activeSessionId(sessions);
       let next = [...sessions];
@@ -179,6 +203,7 @@ export function MatchHistoryProvider({ children }: { children: ReactNode }) {
   const value: MatchHistoryContextValue = {
     history,
     stats,
+    activeSessionStats,
     loading,
     error,
     refresh,

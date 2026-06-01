@@ -1,5 +1,9 @@
 import React, { useMemo } from "react";
-import { AudioDevice, AudioErrorSource } from "../hooks/useAudio";
+import {
+  AudioDevice,
+  AudioErrorSource,
+  AudioSelectionOrigin,
+} from "../hooks/useAudio";
 import { useI18n } from "../hooks/useI18n";
 import { I18N_KEYS } from "../i18n/keys";
 import {
@@ -10,9 +14,11 @@ export interface AudioSettingsProps {
   devices: AudioDevice[];
   selectedDevice: number | null;
   isCapturing: boolean;
-  loading: boolean;
+  devicesLoading: boolean;
+  captureLoading: boolean;
   error: string | null;
   errorSource?: AudioErrorSource;
+  selectionOrigin?: AudioSelectionOrigin;
   selectDevice: (deviceIndex: number) => void | Promise<void>;
   loadDevices?: () => void;
   startCapture: (deviceIndex?: number) => Promise<void> | void;
@@ -23,9 +29,11 @@ export function AudioSettings({
   devices,
   selectedDevice,
   isCapturing,
-  loading,
+  devicesLoading,
+  captureLoading,
   error,
   errorSource,
+  selectionOrigin,
   selectDevice,
   loadDevices,
   startCapture,
@@ -36,6 +44,7 @@ export function AudioSettings({
     () => filterDevicesByCaptureSource(devices, "loopback"),
     [devices]
   );
+  const recommendedDevice = gameAudioDevices[0];
   const selectedDev =
     selectedDevice !== null
       ? devices.find((d) => d.index === selectedDevice)
@@ -57,10 +66,10 @@ export function AudioSettings({
             <button
               type="button"
               onClick={() => loadDevices()}
-              disabled={loading}
+              disabled={devicesLoading}
               className="text-sm px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded"
             >
-              Retry loading devices
+              {t("audio.retry_loading_devices")}
             </button>
           )}
         </div>
@@ -70,7 +79,10 @@ export function AudioSettings({
         <div className="flex items-center justify-between mb-3">
           <label className="block text-sm font-medium text-gray-300">
             {t(I18N_KEYS.AUDIO_DEVICE)}
-            {selectedDevice !== null && devices.length > 1 && (
+            {selectionOrigin &&
+              selectionOrigin !== "manual" &&
+              selectedDevice !== null &&
+              devices.length > 0 && (
               <span className="ml-2 text-xs text-gray-400">
                 {t(I18N_KEYS.AUDIO_DEVICE_AUTO_SELECTED)}
               </span>
@@ -80,10 +92,10 @@ export function AudioSettings({
             <button
               type="button"
               onClick={() => loadDevices()}
-              disabled={loading || isCapturing}
+              disabled={devicesLoading || isCapturing}
               className="text-xs px-2 py-1 text-blue-300 hover:text-blue-200 disabled:opacity-50"
             >
-              Refresh list
+              {t("audio.refresh_list")}
             </button>
           )}
         </div>
@@ -96,44 +108,58 @@ export function AudioSettings({
             }
             selectDevice(parseInt(value, 10));
           }}
-          disabled={devices.length === 0}
+          disabled={devices.length === 0 || devicesLoading}
           className="w-full p-3 bg-gray-700/50 text-white rounded-lg border border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {devices.length === 0 && (
-            <option value="">No devices — click Refresh list</option>
+            <option value="">{t("audio.no_devices")}</option>
           )}
           {gameAudioDevices.map((device) => (
             <option key={device.index} value={device.index}>
               {device.name}
+              {recommendedDevice?.index === device.index ? " [Recommended]" : ""}
               {device.is_loopback ? " [Loopback]" : ""} ({device.sample_rate}Hz,{" "}
               {device.channels}ch)
             </option>
           ))}
         </select>
+        {devicesLoading && (
+          <p className="mt-2 text-xs text-gray-400">{t("audio.loading_devices")}</p>
+        )}
         {showLoopbackWarning && (
           <p className="mt-2 text-xs text-amber-400">
-            This device may not capture game audio. Pick one labeled{" "}
-            <strong>[Loopback]</strong> (2 channels) — usually your headphones or
-            speakers, not a 1-channel headset profile.
+            {t("audio.loopback_warning_prefix")}{" "}
+            <strong>[Loopback]</strong> {t("audio.loopback_warning_suffix")}
+          </p>
+        )}
+        {selectedDevice !== null && selectionOrigin === "auto" && (
+          <p className="mt-2 text-xs text-blue-300">
+            Recommended game-audio device auto-selected. Change it if your match
+            audio uses a different headset or speakers.
+          </p>
+        )}
+        {selectedDevice !== null && selectionOrigin === "saved" && (
+          <p className="mt-2 text-xs text-gray-400">
+            Using your saved game-audio device.
           </p>
         )}
         {devices.length === 1 && !isCapturing && (
           <p className="mt-2 text-xs text-gray-400">
-            Only one capture device was detected. Use Refresh list after plugging
-            in other headphones or speakers.
+            {t("audio.single_device_hint")}
           </p>
         )}
         {selectedDevice !== null && (
           <p className="mt-2 text-xs text-gray-400">
             {t(I18N_KEYS.AUDIO_CURRENTLY_USING)}:{" "}
             {devices.length > 0 
-              ? (devices.find((d) => d.index === selectedDevice)?.name || `Device ${selectedDevice}`)
-              : "Loading devices..."}
+              ? (devices.find((d) => d.index === selectedDevice)?.name ||
+                t("audio.device_fallback", { index: selectedDevice }))
+              : t("audio.loading_devices")}
           </p>
         )}
         {selectedDevice === null && devices.length > 0 && (
           <p className="mt-2 text-xs text-yellow-400">
-            No device selected. Auto-selecting best device...
+            {t("audio.auto_selecting")}
           </p>
         )}
       </div>
@@ -148,16 +174,20 @@ export function AudioSettings({
             }
           }}
           disabled={
-            isCapturing || loading || selectedDevice === null || devices.length === 0
+            isCapturing ||
+            captureLoading ||
+            devicesLoading ||
+            selectedDevice === null ||
+            devices.length === 0
           }
           title={
             selectedDevice === null
-              ? "Select your game audio device (speakers or headphones) first"
+              ? t("audio.select_device_first")
               : undefined
           }
           className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
         >
-          {loading ? "Starting..." : t(I18N_KEYS.AUDIO_START_CAPTURE)}
+          {captureLoading ? t("audio.starting") : t(I18N_KEYS.AUDIO_START_CAPTURE)}
         </button>
         <button
           onClick={async () => {
@@ -167,10 +197,12 @@ export function AudioSettings({
               console.error("Error stopping capture:", err);
             }
           }}
-          disabled={!isCapturing || loading}
+          disabled={!isCapturing || captureLoading}
           className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
         >
-          {loading && isCapturing ? "Stopping..." : t(I18N_KEYS.AUDIO_STOP_CAPTURE)}
+          {captureLoading && isCapturing
+            ? t("audio.stopping")
+            : t(I18N_KEYS.AUDIO_STOP_CAPTURE)}
         </button>
       </div>
 

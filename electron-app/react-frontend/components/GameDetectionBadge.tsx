@@ -27,7 +27,6 @@ export function GameDetectionBadge({ onGameDetected }: GameDetectionBadgeProps) 
       try {
         // This would call a Rust command to detect running games
         // For now, we'll simulate detection
-        const games = ["CS:GO 2", "Valorant", "Apex Legends", "Dota 2"];
         const runningGames = await detectRunningGames();
         
         if (runningGames.length > 0) {
@@ -68,7 +67,9 @@ export function GameDetectionBadge({ onGameDetected }: GameDetectionBadgeProps) 
       <span className="text-sm font-medium text-blue-200">
         {detectedGame}
       </span>
-      <span className="text-xs text-blue-400">Detected</span>
+      <span className="text-xs text-blue-400">
+        {isChecking ? t("game_detection.checking") : t("game_detection.detected")}
+      </span>
     </div>
   );
 }

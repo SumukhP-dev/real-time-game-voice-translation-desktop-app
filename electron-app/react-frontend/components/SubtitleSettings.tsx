@@ -30,7 +30,7 @@ export function SubtitleSettings() {
 
   const previewOnOverlay = async (overlay: NonNullable<typeof config>["overlay"]) => {
     try {
-      await electronService.showOverlayText("Sample Subtitle Text", overlay);
+      await electronService.showOverlayText(t("subtitle.preview_text"), overlay);
     } catch (error) {
       console.warn("Overlay preview failed:", error);
     }
@@ -145,7 +145,9 @@ export function SubtitleSettings() {
 
         {/* Preview */}
         <div className="p-4 bg-gray-900/50 rounded-xl border border-gray-700">
-          <p className="text-sm font-medium text-gray-300 mb-3">Preview:</p>
+          <p className="text-sm font-medium text-gray-300 mb-3">
+            {t("subtitle.preview_label")}
+          </p>
           <div className="flex justify-center p-2">
             <div
               style={{
@@ -158,7 +160,7 @@ export function SubtitleSettings() {
                 transform: "none",
               }}
             >
-              Sample Subtitle Text
+              {t("subtitle.preview_text")}
             </div>
           </div>
         </div>

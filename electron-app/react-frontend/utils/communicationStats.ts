@@ -27,6 +27,17 @@ export interface CommunicationStats {
   total_duration_seconds: number;
 }
 
+export const EMPTY_COMMUNICATION_STATS: CommunicationStats = {
+  totalMessages: 0,
+  messagesPerMinute: 0,
+  languageDiversity: 0,
+  responseTime: 0,
+  most_common_languages: [],
+  uniqueLanguages: 0,
+  avgTranslationTime: 0,
+  total_duration_seconds: 0,
+};
+
 function normalizeLang(code: string | undefined): string | null {
   if (!code) return null;
   const base = code.trim().toLowerCase().split("-")[0];
@@ -39,16 +50,7 @@ export function computeCommunicationStats(
   const translations = sessions.flatMap((s) => s.translations);
 
   if (translations.length === 0) {
-    return {
-      totalMessages: 0,
-      messagesPerMinute: 0,
-      languageDiversity: 0,
-      responseTime: 0,
-      most_common_languages: [],
-      uniqueLanguages: 0,
-      avgTranslationTime: 0,
-      total_duration_seconds: 0,
-    };
+    return EMPTY_COMMUNICATION_STATS;
   }
 
   const langCounts: Record<string, number> = {};

@@ -2,10 +2,14 @@ import React from "react";
 import { useTranslation } from "../hooks/useTranslation";
 import { useI18n } from "../hooks/useI18n";
 import { I18N_KEYS } from "../i18n/keys";
+import { isSameLanguagePassthroughTranslation } from "../utils/translationFiltering";
 
 export function TranslationLog() {
   const { translations, clearTranslations, error } = useTranslation();
   const { t } = useI18n();
+  const visibleTranslations = translations.filter(
+    (translation) => !isSameLanguagePassthroughTranslation(translation)
+  );
 
   return (
     <div className="p-4 bg-gray-800 rounded-lg">
@@ -26,10 +30,10 @@ export function TranslationLog() {
       )}
 
       <div className="space-y-2 max-h-96 overflow-y-auto">
-        {translations.length === 0 ? (
+        {visibleTranslations.length === 0 ? (
           <p className="text-gray-400 text-sm">{t(I18N_KEYS.MAIN_NO_TRANSLATIONS)}</p>
         ) : (
-          translations.map((translation, index) => (
+          visibleTranslations.map((translation, index) => (
             <div key={index} className="p-3 bg-gray-700 rounded text-sm">
               <div className="text-gray-300 mb-1">
                 <span className="font-semibold">

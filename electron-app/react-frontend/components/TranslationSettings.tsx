@@ -3,29 +3,12 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useConfig } from "../hooks/useConfig";
 import { useI18n } from "../hooks/useI18n";
 import { I18N_KEYS } from "../i18n/keys";
-
-const LANGUAGES = [
-  { code: "en", name: "English" },
-  { code: "es", name: "Spanish" },
-  { code: "fr", name: "French" },
-  { code: "de", name: "German" },
-  { code: "ru", name: "Russian" },
-  { code: "zh", name: "Chinese" },
-  { code: "ja", name: "Japanese" },
-  { code: "ko", name: "Korean" },
-  { code: "pt", name: "Portuguese" },
-  { code: "it", name: "Italian" },
-  { code: "ar", name: "Arabic" },
-  { code: "hi", name: "Hindi" },
-  { code: "tr", name: "Turkish" },
-  { code: "pl", name: "Polish" },
-  { code: "uk", name: "Ukrainian" },
-];
+import { TRANSLATION_LANGUAGE_OPTIONS } from "../i18n/languages";
 
 export function TranslationSettings() {
   const { targetLanguage, setTargetLanguage } = useTranslation();
   const { config, updateConfig } = useConfig();
-  const { language: uiLanguage, setLanguage: setUiLanguage, t } = useI18n();
+  const { t } = useI18n();
 
   const handleOverlayToggle = async (enabled: boolean) => {
     if (!config) return;
@@ -92,9 +75,9 @@ export function TranslationSettings() {
             }}
             className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
           >
-            {LANGUAGES.map((lang) => (
+            {TRANSLATION_LANGUAGE_OPTIONS.map((lang) => (
               <option key={lang.code} value={lang.code}>
-                {lang.name}
+                {t(lang.labelKey)}
               </option>
             ))}
           </select>
