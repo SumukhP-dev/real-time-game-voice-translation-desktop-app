@@ -24,11 +24,6 @@ const tractionStats = [
     sub: "Players who clicked to learn more",
   },
   {
-    value: "~$695",
-    label: "Ad spend",
-    sub: "Lean validation budget across RTGVT campaigns",
-  },
-  {
     value: "$0.31",
     label: "CPC",
     sub: "Efficient click cost",
