@@ -191,3 +191,67 @@ export function isGameAudioDeviceSuitable(device: CaptureDevice): boolean {
 }
 
 
+
+export interface PlaybackDeviceLike {
+
+  name: string;
+
+}
+
+
+
+/** Score playback devices; prefer virtual audio cables for game mic routing. */
+
+export function scoreVirtualCableDevice(device: PlaybackDeviceLike): number {
+
+  const name = device.name.toLowerCase();
+
+  let score = 0;
+
+  if (name.includes("cable input")) score += 100;
+
+  if (name.includes("vb-audio") || name.includes("virtual cable")) score += 90;
+
+  if (name.includes("voicemeeter")) score += 80;
+
+  if (name.includes("virtual")) score += 40;
+
+  if (name.includes("cable")) score += 30;
+
+  return score;
+
+}
+
+
+
+export function findPreferredVirtualCableDevice<T extends PlaybackDeviceLike>(
+
+  devices: T[]
+
+): T | undefined {
+
+  if (!devices.length) return undefined;
+
+  return [...devices].sort(
+
+    (a, b) => scoreVirtualCableDevice(b) - scoreVirtualCableDevice(a)
+
+  )[0];
+
+}
+
+
+
+/** True when a VB-Audio / virtual cable playback device is present (CABLE Input). */
+
+export function hasVirtualCablePlaybackDevice(
+
+  devices: PlaybackDeviceLike[]
+
+): boolean {
+
+  return devices.some((d) => scoreVirtualCableDevice(d) >= 90);
+
+}
+
+

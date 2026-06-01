@@ -15,39 +15,48 @@ export interface AudioDevice {
 }
 
 export type AudioErrorSource = "devices" | "start" | "stop" | null;
+export type AudioSelectionOrigin = "auto" | "saved" | "manual" | null;
 
 export function useAudio(configDeviceIndex?: number | null) {
   const [devices, setDevices] = useState<AudioDevice[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<number | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [devicesLoading, setDevicesLoading] = useState(false);
+  const [captureLoading, setCaptureLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorSource, setErrorSource] = useState<AudioErrorSource>(null);
+  const [selectionOrigin, setSelectionOrigin] =
+    useState<AudioSelectionOrigin>(null);
 
   const loadDevices = useCallback(async () => {
-    setLoading(true);
+    setDevicesLoading(true);
     setError(null);
     setErrorSource(null);
     try {
       const audioDevices = await electronService.getAudioDevices();
       setDevices(audioDevices);
 
-      setSelectedDevice((prev) => {
-        const prevDev =
-          prev !== null ? audioDevices.find((d) => d.index === prev) : undefined;
-        if (prevDev && isGameAudioDeviceSuitable(prevDev)) {
-          return prev;
-        }
+      const currentDevice =
+        selectedDevice !== null
+          ? audioDevices.find((d) => d.index === selectedDevice)
+          : undefined;
+      if (currentDevice && isGameAudioDeviceSuitable(currentDevice)) {
+        setSelectedDevice(currentDevice.index);
+      } else {
         const savedDev =
           configDeviceIndex != null
             ? audioDevices.find((d) => d.index === configDeviceIndex)
             : undefined;
+
         if (savedDev && isGameAudioDeviceSuitable(savedDev)) {
-          return configDeviceIndex;
+          setSelectedDevice(savedDev.index);
+          setSelectionOrigin("saved");
+        } else {
+          const preferred = findPreferredCaptureDevice(audioDevices);
+          setSelectedDevice(preferred?.index ?? null);
+          setSelectionOrigin(preferred ? "auto" : null);
         }
-        const preferred = findPreferredCaptureDevice(audioDevices);
-        return preferred?.index ?? prev ?? configDeviceIndex ?? null;
-      });
+      }
     } catch (err: unknown) {
       setDevices([]);
       setErrorSource("devices");
@@ -55,12 +64,12 @@ export function useAudio(configDeviceIndex?: number | null) {
         err instanceof Error ? err.message : "Failed to load audio devices"
       );
     } finally {
-      setLoading(false);
+      setDevicesLoading(false);
     }
-  }, [configDeviceIndex]);
+  }, [configDeviceIndex, selectedDevice]);
 
   const startCapture = useCallback(async (deviceIndex?: number) => {
-    setLoading(true);
+    setCaptureLoading(true);
     setError(null);
     setErrorSource(null);
     try {
@@ -80,7 +89,7 @@ export function useAudio(configDeviceIndex?: number | null) {
       setError(errorMsg);
       throw err;
     } finally {
-      setLoading(false);
+      setCaptureLoading(false);
     }
   }, [selectedDevice]);
 
@@ -88,7 +97,7 @@ export function useAudio(configDeviceIndex?: number | null) {
     if (!isCapturing) {
       return;
     }
-    setLoading(true);
+    setCaptureLoading(true);
     setError(null);
     setErrorSource(null);
     try {
@@ -102,7 +111,7 @@ export function useAudio(configDeviceIndex?: number | null) {
       setError(errorMsg);
       throw err;
     } finally {
-      setLoading(false);
+      setCaptureLoading(false);
     }
   }, [isCapturing]);
 
@@ -114,13 +123,18 @@ export function useAudio(configDeviceIndex?: number | null) {
     devices,
     selectedDevice,
     isCapturing,
-    loading,
+    devicesLoading,
+    captureLoading,
     error,
     errorSource,
+    selectionOrigin,
     loadDevices,
     startCapture,
     stopCapture,
     setSelectedDevice,
-    selectDevice: (deviceIndex: number) => setSelectedDevice(deviceIndex),
+    selectDevice: (deviceIndex: number) => {
+      setSelectedDevice(deviceIndex);
+      setSelectionOrigin("manual");
+    },
   };
 }

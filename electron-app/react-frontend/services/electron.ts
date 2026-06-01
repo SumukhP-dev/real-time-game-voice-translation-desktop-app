@@ -10,12 +10,46 @@ export interface AudioDevice {
   is_loopback?: boolean;
 }
 
+export interface PlaybackDevice {
+  index: number;
+  name: string;
+  channels: number;
+  sample_rate: number;
+  is_default?: boolean;
+}
+
+export type VoiceOutputMode = "virtual_mic" | "speakers" | "both";
+export type VoiceRoutingPreset = "game" | "discord";
+
+interface TeammateProfile {
+  id: string;
+  name: string;
+  language: string;
+  detected_language?: string;
+  primary_language?: string;
+  detected_languages?: Record<string, number>;
+  translations?: Array<{
+    text: string;
+    timestamp: Date;
+    source_language: string;
+    target_language: string;
+  }>;
+}
+
+function generateId(): string {
+  const anyCrypto = typeof crypto !== "undefined" ? (crypto as any) : undefined;
+  if (anyCrypto?.randomUUID) return anyCrypto.randomUUID();
+  return `t_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
 export interface Config {
   audio: {
     /** Loopback device for game / teammate audio (subtitles). */
     device_index: number | null;
     /** Physical microphone for your voice (voice translation). */
     microphone_device_index?: number | null;
+    /** Playback device for TTS (e.g. VB-Audio CABLE Input). */
+    tts_output_device_index?: number | null;
     chunk_size: number;
     sample_rate: number;
     channels: number;
@@ -48,6 +82,10 @@ export interface Config {
     engine: string;
     rate: number;
     volume: number;
+  };
+  voice_output?: {
+    mode?: VoiceOutputMode;
+    preset?: VoiceRoutingPreset;
   };
   overlay: {
     enabled: boolean;
@@ -97,6 +135,22 @@ export interface MLServiceStartupState {
   translationLoaded?: boolean;
 }
 
+export interface VbAudioCableStatus {
+  supported: boolean;
+  installed: boolean;
+  installerAvailable: boolean;
+  /** True when the packaged app includes VBCABLE_Setup_x64.exe (no download needed). */
+  bundledOffline?: boolean;
+  setupPath: string | null;
+  downloadPageUrl?: string;
+}
+
+export interface VbAudioCableInstallResult {
+  success: boolean;
+  needsReboot?: boolean;
+  message: string;
+}
+
 class ElectronService {
   private isElectron: boolean;
   private isDev: boolean;
@@ -105,10 +159,13 @@ class ElectronService {
   private mlServiceStartupPromise: Promise<void> | null;
   private mlServiceStartupGeneration: number;
 
-  private static readonly ML_SERVICE_STARTUP_TIMEOUT_MS = 120000;
+  private teammates: TeammateProfile[] = [];
+
+  private static readonly ML_SERVICE_STARTUP_TIMEOUT_MS = 300000;
   private static readonly ML_SERVICE_POLL_INTERVAL_MS = 500;
-  /** Expected first-launch model load duration for progress UI (~1 min). */
-  private static readonly ML_SERVICE_EXPECTED_LOAD_MS = 60000;
+  /** Expected first-launch model load duration for progress UI. */
+  private static readonly ML_SERVICE_EXPECTED_LOAD_MS = 180000;
+  private static readonly BACKEND_REACHABLE_TIMEOUT_MS = 45000;
 
   constructor() {
     this.isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI;
@@ -117,6 +174,28 @@ class ElectronService {
     this.mlServiceReady = false;
     this.mlServiceStartupPromise = null;
     this.mlServiceStartupGeneration = 0;
+  }
+
+  private emitTeammatesUpdated(): void {
+    if (typeof window === "undefined") return;
+    try {
+      window.dispatchEvent(
+        new CustomEvent("teammates:updated", {
+          detail: { teammates: this.teammates },
+        })
+      );
+    } catch {
+      // Ignore emit failures; UI can refresh via getTeammates().
+    }
+  }
+
+  async getTeammates(): Promise<TeammateProfile[]> {
+    // Return a shallow clone so React state updates correctly.
+    return this.teammates.map((t) => ({
+      ...t,
+      detected_languages: t.detected_languages ? { ...t.detected_languages } : {},
+      translations: t.translations ? [...t.translations] : [],
+    }));
   }
 
   // Check if running in Electron
@@ -170,6 +249,25 @@ class ElectronService {
     }
     // Fallback for web
     window.open(url, '_blank');
+  }
+
+  async getVbAudioCableStatus(): Promise<VbAudioCableStatus> {
+    if (this.isElectron && (window as any).electronAPI?.getVbAudioCableStatus) {
+      return await (window as any).electronAPI.getVbAudioCableStatus();
+    }
+    return {
+      supported: false,
+      installed: false,
+      installerAvailable: false,
+      setupPath: null,
+    };
+  }
+
+  async installVbAudioCable(): Promise<VbAudioCableInstallResult> {
+    if (this.isElectron && (window as any).electronAPI?.installVbAudioCable) {
+      return await (window as any).electronAPI.installVbAudioCable();
+    }
+    throw new Error('VB-Audio install is only available in the desktop app on Windows.');
   }
 
   // Get platform info
@@ -401,18 +499,45 @@ class ElectronService {
     return this.waitForMLServiceReady(undefined, timeoutMs);
   }
 
+  private async waitForBackendReachable(
+    timeoutMs: number = ElectronService.BACKEND_REACHABLE_TIMEOUT_MS
+  ): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const health = await this.fetchMLHealth();
+      if (health) {
+        return;
+      }
+      await this.delay(ElectronService.ML_SERVICE_POLL_INTERVAL_MS);
+    }
+    throw new Error(
+      `Translation backend was not reachable within ${Math.round(
+        timeoutMs / 1000
+      )}s`
+    );
+  }
+
   // ML Service API calls (via HTTP)
-  async callMLService(endpoint: string, data?: any): Promise<any> {
+  async callMLService(
+    endpoint: string,
+    data?: any,
+    options?: { requireReady?: boolean; timeoutMs?: number }
+  ): Promise<any> {
     const url = await this.getMLServiceURL();
     const fullUrl = `${url}${endpoint}`;
+    const requireReady = options?.requireReady ?? true;
 
     try {
-      await this.waitForMLService();
+      if (requireReady) {
+        await this.waitForMLService(options?.timeoutMs);
+      } else {
+        await this.waitForBackendReachable(options?.timeoutMs);
+      }
       let response = await this.fetchMLServiceResponse(fullUrl, data);
 
-      if (!response.ok && response.status >= 500) {
+      if (!response.ok && response.status >= 500 && requireReady) {
         this.mlServiceReady = false;
-        await this.waitForMLService();
+        await this.waitForMLService(options?.timeoutMs);
         response = await this.fetchMLServiceResponse(fullUrl, data);
       }
 
@@ -421,7 +546,9 @@ class ElectronService {
         throw new Error(detail || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      this.mlServiceReady = true;
+      if (requireReady) {
+        this.mlServiceReady = true;
+      }
       return await response.json();
     } catch (error) {
       if (this.isRetriableMLServiceError(error)) {
@@ -445,7 +572,9 @@ class ElectronService {
 
   // Audio device operations (via ML service)
   async getAudioDevices(): Promise<AudioDevice[]> {
-    const devices = await this.callMLService('/audio/devices');
+    const devices = await this.callMLService('/audio/devices', undefined, {
+      requireReady: false,
+    });
     if (!Array.isArray(devices) || devices.length === 0) {
       throw new Error(
         'No audio capture devices found. Wait for the translation backend to finish starting, then retry.'
@@ -454,35 +583,69 @@ class ElectronService {
     return devices;
   }
 
-  async startAudioCapture(deviceIndex: number): Promise<void> {
-    console.log(`Starting audio capture for device ${deviceIndex}`);
+  async startAudioCapture(deviceIndex: number, source: 'loopback' | 'mic' = 'loopback'): Promise<void> {
+    console.log(`Starting ${source} capture for device ${deviceIndex}`);
     try {
-      await this.callMLService('/audio/start', { device_index: deviceIndex });
+      await this.callMLService(
+        '/audio/start',
+        { device_index: deviceIndex, source },
+        { requireReady: false }
+      );
     } catch (error) {
-      console.error('Failed to start audio capture via ML service:', error);
-      // Surface the failure to the caller so the UI can show a real error
+      console.error(`Failed to start ${source} capture via ML service:`, error);
       throw error;
     }
   }
 
-  async stopAudioCapture(): Promise<void> {
-    console.log('Stopping audio capture');
+  async stopAudioCapture(source: 'loopback' | 'mic' = 'loopback'): Promise<void> {
+    console.log(`Stopping ${source} capture`);
     try {
-      // Send an empty JSON body so the transport uses POST.
-      await this.callMLService('/audio/stop', {});
+      await this.callMLService('/audio/stop', { source }, { requireReady: false });
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       if (/not active/i.test(msg)) {
         return;
       }
-      console.error('Failed to stop audio capture via ML service:', error);
+      console.error(`Failed to stop ${source} capture via ML service:`, error);
       throw error;
     }
   }
 
+  async getPlaybackDevices(): Promise<PlaybackDevice[]> {
+    const devices = await this.callMLService(
+      '/audio/playback-devices',
+      undefined,
+      { requireReady: false }
+    );
+    return Array.isArray(devices) ? devices : [];
+  }
+
+  async speakText(
+    text: string,
+    options?: {
+      language?: string;
+      outputDeviceIndex?: number | null;
+      speakersDeviceIndex?: number | null;
+      outputMode?: VoiceOutputMode;
+      volume?: number;
+      rate?: number;
+    }
+  ): Promise<void> {
+    const payload = {
+      text,
+      language: options?.language ?? 'en',
+      output_device_index: options?.outputDeviceIndex ?? null,
+      speakers_device_index: options?.speakersDeviceIndex ?? null,
+      output_mode: options?.outputMode ?? 'virtual_mic',
+      volume: options?.volume ?? 1.0,
+      rate: options?.rate ?? 1.0,
+    };
+    await this.callMLService('/tts/speak', payload);
+  }
+
   // Transcribe audio via ML service (float32 PCM)
   async transcribeAudio(
-    audioData: number[],
+    audioData: ArrayLike<number>,
     sampleRate: number = 48000,
     options?: {
       language?: string | null;
@@ -502,7 +665,10 @@ class ElectronService {
 
     await this.waitForMLService(30000);
     const baseUrl = await this.getMLServiceURL();
-    const float32 = new Float32Array(audioData);
+    const float32 =
+      audioData instanceof Float32Array
+        ? audioData
+        : Float32Array.from(audioData);
 
     const formData = new FormData();
     formData.append(
@@ -565,9 +731,44 @@ class ElectronService {
 
   // Auto-detect teammate language
   async autoDetectTeammateLanguage(language: string, name?: string): Promise<string> {
-    console.log('Mock: autoDetectTeammateLanguage', { language, name });
-    // Return a mock teammate name
-    return name || `Teammate (${language})`;
+    const teammateName = name || `Teammate (${language})`;
+
+    // Create teammate profile on first detection.
+    let teammate = this.teammates.find((t) => t.name === teammateName);
+    if (!teammate) {
+      teammate = {
+        id: generateId(),
+        name: teammateName,
+        language,
+        detected_language: language,
+        primary_language: language,
+        detected_languages: { [language]: 1 },
+        translations: [],
+      };
+      this.teammates.push(teammate);
+      this.emitTeammatesUpdated();
+      return teammate.name;
+    }
+
+    const detected = teammate.detected_languages ?? {};
+    detected[language] = (detected[language] ?? 0) + 1;
+    teammate.detected_languages = detected;
+    teammate.detected_language = language;
+    teammate.language = teammate.language || language;
+
+    // Primary language = most frequently detected language for this teammate.
+    let primary: string | undefined;
+    let maxCount = 0;
+    for (const [lang, count] of Object.entries(detected)) {
+      if (count > maxCount) {
+        maxCount = count;
+        primary = lang;
+      }
+    }
+    teammate.primary_language = primary ?? language;
+
+    this.emitTeammatesUpdated();
+    return teammate.name;
   }
 
   // Show Python overlay by reusing the translation pipeline.
@@ -673,11 +874,15 @@ class ElectronService {
 
   // Configuration operations
   async getConfig(): Promise<Config> {
-    return await this.callMLService('/config/get');
+    return await this.callMLService('/config/get', undefined, {
+      requireReady: false,
+    });
   }
 
   async saveConfig(config: Config): Promise<void> {
-    return await this.callMLService('/config/save', config);
+    return await this.callMLService('/config/save', config, {
+      requireReady: false,
+    });
   }
 
   // Health check (does not require models to be loaded)
@@ -698,19 +903,22 @@ class ElectronService {
     }
   }
 
-  // Audio chunk listener: connect to ML service WebSocket and forward real capture chunks
-  listenToAudioChunk(callback: (event: { data: number[]; sample_rate: number }) => void): () => void {
+  // Audio chunk listener: connect to ML service WebSocket and forward capture chunks
+  listenToAudioChunk(
+    callback: (event: { data: number[]; sample_rate: number; source?: string }) => void,
+    source: 'loopback' | 'mic' = 'loopback'
+  ): () => void {
     let ws: WebSocket | null = null;
     let active = true;
 
-    this.waitForMLService()
+    this.waitForBackendReachable()
     .then(() => this.getMLServiceURL())
     .then((baseUrl) => {
       if (!active) {
         return;
       }
 
-      const wsUrl = baseUrl.replace(/^http/, 'ws') + '/audio/stream';
+      const wsUrl = baseUrl.replace(/^http/, 'ws') + `/audio/stream/${source}`;
       try {
         ws = new WebSocket(wsUrl);
         ws.onopen = () => {
@@ -721,13 +929,16 @@ class ElectronService {
         };
         ws.onmessage = (ev) => {
           try {
-            const msg = JSON.parse(ev.data as string) as { data: number[]; sample_rate: number };
+            const msg = JSON.parse(ev.data as string) as {
+              data: number[];
+              sample_rate: number;
+              source?: string;
+            };
             if (Array.isArray(msg.data) && typeof msg.sample_rate === 'number') {
-              // Match backend cap; avoids renderer stress if a buggy driver sends a huge block.
               const MAX_SAMPLES = 8192;
               const data =
                 msg.data.length > MAX_SAMPLES ? msg.data.slice(0, MAX_SAMPLES) : msg.data;
-              callback({ data, sample_rate: msg.sample_rate });
+              callback({ data, sample_rate: msg.sample_rate, source: msg.source ?? source });
             }
           } catch (e) {
             console.warn('Audio chunk parse error:', e);
@@ -735,16 +946,16 @@ class ElectronService {
         };
         ws.onerror = (err) => {
           if (active) {
-            console.warn('Audio stream WebSocket error:', err);
+            console.warn(`Audio stream WebSocket error (${source}):`, err);
           }
         };
         ws.onclose = () => { ws = null; };
       } catch (e) {
-        console.error('Failed to connect to audio stream:', e);
+        console.error(`Failed to connect to audio stream (${source}):`, e);
       }
     }).catch((e) => {
       if (active) {
-        console.warn('Audio stream unavailable during startup:', e);
+        console.warn(`Audio stream unavailable during startup (${source}):`, e);
       }
     });
 
