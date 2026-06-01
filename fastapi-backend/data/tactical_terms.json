@@ -1,0 +1,127 @@
+{
+  "source_replacements": [
+    {
+      "pattern": "\\bon (the )?left( hand)? side\\b",
+      "replacement": "left"
+    },
+    {
+      "pattern": "\\bon (the )?right( hand)? side\\b",
+      "replacement": "right"
+    },
+    {
+      "pattern": "\\bin the middle\\b",
+      "replacement": "mid"
+    },
+    {
+      "pattern": "\\bbehind (me|us|you)\\b",
+      "replacement": "behind"
+    },
+    {
+      "pattern": "\\brushing\\b",
+      "replacement": "rush"
+    },
+    {
+      "pattern": "\\bone hp\\b",
+      "replacement": "1 hp"
+    },
+    {
+      "pattern": "\\bone shot\\b",
+      "replacement": "1 shot"
+    },
+    {
+      "pattern": "\\btwo (on )?mid\\b",
+      "replacement": "2 mid"
+    },
+    {
+      "pattern": "\\bthree (on )?mid\\b",
+      "replacement": "3 mid"
+    }
+  ],
+  "generic_output_replacements": [
+    {
+      "pattern": "\\bon the left\\b",
+      "replacement": "left"
+    },
+    {
+      "pattern": "\\bon the right\\b",
+      "replacement": "right"
+    },
+    {
+      "pattern": "\\bin the middle\\b",
+      "replacement": "mid"
+    },
+    {
+      "pattern": "\\bto the rear\\b",
+      "replacement": "behind"
+    }
+  ],
+  "language_output_replacements": {
+    "zh": [
+      {
+        "pattern": "在左边",
+        "replacement": "左边"
+      },
+      {
+        "pattern": "在右边",
+        "replacement": "右边"
+      },
+      {
+        "pattern": "在后面",
+        "replacement": "后面"
+      },
+      {
+        "pattern": "在中间",
+        "replacement": "中路"
+      },
+      {
+        "pattern": "往B点冲",
+        "replacement": "冲B"
+      },
+      {
+        "pattern": "往A点冲",
+        "replacement": "冲A"
+      },
+      {
+        "pattern": "只剩一点生命值",
+        "replacement": "1滴血"
+      },
+      {
+        "pattern": "只剩一滴血",
+        "replacement": "1滴血"
+      },
+      {
+        "pattern": "小心",
+        "replacement": ""
+      }
+    ],
+    "en": [
+      {
+        "pattern": "\\bthere is\\b",
+        "replacement": ""
+      },
+      {
+        "pattern": "\\bhe is at\\b",
+        "replacement": ""
+      },
+      {
+        "pattern": "\\bthey are at\\b",
+        "replacement": ""
+      }
+    ]
+  },
+  "generic_fillers": [
+    "uh",
+    "um",
+    "you know",
+    "i think",
+    "kind of",
+    "sort of"
+  ],
+  "language_fillers": {
+    "zh": [
+      "那个",
+      "就是",
+      "呃"
+    ]
+  }
+}

@@ -37,6 +37,8 @@ from audio_capture import (
     soundcard_device_count,
     soundcard_preferred_samplerate,
 )
+from audio_output import AudioOutputPlayer, list_playback_devices, playback_available
+from tts_service import TTSService
 
 try:
     import sounddevice as sd
@@ -60,7 +62,36 @@ app.add_middleware(
 whisper_service: Optional[WhisperService] = None
 translation_service: Optional[TranslationService] = None
 
-# Audio capture state
+# Audio capture state (loopback + mic can run simultaneously)
+_CAPTURE_BLOCK_SIZE = 2048
+_AUDIO_QUEUE_MAXSIZE = 64
+_VALID_CAPTURE_SOURCES = frozenset({"loopback", "mic"})
+
+
+class CaptureSession:
+    """One active capture stream (loopback or microphone)."""
+
+    def __init__(self, source: str):
+        self.source = source
+        self.active = False
+        self.device_index: Optional[int] = None
+        self.stream = None
+        self.queue: Optional[queue.Queue] = None
+        self.ws_connections: set = set()
+        self.broadcast_task = None
+        self.sample_rate = 48000
+
+
+_capture_sessions: dict[str, CaptureSession] = {
+    "loopback": CaptureSession("loopback"),
+    "mic": CaptureSession("mic"),
+}
+
+# Backwards-compatible aliases for loopback session
+def _loopback_session() -> CaptureSession:
+    return _capture_sessions["loopback"]
+
+
 audio_capture_active = False
 selected_device_index = None
 audio_stream = None
@@ -68,9 +99,10 @@ _chunk_queue = None
 _ws_connections: set = set()
 _broadcast_task = None
 _capture_sample_rate = 48000
-_capture_block_size = 2048
-# Bound queue so a stuck WebSocket/client cannot grow memory without bound (can take down the process).
-_AUDIO_QUEUE_MAXSIZE = 64
+_capture_block_size = _CAPTURE_BLOCK_SIZE
+
+_tts_service = TTSService()
+_audio_player = AudioOutputPlayer()
 
 # Audio device models
 class AudioDevice(BaseModel):
@@ -83,6 +115,29 @@ class AudioDevice(BaseModel):
 
 class AudioStartRequest(BaseModel):
     device_index: int
+    source: str = "loopback"
+
+
+class AudioStopRequest(BaseModel):
+    source: str = "loopback"
+
+
+class PlaybackDevice(BaseModel):
+    index: int
+    name: str
+    channels: int
+    sample_rate: int
+    is_default: bool = False
+
+
+class TTSSpeakRequest(BaseModel):
+    text: str
+    language: str = "en"
+    output_device_index: Optional[int] = None
+    speakers_device_index: Optional[int] = None
+    output_mode: str = "virtual_mic"  # virtual_mic | speakers | both
+    volume: float = 1.0
+    rate: float = 1.0
 
 # Request/Response models
 class TranscribeRequest(BaseModel):
@@ -136,16 +191,39 @@ async def startup_event():
     async def preload_models():
         import time
 
-        try:
-            load_start = time.time()
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, whisper_service.load_model)
-            print(
-                f"[STARTUP] Whisper model loaded in {time.time() - load_start:.1f}s",
-                flush=True,
-            )
-        except Exception as e:
-            print(f"[STARTUP] Whisper preload failed (lazy load on use): {e}", flush=True)
+        loop = asyncio.get_event_loop()
+
+        async def load_whisper():
+            try:
+                load_start = time.time()
+                await loop.run_in_executor(None, whisper_service.load_model)
+                print(
+                    f"[STARTUP] Whisper model loaded in {time.time() - load_start:.1f}s",
+                    flush=True,
+                )
+            except Exception as e:
+                print(
+                    f"[STARTUP] Whisper preload failed (lazy load on use): {e}",
+                    flush=True,
+                )
+
+        async def load_translation():
+            try:
+                load_start = time.time()
+                await loop.run_in_executor(
+                    None, translation_service._initialize_local_model
+                )
+                print(
+                    f"[STARTUP] Translation model loaded in {time.time() - load_start:.1f}s",
+                    flush=True,
+                )
+            except Exception as e:
+                print(
+                    f"[STARTUP] Translation preload failed (lazy load on use): {e}",
+                    flush=True,
+                )
+
+        await asyncio.gather(load_whisper(), load_translation())
 
     asyncio.create_task(preload_models())
 
@@ -156,20 +234,21 @@ async def health_check():
     translation_loaded = bool(
         translation_service and translation_service._model_loaded
     )
+    ready = whisper_loaded and translation_loaded
     return {
         "status": "healthy",
-        "ready": whisper_loaded,
+        "ready": ready,
         "whisper_loaded": whisper_loaded,
         "translation_loaded": translation_loaded,
     }
 
 def _audio_callback(indata, frames, time_info, status):
-    """Sounddevice stream callback; runs in a separate thread. Puts (data_list, sample_rate) into queue."""
-    global _chunk_queue, _capture_sample_rate
+    """Sounddevice stream callback for PortAudio fallback capture."""
+    session = _capture_sessions.get("loopback")
+    if session is None or session.queue is None:
+        return
     if status:
         print(f"[AUDIO] Stream status: {status}", flush=True)
-    if _chunk_queue is None:
-        return
     try:
         data = np.asarray(indata, dtype=np.float32)
         if data.ndim == 2:
@@ -177,33 +256,223 @@ def _audio_callback(indata, frames, time_info, status):
         flat = data.flatten()
         if flat.size > MAX_SAMPLES_PER_WS_CHUNK:
             flat = flat[:MAX_SAMPLES_PER_WS_CHUNK]
-        _chunk_queue.put((flat.tolist(), _capture_sample_rate))
+        session.queue.put((flat.tolist(), session.sample_rate))
     except Exception as e:
         print(f"[AUDIO] Callback error: {e}", flush=True)
 
 
-async def _broadcast_audio_task():
-    """Background task: read chunks from queue and send to all WebSocket clients."""
-    global _chunk_queue, _ws_connections
+def _portaudio_input_callback(session: CaptureSession):
+    """Build a sounddevice callback bound to a specific capture session."""
+
+    def callback(indata, frames, time_info, status):
+        if status:
+            print(f"[AUDIO:{session.source}] Stream status: {status}", flush=True)
+        if session.queue is None:
+            return
+        try:
+            data = np.asarray(indata, dtype=np.float32)
+            if data.ndim == 2:
+                data = np.mean(data, axis=1)
+            flat = data.flatten()
+            if flat.size > MAX_SAMPLES_PER_WS_CHUNK:
+                flat = flat[:MAX_SAMPLES_PER_WS_CHUNK]
+            session.queue.put((flat.tolist(), session.sample_rate))
+        except Exception as e:
+            print(f"[AUDIO:{session.source}] Callback error: {e}", flush=True)
+
+    return callback
+
+
+async def _broadcast_audio_task(session: CaptureSession):
+    """Background task: read chunks from queue and send to session WebSocket clients."""
     loop = asyncio.get_event_loop()
     while True:
         try:
-            chunk = await loop.run_in_executor(None, _chunk_queue.get)
+            chunk = await loop.run_in_executor(None, session.queue.get)
             if chunk is None:
                 break
             data_list, sample_rate = chunk
+            payload = {
+                "data": data_list,
+                "sample_rate": sample_rate,
+                "source": session.source,
+            }
             dead = set()
-            for ws in _ws_connections:
+            for ws in session.ws_connections:
                 try:
-                    await ws.send_json({"data": data_list, "sample_rate": sample_rate})
+                    await ws.send_json(payload)
                 except Exception:
                     dead.add(ws)
             for ws in dead:
-                _ws_connections.discard(ws)
+                session.ws_connections.discard(ws)
         except asyncio.CancelledError:
             break
         except Exception as e:
-            print(f"[AUDIO] Broadcast error: {e}", flush=True)
+            print(f"[AUDIO:{session.source}] Broadcast error: {e}", flush=True)
+
+
+def _sync_loopback_aliases() -> None:
+    """Keep legacy globals in sync with the loopback session."""
+    global audio_capture_active, selected_device_index, audio_stream
+    global _chunk_queue, _ws_connections, _broadcast_task, _capture_sample_rate
+
+    session = _loopback_session()
+    audio_capture_active = session.active
+    selected_device_index = session.device_index
+    audio_stream = session.stream
+    _chunk_queue = session.queue
+    _ws_connections = session.ws_connections
+    _broadcast_task = session.broadcast_task
+    _capture_sample_rate = session.sample_rate
+
+
+async def _start_capture_session(session: CaptureSession, device_index: int) -> dict:
+    if session.active:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Audio capture ({session.source}) is already active",
+        )
+
+    n_soundcard = soundcard_device_count()
+    use_soundcard = (
+        soundcard_capture_available()
+        and n_soundcard > 0
+        and device_index < n_soundcard
+    )
+
+    if use_soundcard:
+        preferred_rate = soundcard_preferred_samplerate(
+            device_index, default_rate=48000
+        )
+        sc_block = max(256, min(_capture_block_size, 1024))
+        try:
+            effective_rate = await asyncio.wait_for(
+                asyncio.get_event_loop().run_in_executor(
+                    None,
+                    functools.partial(
+                        probe_soundcard_capture,
+                        device_index,
+                        preferred_rate,
+                        sc_block,
+                    ),
+                ),
+                timeout=15.0,
+            )
+        except asyncio.TimeoutError:
+            raise HTTPException(
+                status_code=504,
+                detail="Opening the audio device timed out. Try another device or reconnect the headset.",
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Could not open audio capture: {e!s}",
+            )
+
+        session.sample_rate = int(effective_rate)
+        session.queue = queue.Queue(maxsize=_AUDIO_QUEUE_MAXSIZE)
+        session.stream = SoundcardCaptureController(
+            device_index,
+            session.queue,
+            sc_block,
+            samplerate=session.sample_rate,
+        )
+        session.stream.start()
+        session.active = True
+        session.device_index = device_index
+        session.broadcast_task = asyncio.create_task(_broadcast_audio_task(session))
+        print(
+            f"[AUDIO:{session.source}] Started soundcard capture device {device_index} @ {session.sample_rate}Hz block={sc_block}",
+            flush=True,
+        )
+        if session.source == "loopback":
+            _sync_loopback_aliases()
+        return {
+            "status": "success",
+            "source": session.source,
+            "message": f"Audio capture started (soundcard) device {device_index}",
+        }
+
+    if not SOUNDDEVICE_AVAILABLE or sd is None:
+        raise HTTPException(
+            status_code=503,
+            detail="sounddevice not available; install with: pip install sounddevice",
+        )
+
+    sd_device_index = device_index - n_soundcard
+    try:
+        dev = sd.query_devices(sd_device_index)
+        sample_rate = int(dev.get("default_samplerate", 48000))
+        channels = min(2, int(dev.get("max_input_channels", 1)))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid device: {e}")
+
+    session.sample_rate = sample_rate
+    session.queue = queue.Queue(maxsize=_AUDIO_QUEUE_MAXSIZE)
+    session.stream = sd.InputStream(
+        device=sd_device_index,
+        channels=channels,
+        samplerate=sample_rate,
+        blocksize=_capture_block_size,
+        dtype="float32",
+        callback=_portaudio_input_callback(session),
+    )
+    session.stream.start()
+    session.active = True
+    session.device_index = device_index
+    session.broadcast_task = asyncio.create_task(_broadcast_audio_task(session))
+    print(
+        f"[AUDIO:{session.source}] Started PortAudio capture logical={device_index} sd={sd_device_index} @ {sample_rate}Hz",
+        flush=True,
+    )
+    if session.source == "loopback":
+        _sync_loopback_aliases()
+    return {
+        "status": "success",
+        "source": session.source,
+        "message": f"Audio capture started for device {device_index}",
+    }
+
+
+async def _stop_capture_session(session: CaptureSession) -> dict:
+    if not session.active:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Audio capture ({session.source}) is not active",
+        )
+
+    device_index = session.device_index
+    session.active = False
+    session.device_index = None
+    if session.stream is not None:
+        try:
+            if getattr(session.stream, "_is_soundcard_capture", False):
+                session.stream.stop()
+            else:
+                session.stream.stop()
+                session.stream.close()
+        except Exception as e:
+            print(f"[AUDIO:{session.source}] Stop stream error: {e}", flush=True)
+        session.stream = None
+    if session.queue is not None:
+        session.queue.put(None)
+    if session.broadcast_task is not None:
+        task = session.broadcast_task
+        session.broadcast_task = None
+        task.cancel()
+        try:
+            await asyncio.wait_for(task, timeout=2.0)
+        except (asyncio.CancelledError, asyncio.TimeoutError):
+            pass
+    session.queue = None
+    print(f"[AUDIO:{session.source}] Stopped capture for device {device_index}", flush=True)
+    if session.source == "loopback":
+        _sync_loopback_aliases()
+    return {
+        "status": "success",
+        "source": session.source,
+        "message": f"Audio capture stopped for device {device_index}",
+    }
 
 
 # Audio device endpoints
@@ -225,150 +494,124 @@ async def get_audio_devices():
 
 @app.post("/audio/start")
 async def start_audio_capture(request: AudioStartRequest):
-    """Start capture: Windows WASAPI loopback for render devices, else sounddevice input."""
-    global audio_capture_active, selected_device_index, audio_stream, _chunk_queue, _broadcast_task, _capture_sample_rate
-
-    if audio_capture_active:
-        raise HTTPException(status_code=400, detail="Audio capture is already active")
-
-    n_soundcard = soundcard_device_count()
-    use_soundcard = (
-        soundcard_capture_available()
-        and n_soundcard > 0
-        and request.device_index < n_soundcard
-    )
-
-    if use_soundcard:
-        preferred_rate = soundcard_preferred_samplerate(
-            request.device_index, default_rate=48000
-        )
-        # Smaller blocks are more reliable on some USB headphone loopback endpoints.
-        sc_block = max(256, min(_capture_block_size, 1024))
-        try:
-            effective_rate = await asyncio.wait_for(
-                asyncio.get_event_loop().run_in_executor(
-                    None,
-                    functools.partial(
-                        probe_soundcard_capture,
-                        request.device_index,
-                        preferred_rate,
-                        sc_block,
-                    ),
-                ),
-                timeout=15.0,
-            )
-        except asyncio.TimeoutError:
-            raise HTTPException(
-                status_code=504,
-                detail="Opening the audio device timed out. Try another device or reconnect the headset.",
-            )
-        except Exception as e:
-            raise HTTPException(
-                status_code=503,
-                detail=f"Could not open audio capture: {e!s}",
-            )
-
-        _capture_sample_rate = int(effective_rate)
-        _chunk_queue = queue.Queue(maxsize=_AUDIO_QUEUE_MAXSIZE)
-        audio_stream = SoundcardCaptureController(
-            request.device_index,
-            _chunk_queue,
-            sc_block,
-            samplerate=_capture_sample_rate,
-        )
-        audio_stream.start()
-        audio_capture_active = True
-        selected_device_index = request.device_index
-        _broadcast_task = asyncio.create_task(_broadcast_audio_task())
-        print(
-            f"[AUDIO] Started soundcard capture (loopback/mic) device {request.device_index} @ {_capture_sample_rate}Hz block={sc_block}",
-            flush=True,
-        )
-        return {
-            "status": "success",
-            "message": f"Audio capture started (soundcard) device {request.device_index}",
-        }
-
-    if not SOUNDDEVICE_AVAILABLE or sd is None:
-        raise HTTPException(status_code=503, detail="sounddevice not available; install with: pip install sounddevice")
-
-    sd_device_index = request.device_index - n_soundcard
-    try:
-        dev = sd.query_devices(sd_device_index)
-        sample_rate = int(dev.get("default_samplerate", 48000))
-        channels = min(2, int(dev.get("max_input_channels", 1)))
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid device: {e}")
-
-    _capture_sample_rate = sample_rate
-    _chunk_queue = queue.Queue(maxsize=_AUDIO_QUEUE_MAXSIZE)
-    audio_stream = sd.InputStream(
-        device=sd_device_index,
-        channels=channels,
-        samplerate=sample_rate,
-        blocksize=_capture_block_size,
-        dtype="float32",
-        callback=_audio_callback,
-    )
-    audio_stream.start()
-    audio_capture_active = True
-    selected_device_index = request.device_index
-    _broadcast_task = asyncio.create_task(_broadcast_audio_task())
-    print(
-        f"[AUDIO] Started PortAudio capture logical={request.device_index} sd={sd_device_index} @ {sample_rate}Hz",
-        flush=True,
-    )
-    return {"status": "success", "message": f"Audio capture started for device {request.device_index}"}
+    """Start capture: loopback (game audio) or mic (your voice). Both can run at once."""
+    source = (request.source or "loopback").strip().lower()
+    if source not in _VALID_CAPTURE_SOURCES:
+        raise HTTPException(status_code=400, detail=f"Invalid capture source: {source}")
+    session = _capture_sessions[source]
+    return await _start_capture_session(session, request.device_index)
 
 
 @app.post("/audio/stop")
-async def stop_audio_capture():
-    """Stop audio capture and broadcast task."""
-    global audio_capture_active, selected_device_index, audio_stream, _chunk_queue, _broadcast_task
-
-    if not audio_capture_active:
-        raise HTTPException(status_code=400, detail="Audio capture is not active")
-
-    device_index = selected_device_index
-    audio_capture_active = False
-    selected_device_index = None
-    if audio_stream is not None:
-        try:
-            if getattr(audio_stream, "_is_soundcard_capture", False):
-                audio_stream.stop()
-            else:
-                audio_stream.stop()
-                audio_stream.close()
-        except Exception as e:
-            print(f"[AUDIO] Stop stream error: {e}", flush=True)
-        audio_stream = None
-    if _chunk_queue is not None:
-        _chunk_queue.put(None)
-    if _broadcast_task is not None:
-        task = _broadcast_task
-        _broadcast_task = None
-        task.cancel()
-        try:
-            await asyncio.wait_for(task, timeout=2.0)
-        except (asyncio.CancelledError, asyncio.TimeoutError):
-            pass
-    _chunk_queue = None
-    print(f"[AUDIO] Stopped capture for device {device_index}", flush=True)
-    return {"status": "success", "message": f"Audio capture stopped for device {device_index}"}
+async def stop_audio_capture(request: AudioStopRequest = AudioStopRequest()):
+    """Stop capture for loopback or mic."""
+    source = (request.source or "loopback").strip().lower()
+    if source not in _VALID_CAPTURE_SOURCES:
+        raise HTTPException(status_code=400, detail=f"Invalid capture source: {source}")
+    session = _capture_sessions[source]
+    return await _stop_capture_session(session)
 
 
-@app.websocket("/audio/stream")
-async def audio_stream_ws(websocket: WebSocket):
-    """WebSocket endpoint for real-time audio chunks. Connect after /audio/start; receive { data, sample_rate }."""
+@app.get("/audio/playback-devices", response_model=List[PlaybackDevice])
+async def get_playback_devices():
+    """List output devices for TTS routing (e.g. VB-Audio CABLE Input)."""
+    return list_playback_devices()
+
+
+@app.post("/tts/speak")
+async def tts_speak(request: TTSSpeakRequest):
+    """Synthesize translated speech and play to virtual cable / speakers."""
+    text = (request.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="TTS text is empty")
+    if not playback_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Audio playback unavailable; install sounddevice",
+        )
+
+    loop = asyncio.get_event_loop()
+
+    def _run_playback() -> dict:
+        samples, sample_rate = _tts_service.synthesize(
+            text,
+            language=request.language,
+            rate=request.rate,
+            volume=request.volume,
+        )
+        mode = (request.output_mode or "virtual_mic").strip().lower()
+        played_to: list[str] = []
+
+        if mode in ("virtual_mic", "both") and request.output_device_index is not None:
+            _audio_player.play(
+                samples,
+                sample_rate,
+                device_index=request.output_device_index,
+                volume=request.volume,
+            )
+            played_to.append(f"device_{request.output_device_index}")
+
+        if mode in ("speakers", "both"):
+            speaker_idx = request.speakers_device_index
+            _audio_player.play(
+                samples,
+                sample_rate,
+                device_index=speaker_idx,
+                volume=request.volume,
+            )
+            played_to.append(
+                f"speakers_{speaker_idx if speaker_idx is not None else 'default'}"
+            )
+
+        if not played_to:
+            raise RuntimeError(
+                "No output device configured. Select a virtual cable or speakers output."
+            )
+
+        return {
+            "status": "success",
+            "samples": int(samples.size),
+            "sample_rate": sample_rate,
+            "played_to": played_to,
+        }
+
+    try:
+        result = await loop.run_in_executor(None, _run_playback)
+        print(
+            f"[TTS] Spoke {len(text)} chars ({request.language}) -> {result['played_to']}",
+            flush=True,
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"TTS playback failed: {e!s}")
+
+
+async def _audio_stream_ws_handler(websocket: WebSocket, source: str) -> None:
+    if source not in _VALID_CAPTURE_SOURCES:
+        await websocket.close(code=4400)
+        return
+    session = _capture_sessions[source]
     await websocket.accept()
-    _ws_connections.add(websocket)
+    session.ws_connections.add(websocket)
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
         pass
     finally:
-        _ws_connections.discard(websocket)
+        session.ws_connections.discard(websocket)
+
+
+@app.websocket("/audio/stream")
+async def audio_stream_ws(websocket: WebSocket):
+    """WebSocket for loopback audio (backwards compatible)."""
+    await _audio_stream_ws_handler(websocket, "loopback")
+
+
+@app.websocket("/audio/stream/{source}")
+async def audio_stream_ws_source(websocket: WebSocket, source: str):
+    """WebSocket for loopback or mic audio chunks."""
+    await _audio_stream_ws_handler(websocket, source.strip().lower())
 
 def _run_whisper_transcribe(
     audio_array: np.ndarray,
@@ -777,15 +1020,16 @@ def _default_config() -> dict:
         "audio": {
             "device_index": None,
             "microphone_device_index": None,
+            "tts_output_device_index": None,
             "chunk_size": 4096,
             "sample_rate": 16000,
             "channels": 1,
         },
         "whisper": {
             "model": "base",
-            "language": "en",
-            "min_buffer_duration": 2.5,
-            "min_transcription_interval": 2.5,
+            "language": None,
+            "min_buffer_duration": 1.6,
+            "min_transcription_interval": 1.5,
         },
         "translation": {
             "target_language": "en",
@@ -794,10 +1038,18 @@ def _default_config() -> dict:
             "model_type": "nllb",
             "model_name": "facebook/nllb-200-distilled-600M",
             "use_fallback": False,
-            "show_same_language": False,
+            "show_same_language": True,
             "ui_language": "en",
             "enable_overlay": True,
             "enable_tts": False,
+            "translate_to_teammates": False,
+            "team_target_language": "en",
+            "use_auto_detect_team_language": False,
+            "tts_for_team_translations": False,
+        },
+        "voice_output": {
+            "mode": "virtual_mic",
+            "preset": "game",
         },
         "tts": {
             "enabled": False,
@@ -815,7 +1067,7 @@ def _default_config() -> dict:
             "max_width": 800,
             "max_lines": 3,
             "fade_duration": 5.0,
-            "show_same_language": False,
+            "show_same_language": True,
             "style_preset": "minimal",
             "position_preset": "bottom",
         },

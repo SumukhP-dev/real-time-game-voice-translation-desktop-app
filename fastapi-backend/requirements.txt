@@ -19,6 +19,11 @@ googletrans==4.0.0rc1
 # Audio file handling
 soundfile>=0.12.0
 
+# Text-to-speech
+pyttsx3>=2.90
+gtts>=2.5.0
+pydub>=0.25.1
+
 # Real-time audio capture (for live streaming to UI)
 sounddevice>=0.4.6
 # Loopback / monitor devices (WASAPI on Windows, Core Audio on macOS)

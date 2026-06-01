@@ -4,6 +4,8 @@ Refactored from src/core/translation/translator.py
 """
 import sys
 import os
+import json
+import re
 import threading
 from pathlib import Path
 from typing import Optional, Tuple, Dict, Any
@@ -71,6 +73,104 @@ class TranslationService:
         # Translation cache
         self.translation_cache = {}
         self.cache_lock = threading.Lock()
+        self.tactical_rules = self._load_tactical_rules()
+
+    def _load_tactical_rules(self) -> Dict[str, Any]:
+
+        rules_path = Path(__file__).resolve().parent / "data" / "tactical_terms.json"
+        try:
+            with rules_path.open("r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            safe_print(f"[WARN] Tactical rules unavailable: {e}", flush=True)
+            return {}
+
+    def _apply_regex_replacements(self, text: str, replacements: list[dict]) -> str:
+
+        updated = text
+        for rule in replacements:
+            pattern = rule.get("pattern")
+            replacement = rule.get("replacement", "")
+            if not pattern:
+                continue
+            updated = re.sub(pattern, replacement, updated, flags=re.IGNORECASE)
+        return updated
+
+    def _strip_fillers(self, text: str, fillers: list[str]) -> str:
+
+        updated = text
+        for filler in fillers:
+            token = (filler or "").strip()
+            if not token:
+                continue
+            if re.search(r"[A-Za-z0-9]", token):
+                updated = re.sub(
+                    rf"\b{re.escape(token)}\b[\s,]*",
+                    "",
+                    updated,
+                    flags=re.IGNORECASE,
+                )
+            else:
+                updated = updated.replace(token, "")
+        return updated
+
+    def _clean_tactical_text(self, text: str) -> str:
+
+        text = re.sub(r"[ \t]+", " ", text).strip()
+        text = re.sub(r"\s+([,.;:!?])", r"\1", text)
+        text = re.sub(r"([!?.,])\1+", r"\1", text)
+        text = re.sub(r"\s{2,}", " ", text)
+        return text.strip(" ,")
+
+    def _normalize_tactical_source(self, text: str) -> str:
+
+        normalized = (text or "").strip()
+        if not normalized:
+            return ""
+
+        normalized = self._apply_regex_replacements(
+            normalized,
+            self.tactical_rules.get("source_replacements", []),
+        )
+        normalized = self._strip_fillers(
+            normalized,
+            self.tactical_rules.get("generic_fillers", []),
+        )
+        return self._clean_tactical_text(normalized)
+
+    def _compress_tactical_output(
+        self,
+        text: str,
+        target_language: Optional[str],
+    ) -> str:
+
+        compressed = (text or "").strip()
+        if not compressed:
+            return ""
+
+        compressed = self._apply_regex_replacements(
+            compressed,
+            self.tactical_rules.get("generic_output_replacements", []),
+        )
+        compressed = self._apply_regex_replacements(
+            compressed,
+            self.tactical_rules.get("language_output_replacements", {}).get(
+                (target_language or "").lower(),
+                [],
+            ),
+        )
+        compressed = self._strip_fillers(
+            compressed,
+            self.tactical_rules.get("generic_fillers", []),
+        )
+        compressed = self._strip_fillers(
+            compressed,
+            self.tactical_rules.get("language_fillers", {}).get(
+                (target_language or "").lower(),
+                [],
+            ),
+        )
+        return self._clean_tactical_text(compressed) or text.strip()
 
     def _initialize_local_model(self):
 
@@ -210,27 +310,10 @@ class TranslationService:
                 "target_language": self.target_language
             }
 
-        # Adaptive preference (placeholder call to local service endpoint)
-        try:
-            import requests
-            resp = requests.post(
-                "http://127.0.0.1:8000/get_personalized_translation",
-                json={"context": text},
-                timeout=0.2,
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                pref = data.get("preferred_translation")
-                if pref:
-                    return {
-                        "translated_text": pref,
-                        "source_language": source_language or "auto",
-                        "target_language": self.target_language,
-                    }
-        except Exception:
-            pass
+        original_text = text.strip()
+        normalized_text = self._normalize_tactical_source(original_text) or original_text
 
-        cache_key = f"{text}_{source_language}_{self.target_language}"
+        cache_key = f"{normalized_text}_{source_language}_{self.target_language}"
         with self.cache_lock:
             if cache_key in self.translation_cache:
                 return self.translation_cache[cache_key]
@@ -243,7 +326,7 @@ class TranslationService:
                     flush=True,
                 )
                 result = {
-                    "translated_text": text,
+                    "translated_text": original_text,
                     "source_language": source_language,
                     "target_language": self.target_language,
                 }
@@ -266,8 +349,11 @@ class TranslationService:
             # Try local translation first
             translated = None
             if self.model_type == "local" and self.local_translator and self._model_loaded:
-                safe_print(f"[INFO] Attempting local translation: {text[:50]}...", flush=True)
-                translated = self._translate_with_local(text, source_language)
+                safe_print(
+                    f"[INFO] Attempting local translation: {normalized_text[:50]}...",
+                    flush=True,
+                )
+                translated = self._translate_with_local(normalized_text, source_language)
                 if translated:
                     safe_print(f"[OK] Local translation: {translated[:50]}...", flush=True)
                 else:
@@ -282,9 +368,9 @@ class TranslationService:
                         self._initialize_api_translator()
 
                     if self.fallback_translator:
-                        safe_print(f"[INFO] Using API fallback for: {text[:50]}... (source: {source_language}, target: {self.target_language})", flush=True)
-                        api_translated = self._translate_with_api(text, source_language)
-                        if api_translated and api_translated != text:
+                        safe_print(f"[INFO] Using API fallback for: {normalized_text[:50]}... (source: {source_language}, target: {self.target_language})", flush=True)
+                        api_translated = self._translate_with_api(normalized_text, source_language)
+                        if api_translated and api_translated != normalized_text:
                             translated = api_translated
                             safe_print(f"[OK] API translation: '{translated[:50]}...'", flush=True)
                         else:
@@ -296,7 +382,12 @@ class TranslationService:
 
             if translated is None:
                 safe_print(f"[WARN] All translation methods failed, returning original text", flush=True)
-                translated = text
+                translated = normalized_text
+
+            translated = self._compress_tactical_output(
+                translated,
+                self.target_language,
+            )
 
             result = {
                 "translated_text": translated,
