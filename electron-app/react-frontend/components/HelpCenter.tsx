@@ -3,63 +3,70 @@ import { useI18n } from "../hooks/useI18n";
 import { I18N_KEYS } from "../i18n/keys";
 
 interface FAQItem {
-  question: string;
-  answer: string;
-  category: string;
+  questionKey: string;
+  answerKey: string;
+  categoryKey: string;
 }
 
 const FAQ_DATA: FAQItem[] = [
   {
-    category: "Setup",
-    question: "How do I set up audio capture?",
-    answer: "In Audio Settings, select your headphones or speakers (look for [Loopback] on Windows/macOS). Click Start Capture, then play game or system audio. No virtual audio cable is required on Windows 10/11 or macOS.",
+    categoryKey: "help_center.categories.setup",
+    questionKey: "help_center.faq.audio_setup.question",
+    answerKey: "help_center.faq.audio_setup.answer",
   },
   {
-    category: "Setup",
-    question: "Why can't I hear game audio in my headphones?",
-    answer: "The app captures what plays through the selected output without changing your Windows default device. If you changed Windows sound settings manually, set your normal headphones/speakers back as the default playback device.",
+    categoryKey: "help_center.categories.setup",
+    questionKey: "help_center.faq.hear_game_audio.question",
+    answerKey: "help_center.faq.hear_game_audio.answer",
   },
   {
-    category: "Translation",
-    question: "Why are no translations appearing?",
-    answer: "Check that: 1) ML service is running, 2) Audio capture is started, 3) Overlay is enabled, 4) Target language is set, 5) Audio is actually playing (check RMS levels in logs).",
+    categoryKey: "help_center.categories.translation",
+    questionKey: "help_center.faq.no_translations.question",
+    answerKey: "help_center.faq.no_translations.answer",
   },
   {
-    category: "Overlay",
-    question: "The overlay is not showing on screen",
-    answer: "Verify overlay is enabled in Translation Settings. Try clicking 'Test Overlay' button. Check that overlay position is within screen bounds. Ensure no other application is covering it.",
+    categoryKey: "help_center.categories.overlay",
+    questionKey: "help_center.faq.overlay_missing.question",
+    answerKey: "help_center.faq.overlay_missing.answer",
   },
   {
-    category: "Audio",
-    question: "Audio capture shows RMS=0.000000",
-    answer: "This means no audio is being captured. Verify: 1) The correct device is selected (your headphones/speakers), 2) Capture is started, 3) Audio is actually playing (check Windows volume), 4) Status logs show non-zero RMS when sound plays.",
+    categoryKey: "help_center.categories.audio",
+    questionKey: "help_center.faq.rms_zero.question",
+    answerKey: "help_center.faq.rms_zero.answer",
   },
   {
-    category: "Anti-Cheat",
-    question: "Is this safe to use with anti-cheat systems?",
-    answer: "Yes! The application uses only standard Windows audio APIs and does not access game memory or inject code. It is compatible with VAC, EasyAntiCheat, BattlEye, and Vanguard.",
+    categoryKey: "help_center.categories.anti_cheat",
+    questionKey: "help_center.faq.anti_cheat.question",
+    answerKey: "help_center.faq.anti_cheat.answer",
   },
   {
-    category: "Performance",
-    question: "Translation is slow or laggy",
-    answer: "Try: 1) Use smaller Whisper model (tiny/base), 2) Enable GPU acceleration if available, 3) Reduce audio buffer size, 4) Close other resource-intensive applications.",
+    categoryKey: "help_center.categories.performance",
+    questionKey: "help_center.faq.performance.question",
+    answerKey: "help_center.faq.performance.answer",
   },
 ];
 
 export function HelpCenter() {
   const { t } = useI18n();
+  const allCategoryKey = "help_center.categories.all";
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [selectedCategory, setSelectedCategory] = useState<string>(allCategoryKey);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
 
-  const categories = ["All", ...Array.from(new Set(FAQ_DATA.map((item) => item.category)))];
+  const categories = [
+    allCategoryKey,
+    ...Array.from(new Set(FAQ_DATA.map((item) => item.categoryKey))),
+  ];
 
   const filteredFAQ = FAQ_DATA.filter((item) => {
+    const localizedQuestion = t(item.questionKey).toLowerCase();
+    const localizedAnswer = t(item.answerKey).toLowerCase();
     const matchesSearch =
       searchQuery === "" ||
-      item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.answer.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
+      localizedQuestion.includes(searchQuery.toLowerCase()) ||
+      localizedAnswer.includes(searchQuery.toLowerCase());
+    const matchesCategory =
+      selectedCategory === allCategoryKey || item.categoryKey === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -77,13 +84,15 @@ export function HelpCenter() {
 
   return (
     <div className="p-4 bg-gray-800 rounded-lg">
-      <h2 className="text-xl font-bold mb-4 text-white">Help Center</h2>
+      <h2 className="text-xl font-bold mb-4 text-white">
+        {t("help_center.title")}
+      </h2>
 
       {/* Search */}
       <div className="mb-4">
         <input
           type="text"
-          placeholder="Search for help..."
+          placeholder={t("help_center.search_placeholder")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
@@ -102,7 +111,7 @@ export function HelpCenter() {
                 : "bg-gray-700 text-gray-300 hover:bg-gray-600"
             }`}
           >
-            {category}
+            {t(category)}
           </button>
         ))}
       </div>
@@ -111,7 +120,7 @@ export function HelpCenter() {
       <div className="space-y-2">
         {filteredFAQ.length === 0 ? (
           <div className="text-gray-400 text-center py-8">
-            No results found. Try a different search term.
+            {t("help_center.no_results")}
           </div>
         ) : (
           filteredFAQ.map((item, index) => (
@@ -123,16 +132,18 @@ export function HelpCenter() {
                 onClick={() => toggleItem(index)}
                 className="w-full p-3 text-left flex items-center justify-between hover:bg-gray-800"
               >
-                <span className="font-medium text-white text-sm">{item.question}</span>
+                <span className="font-medium text-white text-sm">
+                  {t(item.questionKey)}
+                </span>
                 <span className="text-gray-400">
                   {expandedItems.has(index) ? "−" : "+"}
                 </span>
               </button>
               {expandedItems.has(index) && (
                 <div className="p-3 pt-0 border-t border-gray-700">
-                  <p className="text-gray-300 text-sm">{item.answer}</p>
+                  <p className="text-gray-300 text-sm">{t(item.answerKey)}</p>
                   <span className="text-xs text-gray-500 mt-2 block">
-                    Category: {item.category}
+                    {t("help_center.category_prefix")} {t(item.categoryKey)}
                   </span>
                 </div>
               )}
@@ -144,7 +155,7 @@ export function HelpCenter() {
       {/* Support Contact */}
       <div className="mt-6 text-center">
         <p className="text-gray-400 text-sm">
-          Still need help? Contact support:{" "}
+          {t("help_center.support_prefix")}{" "}
           <a
             href="mailto:gaminglivevoicetranslationmod@gmail.com"
             className="text-blue-400 hover:text-blue-300"

@@ -1,12 +1,14 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useConfig } from "./useConfig";
-import { translations, getTranslation } from "../i18n/translations";
-import type { I18NKey } from "../i18n/keys";
+import {
+  getTranslation,
+  type TranslationParams,
+} from "../i18n/translations";
 
 interface I18nContextType {
   language: string;
   setLanguage: (lang: string) => Promise<void>;
-  t: (key: I18NKey) => string;
+  t: (key: string, params?: TranslationParams) => string;
 }
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
@@ -42,9 +44,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const t = (key: I18NKey): string => {
+  const t = (key: string, params?: TranslationParams): string => {
     try {
-      return getTranslation(language, key);
+      return getTranslation(language, key, params);
     } catch (error) {
       console.error(`Translation error for key "${key}":`, error);
       return key; // Fallback to key itself
@@ -54,15 +56,21 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   // Always provide the context, even while loading
   // Children can check loading state themselves if needed
   const contextValue = { language, setLanguage, t };
+  const loadingTitle = getTranslation(language, "app.loading_configuration_title");
+  const loadingMessage = getTranslation(
+    language,
+    "app.loading_configuration_message"
+  );
+  const loadingHint = getTranslation(language, "app.loading_configuration_hint");
 
   return (
     <I18nContext.Provider value={contextValue}>
       {loading ? (
         <div style={{ padding: "20px", textAlign: "center", backgroundColor: "#1a1a1a", color: "#fff", minHeight: "100vh" }}>
-          <h2>Loading configuration...</h2>
-          <p>Please wait while the app initializes.</p>
+          <h2>{loadingTitle}</h2>
+          <p>{loadingMessage}</p>
           <p style={{ marginTop: "20px", fontSize: "12px", color: "#888" }}>
-            If this takes more than 10 seconds, check the console for errors.
+            {loadingHint}
           </p>
         </div>
       ) : (

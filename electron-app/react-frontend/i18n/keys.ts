@@ -24,7 +24,7 @@ export const I18N_KEYS = {
   TRANSLATION_ENABLE_OVERLAY: "translation.enable_overlay",
   TRANSLATION_ENABLE_TTS: "translation.enable_tts",
   TRANSLATION_SHOW_SAME_LANGUAGE: "translation.show_same_language",
-  TRANSLATION_UI_LANGUAGE: "translation.ui_language",
+  TRANSLATION_UI_LANGUAGE: "common.ui_language",
   
   // Subtitle Settings
   SUBTITLE_SETTINGS: "subtitle.settings",
@@ -51,8 +51,8 @@ export const I18N_KEYS = {
   MAIN_STATUS: "main.status",
   MAIN_SETUP_WIZARD: "main.setup_wizard",
   MAIN_TEST_OVERLAY: "main.test_overlay",
-  MAIN_TRANSLATION_LOG: "main.translation_log",
-  MAIN_NO_TRANSLATIONS: "main.no_translations",
+  MAIN_TRANSLATION_LOG: "translation_log.title",
+  MAIN_NO_TRANSLATIONS: "translation_log.empty",
   
   // Status Messages
   STATUS_INITIALIZING: "status.initializing",
