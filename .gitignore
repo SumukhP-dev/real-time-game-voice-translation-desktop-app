@@ -77,6 +77,16 @@ models/models--*/
 -app/src-/target/
 -app/src-/Cargo.lock
 
+# VB-Audio driver pack (download via scripts/download_vb_cable.ps1)
+third_party/vb-audio/*.zip
+third_party/vb-audio/installer/
+third_party/vb-audio/pack45/
+third_party/vb-audio/*.exe
+third_party/vb-audio/*.sys
+third_party/vb-audio/*.cat
+third_party/vb-audio/*.ico
+!third_party/vb-audio/README.md
+
 # Audio captures (large binary files)
 -app/audio_captures/
 *.f32pcm

@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const isDev = require('electron-is-dev');
+const vbAudioInstaller = require('./vb-audio-installer');
 
 let mainWindow;
 let mlServiceProcess;
@@ -255,6 +256,14 @@ function createWindow() {
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+
+    // Preload the hidden overlay window so the first live subtitle does not
+    // pay the renderer boot cost during a match.
+    ensureOverlayWindowLoaded()
+      .then(() => waitForOverlayRendererReady().catch(() => undefined))
+      .catch((error) => {
+        console.warn('[ELECTRON] Overlay prewarm failed:', error);
+      });
     
     if (isDev) {
       mainWindow.webContents.openDevTools();
@@ -410,20 +419,17 @@ async function startMLService() {
 
 // App event handlers
 app.whenReady().then(async () => {
-  try {
-    // Wait for the ML service before creating the renderer window so the
-    // frontend does not spam connection-refused errors during startup.
-    await startMLService();
-    createWindow();
-  } catch (error) {
+  // Show the dashboard immediately; models load in the background (progress in UI).
+  createWindow();
+
+  void startMLService().catch((error) => {
     console.error('[ELECTRON] ML service failed to start:', error);
     const logHint = path.join(app.getPath('userData'), 'ml-service.log');
     dialog.showErrorBox(
       'ML Service',
       `The translation backend could not start: ${error.message}\n\nLog file:\n${logHint}\n\nYou can still use the app; translation may be limited until the service is running.`
     );
-    createWindow();
-  }
+  });
 
   app.on('activate', async () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -487,6 +493,24 @@ ipcMain.handle('get-ml-service-url', () => {
 ipcMain.on('overlay-renderer-ready', () => {
   console.log('[ELECTRON] Overlay renderer ready');
   markOverlayRendererReady();
+});
+
+ipcMain.handle('get-vb-audio-cable-status', async () => {
+  try {
+    return await vbAudioInstaller.getVbAudioCableStatus();
+  } catch (error) {
+    logToFile(`get-vb-audio-cable-status: ${error.message}`);
+    throw error;
+  }
+});
+
+ipcMain.handle('install-vb-audio-cable', async () => {
+  try {
+    return await vbAudioInstaller.installVbAudioCable();
+  } catch (error) {
+    logToFile(`install-vb-audio-cable: ${error.message}`);
+    throw error;
+  }
 });
 
 ipcMain.handle('show-subtitle-overlay', async (_event, payload) => {

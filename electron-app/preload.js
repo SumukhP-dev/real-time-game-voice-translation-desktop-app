@@ -12,6 +12,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // System
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
+
+  /** VB-Audio Virtual Cable (Windows): status and user-triggered install */
+  getVbAudioCableStatus: () => ipcRenderer.invoke('get-vb-audio-cable-status'),
+  installVbAudioCable: () => ipcRenderer.invoke('install-vb-audio-cable'),
   
   // ML Service
   getMLServiceURL: () => ipcRenderer.invoke('get-ml-service-url'),
