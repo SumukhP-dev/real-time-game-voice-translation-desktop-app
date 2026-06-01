@@ -8,9 +8,6 @@ interface Props {
 }
 
 export function MLServiceStartupScreen({ state, error, onRetry }: Props) {
-  const showModelSteps =
-    state.phase === "loading_models" || state.phase === "ready";
-
   return (
     <div
       className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white flex items-center justify-center p-6"
@@ -52,35 +49,6 @@ export function MLServiceStartupScreen({ state, error, onRetry }: Props) {
               />
             </div>
           </div>
-
-          {showModelSteps && (
-            <ul className="text-xs text-gray-400 space-y-1.5">
-              <li className="flex items-center gap-2">
-                <span
-                  className={
-                    state.whisperLoaded
-                      ? "text-green-400"
-                      : "text-gray-500"
-                  }
-                >
-                  {state.whisperLoaded ? "✓" : "○"}
-                </span>
-                Speech recognition (Whisper)
-              </li>
-              <li className="flex items-center gap-2">
-                <span
-                  className={
-                    state.translationLoaded
-                      ? "text-green-400"
-                      : "text-gray-500"
-                  }
-                >
-                  {state.translationLoaded ? "✓" : "○"}
-                </span>
-                Translation engine
-              </li>
-            </ul>
-          )}
 
           <p className="text-gray-500 text-xs text-center">
             First launch can take about a minute while models load. Later

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, Component, ErrorInfo, ReactNode } from "react";
+import React, { Component, ErrorInfo, ReactNode } from "react";
 import { MainWindow } from "./components/MainWindow";
 import { MLServiceStartupScreen } from "./components/MLServiceStartupScreen";
 import { I18nProvider } from "./hooks/useI18n";
@@ -6,9 +6,13 @@ import { OnboardingProvider } from "./components/OnboardingTooltips";
 import { TranslationProvider } from "./hooks/useTranslation";
 import { ConfigProvider } from "./hooks/useConfig";
 import { MatchHistoryProvider } from "./hooks/useMatchHistory";
-import electronService, {
-  type MLServiceStartupState,
-} from "./services/electron";
+import {
+  MLModelLoadingProvider,
+  useMLModelLoading,
+} from "./hooks/useMLModelLoading";
+import { useConfig } from "./hooks/useConfig";
+import electronService from "./services/electron";
+import { getTranslation } from "./i18n/translations";
 import "./index.css";
 
 interface ErrorBoundaryState {
@@ -16,6 +20,9 @@ interface ErrorBoundaryState {
   error: Error | null;
   errorInfo: ErrorInfo | null;
 }
+
+const getAppText = (key: string, params?: Record<string, string | number>) =>
+  getTranslation(navigator.language || "en", key, params);
 
 class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
   constructor(props: { children: ReactNode }) {
@@ -36,10 +43,14 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
     if (this.state.hasError) {
       return (
         <div style={{ padding: "20px", fontFamily: "monospace", backgroundColor: "#1a1a1a", minHeight: "100vh", color: "#fff" }}>
-          <h1 style={{ color: "#ff4444" }}>Application Error</h1>
-          <p style={{ color: "#ff8888" }}>{this.state.error?.message || "Unknown error"}</p>
+          <h1 style={{ color: "#ff4444" }}>{getAppText("app.error_title")}</h1>
+          <p style={{ color: "#ff8888" }}>
+            {this.state.error?.message || getAppText("app.unknown_error")}
+          </p>
           <details style={{ marginTop: "20px" }}>
-            <summary style={{ cursor: "pointer", color: "#4a9eff" }}>Stack Trace</summary>
+            <summary style={{ cursor: "pointer", color: "#4a9eff" }}>
+              {getAppText("app.stack_trace")}
+            </summary>
             <pre style={{ whiteSpace: "pre-wrap", overflow: "auto", backgroundColor: "#000", padding: "10px", borderRadius: "4px" }}>
               {this.state.error?.stack}
             </pre>
@@ -53,7 +64,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
             onClick={() => window.location.reload()}
             style={{ marginTop: "20px", padding: "10px 20px", cursor: "pointer", backgroundColor: "#4a9eff", color: "#fff", border: "none", borderRadius: "4px" }}
           >
-            Reload App
+            {getAppText("app.reload_app")}
           </button>
         </div>
       );
@@ -63,94 +74,68 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
   }
 }
 
-const INITIAL_STARTUP_STATE: MLServiceStartupState = {
-  progress: 0,
-  message: "First launch: models loading (~1 min)",
-  phase: "connecting",
-};
+function AppShell() {
+  const { mlReady, startupState, startupError, retryStartup } =
+    useMLModelLoading();
+  const { loading: configLoading } = useConfig();
+
+  if (!mlReady) {
+    return (
+      <MLServiceStartupScreen
+        state={startupState}
+        error={startupError}
+        onRetry={retryStartup}
+      />
+    );
+  }
+
+  if (configLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white flex items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-xl border border-gray-700 bg-gray-800/60 p-6 text-center shadow-xl">
+          <h1 className="text-2xl font-bold text-white">SquadSpeak</h1>
+          <p className="mt-3 text-sm text-gray-300">
+            Loading your setup and audio preferences...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return <MainWindow />;
+}
 
 function App() {
-  const [mlReady, setMlReady] = useState(false);
-  const [startupState, setStartupState] =
-    useState<MLServiceStartupState>(INITIAL_STARTUP_STATE);
-  const [startupError, setStartupError] = useState<string | null>(null);
-  const [startupAttempt, setStartupAttempt] = useState(0);
-
-  const runStartup = useCallback(() => {
-    setStartupError(null);
-    setStartupState(INITIAL_STARTUP_STATE);
-
-    void electronService
-      .waitForMLServiceReady(setStartupState)
-      .then(() => {
-        setMlReady(true);
-        console.log("ML service ready for translation");
-      })
-      .catch((err: unknown) => {
-        const msg =
-          err instanceof Error
-            ? err.message
-            : "Translation backend failed to start";
-        console.warn("ML service startup failed:", err);
-        setStartupError(msg);
-        setStartupState((prev) => ({
-          ...prev,
-          phase: "error",
-          message: "Could not load AI models",
-        }));
-      });
-  }, []);
-
-  useEffect(() => {
-    console.log("App component mounted");
-    console.log("React version:", React.version);
-    console.log("Running in Electron:", electronService.isElectronApp());
-    runStartup();
-  }, [runStartup, startupAttempt]);
-
-  const handleRetryStartup = () => {
-    electronService.resetMLServiceStartup();
-    setMlReady(false);
-    setStartupAttempt((n) => n + 1);
-  };
-
   console.log("App component rendering");
+  console.log("Running in Electron:", electronService.isElectronApp());
 
   try {
-    if (!mlReady) {
-      return (
-        <ErrorBoundary>
-          <MLServiceStartupScreen
-            state={startupState}
-            error={startupError}
-            onRetry={handleRetryStartup}
-          />
-        </ErrorBoundary>
-      );
-    }
-
     return (
       <ErrorBoundary>
-        <ConfigProvider>
-          <MatchHistoryProvider>
-            <I18nProvider>
-              <OnboardingProvider>
-                <TranslationProvider>
-                  <MainWindow />
-                </TranslationProvider>
-              </OnboardingProvider>
-            </I18nProvider>
-          </MatchHistoryProvider>
-        </ConfigProvider>
+        <MLModelLoadingProvider>
+          <ConfigProvider>
+            <MatchHistoryProvider>
+              <I18nProvider>
+                <OnboardingProvider>
+                  <TranslationProvider>
+                    <AppShell />
+                  </TranslationProvider>
+                </OnboardingProvider>
+              </I18nProvider>
+            </MatchHistoryProvider>
+          </ConfigProvider>
+        </MLModelLoadingProvider>
       </ErrorBoundary>
     );
   } catch (error) {
     console.error("App render error:", error);
     return (
       <div style={{ padding: "20px", color: "red" }}>
-        <h1>App Failed to Render</h1>
-        <p>{error instanceof Error ? error.message : "Unknown error"}</p>
-        <button onClick={() => window.location.reload()}>Reload</button>
+        <h1>{getAppText("app.failed_to_render")}</h1>
+        <p>{error instanceof Error ? error.message : getAppText("app.unknown_error")}</p>
+        <button onClick={() => window.location.reload()}>
+          {getAppText("app.reload_app")}
+        </button>
       </div>
     );
   }
