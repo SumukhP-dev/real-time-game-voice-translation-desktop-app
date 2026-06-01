@@ -40,7 +40,7 @@ Thumbs.db
 # Application specific
 config.json
 *.log
-audio/
+/audio/
 *.wav
 .env
 .venv
@@ -110,4 +110,6 @@ python_deps/
 
 # Local assets and pitch materials (not tracked)
 batch/
-docs/pitch_files/interviews/
+docs/pitch/interviews/
+docs/pitch/pre_accelerator/
+docs/**/*.docx
