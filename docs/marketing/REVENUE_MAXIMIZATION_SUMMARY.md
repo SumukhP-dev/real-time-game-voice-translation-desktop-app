@@ -22,12 +22,12 @@ This document summarizes all the revenue maximization strategies and changes mad
    - Updated pricing to show launch special
    - Added value framing and urgency messaging
 
-2. **docs/GUMROAD_DESCRIPTION.md**
+2. **docs/marketing/GUMROAD_DESCRIPTION.md**
    - Added launch pricing section with psychological tactics
    - Included value propositions and urgency messaging
    - Added "limited to first 100 customers" scarcity
 
-3. **docs/ITCH_IO_DESCRIPTION.md**
+3. **docs/marketing/ITCH_IO_DESCRIPTION.md**
    - Added launch pricing section
    - Included same psychological pricing tactics
    - Value framing and urgency messaging
@@ -36,31 +36,31 @@ This document summarizes all the revenue maximization strategies and changes mad
    - Updated pricing information
    - Added launch pricing details
 
-5. **docs/ITCH_IO_BUILD.md**
+5. **docs/marketing/ITCH_IO_BUILD.md**
    - Updated build instructions with new pricing
 
 ## New Documentation Created
 
 ### Strategy Documents
-1. **docs/PRICING_STRATEGY.md**
+1. **docs/marketing/PRICING_STRATEGY.md**
    - Complete pricing strategy framework
    - Price evolution plan
    - Revenue optimization formulas
    - A/B testing framework
 
-2. **docs/ANALYTICS_SETUP.md**
+2. **docs/marketing/ANALYTICS_SETUP.md**
    - Conversion tracking guide
    - Platform-specific analytics setup
    - Key metrics to track
    - Weekly/monthly review processes
 
-3. **docs/LAUNCH_STRATEGY.md**
+3. **docs/marketing/LAUNCH_STRATEGY.md**
    - Complete launch implementation guide
    - Marketing messaging
    - Launch checklist
    - Success metrics and targets
 
-4. **docs/TRACKING_TEMPLATE.csv**
+4. **docs/marketing/TRACKING_TEMPLATE.csv**
    - Spreadsheet template for manual tracking
    - Pre-filled with example data structure
 
@@ -190,10 +190,10 @@ Result: $7.99 generates highest revenue per visitor
 
 ## Documentation Reference
 
-- **Pricing Strategy**: `docs/PRICING_STRATEGY.md`
-- **Analytics Setup**: `docs/ANALYTICS_SETUP.md`
-- **Launch Strategy**: `docs/LAUNCH_STRATEGY.md`
-- **Tracking Template**: `docs/TRACKING_TEMPLATE.csv`
+- **Pricing Strategy**: `docs/marketing/PRICING_STRATEGY.md`
+- **Analytics Setup**: `docs/marketing/ANALYTICS_SETUP.md`
+- **Launch Strategy**: `docs/marketing/LAUNCH_STRATEGY.md`
+- **Tracking Template**: `docs/marketing/TRACKING_TEMPLATE.csv`
 
 ## Notes
 

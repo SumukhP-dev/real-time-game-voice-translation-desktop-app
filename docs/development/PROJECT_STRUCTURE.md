@@ -53,10 +53,16 @@ CSGO2_Live_Voice_Translation_Mod/
 │   ├── test_*.py                     # Test scripts
 │   └── various utility scripts
 │
-├── docs/                             # Documentation
-│   ├── PROJECT_STRUCTURE.md          # This file
-│   ├── *.md                          # Various documentation files
-│   └── README.md                     # Main documentation
+├── docs/                             # Documentation (see docs/README.md)
+│   ├── guides/                       # Setup, audio, troubleshooting
+│   ├── product/                      # Features, changelog, releases
+│   ├── testing/                      # Test guides and checklists
+│   ├── debugging/                    # Debug session notes
+│   ├── development/                # Build, git, this file
+│   ├── marketing/                    # Launch, pricing, campaigns
+│   ├── competitive/                  # Market analysis
+│   ├── legal/                        # Privacy, anti-cheat
+│   └── pitch/                        # Interviews, accelerator, assets
 │
 ├── -app/                        #  frontend application
 │   ├── src/                          # Frontend source code
@@ -96,8 +102,8 @@ CSGO2_Live_Voice_Translation_Mod/
 - Build and deployment utilities
 
 ### Documentation (`docs/`)
-- Complete documentation including setup guides, troubleshooting, and API reference
-- Project structure and development guidelines
+- See [`docs/README.md`](../README.md) for the full index
+- User guides under `guides/`; pitch and interview materials under `pitch/`
 
 ### Frontend (`-app/`)
 - Modern web-based frontend using  framework

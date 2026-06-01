@@ -48,7 +48,7 @@ Create a ZIP file containing:
 ## itch.io Upload
 
 1. **Create Product Page**
-   - Use the description from `docs/ITCH_IO_DESCRIPTION.md`
+   - Use the description from `docs/marketing/ITCH_IO_DESCRIPTION.md`
    - Set launch price to $7.99 (with note that regular price is $12.00)
    - Add tags: CS:GO, CS2, translation, voice, mod, utility
 

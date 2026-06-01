@@ -46,4 +46,4 @@ Per VB-Audio’s readme in the driver pack:
 - SquadSpeak uses a **separate, user-initiated** install step
 
 For commercial redistribution or bundling inside your own NSIS installer, contact VB-Audio.
-See **`docs/VB_AUDIO_LICENSING.md`** for contacts and an email template.
+See **`docs/guides/audio/VB_AUDIO_LICENSING.md`** for contacts and an email template.

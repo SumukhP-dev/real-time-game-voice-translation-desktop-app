@@ -56,7 +56,7 @@ This document tracks the implementation status of all features from the Competit
 ### ✅ Anti-Cheat Compatibility Testing
 
 - **Status**: Implemented
-- **Files**: `src/core/anticheat_compatibility.py`, `docs/ANTICHEAT_COMPATIBILITY.md`
+- **Files**: `src/core/anticheat_compatibility.py`, `docs/legal/ANTICHEAT_COMPATIBILITY.md`
 - **Features**:
   - Detect running anti-cheat systems
   - Compatibility status reporting

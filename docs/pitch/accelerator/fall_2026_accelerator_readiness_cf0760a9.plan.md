@@ -6,7 +6,7 @@ todos:
     content: Confirm CX Pre-Accelerator spot and calendar all four workshop dates (May 28–Jul 30)
     status: pending
   - id: traction-spreadsheet
-    content: Create docs/pitch_files/traction_tracker.csv with interview + activation columns from BETA_TESTER_INTERVIEW_GUIDE_1
+    content: Create docs/pitch/assets/traction_tracker.csv with interview + activation columns from BETA_TESTER_INTERVIEW_GUIDE
     status: pending
   - id: beta-cohort-15
     content: Recruit 15 beta testers; distribute v1.0.0 build + BETA_TESTER_README; run 12–15 structured interviews by Jul 30
@@ -18,7 +18,7 @@ todos:
     content: Deliver CX Pre-Accelerator capstone (5-slide validation deck) using interview synthesis + traction table
     status: pending
   - id: app-materials-aug
-    content: "By Aug 15: one-pager, 10-slide deck, 50/150/300-word copy, 90s demo video in docs/pitch_files/"
+    content: "By Aug 15: one-pager, 10-slide deck, 50/150/300-word copy, 90s demo video in docs/"
     status: pending
   - id: gtm-activation
     content: Shift GTM from Reddit impressions to community beta posts + 3–5 paid/design-partner conversions
@@ -36,7 +36,7 @@ isProject: false
 
 ## Executive summary
 
-You have a **real shipped product** (Electron + FastAPI, v1.0.0 installers in [`dist/`](dist/)) and strong **technical differentiation** (offline, bidirectional, privacy-first) documented in [`docs/COMPETITIVE_GRADING_ASSESSMENT.md`](docs/COMPETITIVE_GRADING_ASSESSMENT.md). What top programs (YC F26, Techstars, gaming-focused labs) will weigh most heavily is still **missing**: **behavioral traction** (activated users who return), **customer-discovery evidence** (not ad clicks), and **application assets** (deck, demo video, metrics one-pager).
+You have a **real shipped product** (Electron + FastAPI, v1.0.0 installers in [`dist/`](dist/)) and strong **technical differentiation** (offline, bidirectional, privacy-first) documented in [`docs/competitive/COMPETITIVE_GRADING_ASSESSMENT.md`](docs/competitive/COMPETITIVE_GRADING_ASSESSMENT.md). What top programs (YC F26, Techstars, gaming-focused labs) will weigh most heavily is still **missing**: **behavioral traction** (activated users who return), **customer-discovery evidence** (not ad clicks), and **application assets** (deck, demo video, metrics one-pager).
 
 Your positioning for fall 2026: **SquadSpeak only** — one problem, one ICP, one product.
 
@@ -63,10 +63,10 @@ gantt
 
 | Area | Status | Accelerator implication |
 |------|--------|-------------------------|
-| Product | v1.0.0 builds exist; core loop implemented per [`docs/FEATURES_LIST.md`](docs/FEATURES_LIST.md) | Meets “working prototype” bar |
+| Product | v1.0.0 builds exist; core loop implemented per [`docs/product/FEATURES_LIST.md`](docs/product/FEATURES_LIST.md) | Meets “working prototype” bar |
 | UX / activation | Graded **C+** on setup; [`SetupWizard.tsx`](electron-app/react-frontend/components/SetupWizard.tsx) still uses **mock** device list; [`useAudio.ts`](electron-app/react-frontend/hooks/useAudio.ts) falls back to mocks if ML service fails | #1 risk in interviews (“setup blocked value”) |
 | Traction | Website claims ~350K impressions / 1,126 clicks ([`product-website/app/page.js`](product-website/app/page.js)); **4 waitlist, 2 Kickstarter backers**; Reddit spend ~$350+ per marketing CSV | Clicks ≠ traction; weak vs YC/Techstars medians |
-| Materials | Interview guide ready ([`docs/pitch_files/BETA_TESTER_INTERVIEW_GUIDE_1.md`](docs/pitch_files/BETA_TESTER_INTERVIEW_GUIDE_1.md)); **no deck/one-pager in repo**; incubator plan todos still **pending** ([`.cursor/plans/incubator_application_plan_70e82b74.plan.md`](.cursor/plans/incubator_application_plan_70e82b74.plan.md)) | Must ship by August |
+| Materials | Interview guide ready ([`docs/pitch/interviews/set_1/BETA_TESTER_INTERVIEW_GUIDE.md`](docs/pitch/interviews/set_1/BETA_TESTER_INTERVIEW_GUIDE.md)); **no deck/one-pager in repo**; incubator plan todos still **pending** ([`.cursor/plans/incubator_application_plan_70e82b74.plan.md`](.cursor/plans/incubator_application_plan_70e82b74.plan.md)) | Must ship by August |
 | CREATE-X | Startup Launch declined; **CX Pre-Accelerator** invited | Use capstone as proof package for fall Launch reapply |
 
 **What “competitive” means for fall 2026:** Not a longer feature list—a **credible beachhead** (who hurts weekly), **10–15 discovery interviews** with **5+ activated beta users** (2+ ranked sessions, subtitles working), **3+ strong WTP signals** or early paid pilots, and a **90-second demo** that shows the core loop in under 60 seconds.
@@ -83,7 +83,7 @@ Competitive PC players (Valorant / CS2 / Apex) in **mixed-language ranked stacks
 
 **Do not lead with:** Dreamflow, VoiceHired, generic “AI platform,” or broad “15+ languages” before problem proof. Company name: **SquadSpeak**.
 
-**Competitive frame:** LiveTranslate / EzDubs = cloud + friction; you = **in-match latency + offline + game-native overlay** ([`docs/COMPETITIVE_GRADING_ASSESSMENT.md`](docs/COMPETITIVE_GRADING_ASSESSMENT.md) sections 1–2).
+**Competitive frame:** LiveTranslate / EzDubs = cloud + friction; you = **in-match latency + offline + game-native overlay** ([`docs/competitive/COMPETITIVE_GRADING_ASSESSMENT.md`](docs/competitive/COMPETITIVE_GRADING_ASSESSMENT.md) sections 1–2).
 
 ---
 
@@ -97,12 +97,12 @@ Align every workshop and 1:1 with outputs investors expect.
 |------|-------------|
 | **Now** | Confirm CX Pre-Accelerator spot (reply even if past May 12 deadline); block workshop dates (May 28, Jun 18, Jul 9, Jul 30, 10:00–11:30 ET) |
 | **May 17–27** | Recruit **12–15** beta slots; send [`dist/BETA_TESTER_README.txt`](dist/BETA_TESTER_README.txt) + portable or installer build |
-| **May 28 → Jun 18** | Complete **6** structured interviews using [`BETA_TESTER_INTERVIEW_GUIDE_1.md`](docs/pitch_files/BETA_TESTER_INTERVIEW_GUIDE_1.md); fill post-interview synthesis + traction counters after each |
+| **May 28 → Jun 18** | Complete **6** structured interviews using [`BETA_TESTER_INTERVIEW_GUIDE.md`](docs/pitch/interviews/set_1/BETA_TESTER_INTERVIEW_GUIDE.md); fill post-interview synthesis + traction counters after each |
 | **Jun 18 → Jul 9** | **6** more interviews; refine ICP; discard weak personas (rare pain, install-only) |
 | **Jul 9 → Jul 30** | **3** follow-up interviews with best ICP; test WTP ($7.99 / $12 / lifetime) |
 | **Capstone (late July)** | 5-slide validation deck: Problem evidence → ICP → Solution demo → Traction table → Ask |
 
-### Traction spreadsheet (create under `docs/pitch_files/`)
+### Traction spreadsheet (create under `docs/pitch/assets/`)
 
 One row per interview/user; columns from your guide’s “Traction counters”: Activated, Repeat 2+ sessions, Would pay, NPS, Referral, Top blocker, Verbatim quote.
 
@@ -142,7 +142,7 @@ Accelerators fund **retention drivers**, not feature breadth. Fix what kills act
 
 ## Phase 3: Traction & GTM (June – September)
 
-Reddit proved **interest** ([`Marketing Data Report 1.csv`](docs/pitch_files/Marketing Data Report 1.csv): V2 campaign ~1,047 page visits); conversion failed. Shift budget from impressions to **activated betas**.
+Reddit proved **interest** ([`Marketing Data Report 1.csv`](docs/marketing/Marketing Data Report 1.csv): V2 campaign ~1,047 page visits); conversion failed. Shift budget from impressions to **activated betas**.
 
 | Channel | Action | Success metric |
 |---------|--------|----------------|
@@ -158,7 +158,7 @@ Update [`product-website/app/page.js`](product-website/app/page.js) traction sta
 
 ## Phase 4: Application materials (July 1 – September 15)
 
-All assets in [`docs/pitch_files/`](docs/pitch_files/) (new files—do not scatter).
+All assets in [`docs/`](docs/) (new files—do not scatter).
 
 ### Core packet (build once)
 
@@ -220,7 +220,7 @@ Use these in deck + YC “progress” field:
 | Risk | Mitigation |
 |------|------------|
 | Setup blocks activation | P0 wizard + audio docs + live beta support |
-| Weak ICP (pain is rare) | Pivot beachhead game/segment in July, not product pivot ([`KICKSTARTER_PROJECT_OVERVIEW.md`](docs/KICKSTARTER_PROJECT_OVERVIEW.md) guidance) |
+| Weak ICP (pain is rare) | Pivot beachhead game/segment in July, not product pivot ([`KICKSTARTER_PROJECT_OVERVIEW.md`](docs/marketing/KICKSTARTER_PROJECT_OVERVIEW.md) guidance) |
 | Traction still click-based | Stop optimizing CTR; optimize activated beta |
 | Dual-product confusion | **Resolved:** GVT only in all fall materials |
 | Unsigned binary / SmartScreen | Beta script + roadmap item; don’t hide in app |

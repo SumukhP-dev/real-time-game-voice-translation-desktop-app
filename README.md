@@ -59,7 +59,7 @@ This software is available for purchase at:
 **macOS**:
 
 1. Download `SquadSpeak-<version>.dmg`
-2. Drag the app to Applications and open it (see [macOS Setup Guide](docs/MACOS_SETUP.md) for permissions and audio)
+2. Drag the app to Applications and open it (see [macOS Setup Guide](docs/guides/setup/MACOS_SETUP.md) for permissions and audio)
 
 **Development Setup**:
 
@@ -68,7 +68,7 @@ This software is available for purchase at:
 python main.py
 ```
 
-See [Installation Guide](docs/INSTALLATION.md) for detailed instructions.
+See [Installation Guide](docs/guides/setup/INSTALLATION.md) for detailed instructions.
 
 ### 2. Audio Setup
 
@@ -76,14 +76,14 @@ See [Installation Guide](docs/INSTALLATION.md) for detailed instructions.
 
 - **Windows**: WASAPI loopback via your headphones/speakers device name  
 - **macOS**: Core Audio loopback — pick the device marked **[Loopback]** in Audio Settings  
-  See [macOS Setup Guide](docs/MACOS_SETUP.md) for permissions and troubleshooting.
+  See [macOS Setup Guide](docs/guides/setup/MACOS_SETUP.md) for permissions and troubleshooting.
 
 1. Launch the app and open **Audio Settings**
 2. Select your **headphones or speakers** (look for **[Loopback]** on Windows/macOS)
 3. Click **Start Capture**
 4. Play game or system audio — status logs should show non-zero audio levels
 
-No virtual audio cable is required. See [Audio Device Guide](docs/AUDIO_DEVICE_GUIDE.md) for details.
+No virtual audio cable is required. See [Audio Device Guide](docs/guides/audio/AUDIO_DEVICE_GUIDE.md) for details.
 
 ### 3. Start Translating
 
@@ -155,18 +155,18 @@ The application consists of:
 
 ## Documentation
 
-Comprehensive documentation is available in the `docs/` folder:
+Documentation is organized under [`docs/`](docs/README.md) (see the [index](docs/README.md) for all categories).
 
-- **[Installation Guide](docs/INSTALLATION.md)** - Detailed installation instructions
-- **[Audio Device Guide](docs/AUDIO_DEVICE_GUIDE.md)** - WASAPI loopback and device selection
-- **[Troubleshooting](docs/SOLUTIONS.md)** - Common issues and solutions
-- **[Quick Start Guide](docs/QUICKSTART.md)** - 5-minute quick start
+- **[Installation Guide](docs/guides/setup/INSTALLATION.md)** - Detailed installation instructions
+- **[Audio Device Guide](docs/guides/audio/AUDIO_DEVICE_GUIDE.md)** - WASAPI loopback and device selection
+- **[Troubleshooting](docs/guides/troubleshooting/SOLUTIONS.md)** - Common issues and solutions
+- **[Quick Start Guide](docs/guides/setup/QUICKSTART.md)** - 5-minute quick start
 
 ## Support
 
 - **Support Email**: gaminglivevoicetranslationmod@gmail.com
 - **Documentation**: Check the `docs/` folder
-- **FAQ**: See [Troubleshooting Guide](docs/SOLUTIONS.md)
+- **FAQ**: See [Troubleshooting Guide](docs/guides/troubleshooting/SOLUTIONS.md)
 
 ## Audio Device Setup
 
@@ -181,7 +181,7 @@ The app uses **WASAPI loopback** to capture what plays through your chosen outpu
 
 **Optional fallback: Stereo Mix**
 
-If no loopback device appears, enable **Stereo Mix** in Windows Sound → Recording → Show disabled devices, then select it in the app. See [Audio Device Guide](docs/AUDIO_DEVICE_GUIDE.md).
+If no loopback device appears, enable **Stereo Mix** in Windows Sound → Recording → Show disabled devices, then select it in the app. See [Audio Device Guide](docs/guides/audio/AUDIO_DEVICE_GUIDE.md).
 
 ### For Microphone Input (Testing Only):
 
@@ -196,7 +196,7 @@ If no loopback device appears, enable **Stereo Mix** in Windows Sound → Record
 - Ensure **Start Capture** is active and the ML service is running
 - Verify audio is actually playing (check system volume)
 - Check status logs for RMS=0 warnings
-- See `docs/AUDIO_DEVICE_GUIDE.md` and `docs/FIX_AUDIO_ROUTING.md` for troubleshooting
+- See `docs/guides/audio/AUDIO_DEVICE_GUIDE.md` and `docs/guides/audio/FIX_AUDIO_ROUTING.md` for troubleshooting
 
 ### Translation not working
 

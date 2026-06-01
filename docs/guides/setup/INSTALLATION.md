@@ -165,7 +165,7 @@ The application needs to capture game audio. Choose one of these methods:
 
 - **Documentation**: Check the `docs/` folder in the installation directory
 - **Support Email**: gaminglivevoicetranslationmod@gmail.com
-- **FAQ**: See `docs/SOLUTIONS.md` for common issues
+- **FAQ**: See `docs/guides/troubleshooting/SOLUTIONS.md` for common issues
 
 ## Next Steps
 
