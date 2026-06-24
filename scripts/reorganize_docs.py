@@ -118,6 +118,7 @@ MOVES: dict[str, list[str]] = {
         "BETA_TESTER_INTERVIEW_GUIDE_set2.md",
         "BETA_TESTER_INTERVIEW_GUIDE_set2.docx",
         "Ric_C_interview_1_completed_notes.md",
+        "SquadSpeak_research_ranked_voice_comms_form_responses.csv",
     ],
     "pitch/accelerator": ["fall_2026_accelerator_readiness_cf0760a9.plan.md"],
     "pitch/pre_accelerator/meeting_1": [
