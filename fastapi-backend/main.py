@@ -31,6 +31,7 @@ from adaptive_learning import learn_preference, get_personalized_translation
 from audio_capture import (
     MAX_SAMPLES_PER_WS_CHUNK,
     SoundcardCaptureController,
+    boost_quiet_audio,
     list_capture_devices,
     probe_soundcard_capture,
     soundcard_capture_available,
@@ -256,6 +257,7 @@ def _audio_callback(indata, frames, time_info, status):
         flat = data.flatten()
         if flat.size > MAX_SAMPLES_PER_WS_CHUNK:
             flat = flat[:MAX_SAMPLES_PER_WS_CHUNK]
+        flat = boost_quiet_audio(flat)
         session.queue.put((flat.tolist(), session.sample_rate))
     except Exception as e:
         print(f"[AUDIO] Callback error: {e}", flush=True)
@@ -276,6 +278,7 @@ def _portaudio_input_callback(session: CaptureSession):
             flat = data.flatten()
             if flat.size > MAX_SAMPLES_PER_WS_CHUNK:
                 flat = flat[:MAX_SAMPLES_PER_WS_CHUNK]
+            flat = boost_quiet_audio(flat)
             session.queue.put((flat.tolist(), session.sample_rate))
         except Exception as e:
             print(f"[AUDIO:{session.source}] Callback error: {e}", flush=True)
@@ -1028,8 +1031,8 @@ def _default_config() -> dict:
         "whisper": {
             "model": "base",
             "language": None,
-            "min_buffer_duration": 1.6,
-            "min_transcription_interval": 1.5,
+            "min_buffer_duration": 0.85,
+            "min_transcription_interval": 0.85,
         },
         "translation": {
             "target_language": "en",

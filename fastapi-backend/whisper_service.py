@@ -4,6 +4,7 @@ Refactored from src/core/speech/recognizer.py
 """
 import sys
 import os
+import re
 import time
 import numpy as np
 from scipy import signal
@@ -85,18 +86,26 @@ class WhisperService:
             "task": "transcribe",
             "fp16": False,
             "condition_on_previous_text": False,
-            # Lower threshold helps sung vocals and speech over background music.
-            "no_speech_threshold": 0.45,
-            "compression_ratio_threshold": 2.4,
-            "logprob_threshold": -1.0,
+            "no_speech_threshold": 0.35,
+            "compression_ratio_threshold": 2.6,
+            "logprob_threshold": -1.2,
             "temperature": 0.0,
         }
         if language:
             kwargs["language"] = language
-            if language == "en":
-                kwargs["initial_prompt"] = (
-                    "English speech, song lyrics, and dialogue from audio or video."
-                )
+        prompt_by_lang = {
+            "en": "English gaming callouts and voice chat.",
+            "es": "Spanish gaming callouts: rush B, plantan, rotar, último en sitio.",
+            "ru": "Russian gaming voice chat callouts.",
+            "de": "German gaming voice chat callouts.",
+            "fr": "French gaming voice chat callouts.",
+        }
+        if language and language in prompt_by_lang:
+            kwargs["initial_prompt"] = prompt_by_lang[language]
+        elif language is None:
+            kwargs["initial_prompt"] = (
+                "Multilingual gaming callouts in Spanish, English, Russian, or Portuguese."
+            )
         return kwargs
 
     def _filter_transcription_text(
@@ -131,7 +140,8 @@ class WhisperService:
             logprobs = [s.get("avg_logprob", -99.0) for s in segments if "avg_logprob" in s]
             if logprobs:
                 avg_logprob = sum(logprobs) / len(logprobs)
-                if avg_logprob < -1.25:
+                logprob_floor = -2.0 if rms_level >= 0.08 else -1.25
+                if avg_logprob < logprob_floor:
                     print(
                         f"[DEBUG] Filtered low-confidence transcription "
                         f"(avg_logprob={avg_logprob:.3f}): {text[:60]!r}",
@@ -147,6 +157,86 @@ class WhisperService:
                     }
 
         return None
+
+    def _is_suspicious_transcription(self, text: str) -> bool:
+        if not text:
+            return True
+        return bool(
+            re.match(
+                r"^(english|spanish|russian|german|french|portuguese)\.?$",
+                text.strip(),
+                re.I,
+            )
+        )
+
+    def _run_whisper_pass(
+        self, audio_data: np.ndarray, language: Optional[str]
+    ) -> dict:
+        whisper_kwargs = self._build_whisper_kwargs(language)
+        if language:
+            whisper_kwargs["language"] = language
+        return self.model.transcribe(audio_data, **whisper_kwargs)
+
+    def _transcribe_with_retries(
+        self,
+        audio_data: np.ndarray,
+        language: Optional[str],
+        duration_s: float,
+    ) -> tuple[str, str, list]:
+        """Try auto/en/es until we get usable text (loopback clips vary)."""
+        tried: list[Optional[str]] = []
+        order: list[Optional[str]] = []
+        if language not in order:
+            order.append(language)
+        for candidate in (None, "en", "es"):
+            if candidate not in order:
+                order.append(candidate)
+
+        best_text = ""
+        best_lang = "unknown"
+        best_segments: list = []
+        best_score = -999.0
+
+        for lang in order:
+            if lang in tried:
+                continue
+            tried.append(lang)
+            label = lang or "auto"
+            try:
+                result = self._run_whisper_pass(audio_data, lang)
+            except Exception as exc:
+                print(f"[WARN] Whisper pass ({label}) failed: {exc}", flush=True)
+                continue
+
+            text = (result.get("text") or "").strip()
+            detected = result.get("language", lang or "unknown")
+            segments = result.get("segments", [])
+            print(f"[DEBUG] Whisper pass ({label}): {text[:80]!r}", flush=True)
+
+            if self._is_suspicious_transcription(text):
+                continue
+
+            score = 0.0
+            if segments:
+                logprobs = [
+                    s.get("avg_logprob", -99.0) for s in segments if "avg_logprob" in s
+                ]
+                if logprobs:
+                    score = sum(logprobs) / len(logprobs)
+            score += min(len(text), 40) * 0.05
+
+            if text and score > best_score:
+                best_score = score
+                best_text = text
+                best_lang = detected
+                best_segments = segments
+
+            if text and not self._is_suspicious_transcription(text) and score >= -1.0:
+                return text, detected, segments
+
+        if best_text:
+            return best_text, best_lang, best_segments
+        return "", language or "unknown", []
 
     def transcribe(
         self,
@@ -390,8 +480,8 @@ class WhisperService:
             if len(audio_data) == 0:
                 raise ValueError("Audio data is empty after processing")
 
-            # Check minimum length (Whisper needs at least 0.5 seconds of audio for reliable transcription)
-            min_samples = int(self.sample_rate * 0.5)  # At least 0.5 seconds
+            # Short ranked callouts can be ~0.35s after trim; allow down to 0.32s at 16 kHz.
+            min_samples = int(self.sample_rate * 0.32)
             if len(audio_data) < min_samples:
                 raise ValueError(f"Audio data too short: {len(audio_data)} samples ({len(audio_data)/self.sample_rate:.3f}s, need at least {min_samples} samples / {min_samples/self.sample_rate:.1f}s)")
 
@@ -399,166 +489,10 @@ class WhisperService:
             audio_data = np.ascontiguousarray(audio_data.astype(np.float32), dtype=np.float32)
 
             print(f"[DEBUG] Calling Whisper transcribe with {len(audio_data)} samples")
-            whisper_kwargs = self._build_whisper_kwargs(language)
-
-            # Try direct transcription first (simpler, may work)
-            # If that fails, fall back to file-based transcription
-            tmp_path = None
-            try:
-                # Try direct transcription first
-                print(f"[DEBUG] Attempting direct transcription with {len(audio_data)} samples")
-                result = self.model.transcribe(audio_data, **whisper_kwargs)
-                print(f"[DEBUG] Direct transcription succeeded")
-            except (OSError, ValueError, RuntimeError) as direct_error:
-                # Direct transcription failed, try file-based approach
-                error_str = str(direct_error)
-                errno_info = f" (errno {direct_error.errno})" if hasattr(direct_error, 'errno') else ""
-
-                print(f"[WARN] Direct transcription failed: {error_str}{errno_info}, trying file-based approach")
-                print(f"[DEBUG] Audio stats: {len(audio_data)} samples, dtype={audio_data.dtype}, shape={audio_data.shape}")
-
-                if not SOUNDFILE_AVAILABLE:
-                    # If soundfile is not available, we can't use file-based fallback
-                    import traceback
-                    error_msg = f"Whisper transcription failed: {error_str}{errno_info}"
-                    error_msg += f"\nAudio: {len(audio_data)} samples, dtype={audio_data.dtype}, shape={audio_data.shape}"
-                    error_msg += f"\nNote: soundfile not available, cannot use file-based fallback"
-                    error_msg += f"\nTraceback:\n{traceback.format_exc()}"
-                    print(f"[ERROR] {error_msg}")
-                    raise ValueError(error_msg)
-
-                # Try file-based transcription
-                try:
-                    import os
-                    import tempfile
-
-                    # Create temp file using mkstemp for better control
-                    fd, tmp_path = tempfile.mkstemp(suffix='.wav', prefix='whisper_')
-                    os.close(fd)  # Close the file descriptor, we'll use soundfile to write
-
-                    print(f"[DEBUG] Created temp file: {tmp_path}")
-
-                    # Ensure audio is in valid range and format
-                    audio_for_file = np.clip(audio_data, -1.0, 1.0).astype(np.float32)
-
-                    # Validate audio before writing
-                    if np.any(np.isnan(audio_for_file)) or np.any(np.isinf(audio_for_file)):
-                        raise ValueError("Audio contains NaN/Inf values, cannot write to file")
-
-                    if len(audio_for_file) == 0:
-                        raise ValueError("Audio is empty, cannot write to file")
-
-                    # Save audio to WAV file with error handling
-                    try:
-                        print(f"[DEBUG] Writing {len(audio_for_file)} samples to {tmp_path} at {self.sample_rate}Hz")
-                        # Convert to int16 for WAV format (standard PCM)
-                        # Audio is already in [-1, 1] range, so scale to int16 range
-                        audio_int16 = (audio_for_file * 32767.0).astype(np.int16)
-                        sf.write(tmp_path, audio_int16, self.sample_rate, subtype='PCM_16')
-                        print(f"[DEBUG] Successfully saved audio to temp file")
-                    except Exception as write_error:
-                        import traceback
-                        error_msg = f"Failed to write audio file: {write_error}"
-                        error_msg += f"\nAudio: {len(audio_for_file)} samples, dtype={audio_for_file.dtype}, shape={audio_for_file.shape}"
-                        error_msg += f"\nSample rate: {self.sample_rate}"
-                        error_msg += f"\nTraceback:\n{traceback.format_exc()}"
-                        print(f"[ERROR] {error_msg}")
-                        # Clean up temp file
-                        if tmp_path:
-                            try:
-                                os.unlink(tmp_path)
-                            except:
-                                pass
-                        raise ValueError(error_msg)
-
-                    # Verify file was created and has content
-                    if not os.path.exists(tmp_path):
-                        raise ValueError(f"Temp file was not created: {tmp_path}")
-
-                    file_size = os.path.getsize(tmp_path)
-                    if file_size == 0:
-                        raise ValueError(f"Temp file is empty: {tmp_path}")
-
-                    print(f"[DEBUG] Temp file size: {file_size} bytes")
-
-                    # Transcribe from file
-                    try:
-                        result = self.model.transcribe(tmp_path, **whisper_kwargs)
-                        print(f"[DEBUG] File-based transcription succeeded")
-                    except Exception as transcribe_error:
-                        import traceback
-                        error_msg = f"File-based transcription failed: {transcribe_error}"
-                        error_msg += f"\nFile: {tmp_path}, size: {file_size} bytes"
-                        error_msg += f"\nTraceback:\n{traceback.format_exc()}"
-                        print(f"[ERROR] {error_msg}")
-                        raise ValueError(error_msg)
-                    finally:
-                        # Clean up temp file
-                        if tmp_path:
-                            try:
-                                os.unlink(tmp_path)
-                                tmp_path = None
-                            except Exception as cleanup_error:
-                                print(f"[WARN] Failed to delete temp file {tmp_path}: {cleanup_error}")
-                except Exception as file_error:
-                    # Clean up temp file on error
-                    import os
-                    if tmp_path:
-                        try:
-                            os.unlink(tmp_path)
-                        except:
-                            pass
-
-                    # If file-based also fails, raise with detailed info
-                    import traceback
-                    error_msg = f"Whisper transcription failed (both direct and file-based): {error_str}{errno_info}"
-                    error_msg += f"\nFile-based error: {file_error}"
-                    error_msg += f"\nAudio: {len(audio_data)} samples, dtype={audio_data.dtype}, shape={audio_data.shape}"
-                    error_msg += f"\nTraceback:\n{traceback.format_exc()}"
-                    print(f"[ERROR] {error_msg}")
-                    raise ValueError(error_msg)
-            except (OSError, ValueError, RuntimeError) as e:
-                # If file-based transcription fails, try direct transcription as fallback
-                import traceback
-                import os
-
-                error_str = str(e)
-                errno_info = f" (errno {e.errno})" if hasattr(e, 'errno') else ""
-
-                print(f"[WARN] File-based transcription failed: {e}{errno_info}, trying direct transcription")
-                print(f"[DEBUG] Audio stats: {len(audio_data)} samples, dtype={audio_data.dtype}, shape={audio_data.shape}")
-
-                # Clean up temp file if it exists
-                if tmp_path:
-                    try:
-                        os.unlink(tmp_path)
-                    except:
-                        pass
-
-                try:
-                    # Try direct transcription as fallback
-                    result = self.model.transcribe(audio_data, **whisper_kwargs)
-                    print(f"[DEBUG] Direct transcription succeeded (fallback)")
-                except Exception as direct_error:
-                    # Both methods failed
-                    error_msg = f"Whisper transcription failed (both file-based and direct): {e}{errno_info}"
-                    error_msg += f"\nDirect transcription error: {direct_error}"
-                    error_msg += f"\nAudio: {len(audio_data)} samples, dtype={audio_data.dtype}, shape={audio_data.shape}"
-                    error_msg += f"\nTraceback:\n{traceback.format_exc()}"
-                    print(f"[ERROR] {error_msg}")
-                    raise ValueError(error_msg)
-            except Exception as e:
-                # Catch any other errors from Whisper
-                import traceback
-                error_msg = f"Whisper transcription error: {e}"
-                error_msg += f"\nAudio: {len(audio_data)} samples, dtype={audio_data.dtype}, shape={audio_data.shape}"
-                error_msg += f"\nTraceback:\n{traceback.format_exc()}"
-                print(f"[ERROR] {error_msg}")
-                raise ValueError(error_msg)
-
-            text = result["text"].strip()
-            detected_language = result.get("language", "unknown")
-            segments = result.get("segments", [])
+            duration_s = len(audio_data) / self.sample_rate
+            text, detected_language, segments = self._transcribe_with_retries(
+                audio_data, language, duration_s
+            )
 
             filtered = self._filter_transcription_text(
                 text, detected_language, segments, rms_level
