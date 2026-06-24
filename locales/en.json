@@ -329,8 +329,7 @@
     "test_overlay_text": "Test: Overlay is working",
     "status_logs": "Status Logs",
     "no_logs": "No logs yet...",
-    "clear_logs": "Clear Logs",
-    "audio_silent_warning": "Audio is silent (RMS=0). In Audio Settings, choose your headphones or speakers and play audio to test."
+    "clear_logs": "Clear Logs"
   },
   "audio": {
     "settings": "Audio Settings",

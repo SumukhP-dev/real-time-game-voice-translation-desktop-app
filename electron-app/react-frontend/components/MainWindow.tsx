@@ -1304,13 +1304,6 @@ export function MainWindow() {
                 )}
               </div>
             </div>
-            {isCapturing &&
-              (status.includes("very quiet") ||
-                status.includes("RMS=0.000000")) && (
-                <div className="p-3 bg-yellow-500/20 border border-yellow-500/30 text-yellow-200 rounded-lg text-sm">
-                  {t("main.audio_silent_warning")}
-                </div>
-              )}
           </div>
         </header>
 
