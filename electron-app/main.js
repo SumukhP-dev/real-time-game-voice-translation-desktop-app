@@ -265,7 +265,7 @@ function createWindow() {
         console.warn('[ELECTRON] Overlay prewarm failed:', error);
       });
     
-    if (isDev) {
+    if (isDev && process.env.SQUADSPEAK_NO_DEVTOOLS !== '1') {
       mainWindow.webContents.openDevTools();
     }
   });
