@@ -18,6 +18,14 @@ except ImportError:
     SOUNDFILE_AVAILABLE = False
     print("[WARN] soundfile not available, file-based fallback will not work")
 
+try:
+    import torch
+
+    TORCH_AVAILABLE = True
+except ImportError:
+    torch = None  # type: ignore
+    TORCH_AVAILABLE = False
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
@@ -75,16 +83,25 @@ class WhisperService:
                 self.model = whisper.load_model(self.model_name)
 
             self.model_loaded = True
-            safe_print(f"[OK] Whisper model '{self.model_name}' loaded successfully", flush=True)
+            device = "cpu"
+            if TORCH_AVAILABLE and torch is not None and torch.cuda.is_available():
+                device = f"cuda ({torch.cuda.get_device_name(0)})"
+            safe_print(
+                f"[OK] Whisper model '{self.model_name}' loaded successfully on {device}",
+                flush=True,
+            )
         except Exception as e:
             safe_print(f"[ERROR] Error loading Whisper model: {e}", flush=True)
             raise
 
     def _build_whisper_kwargs(self, language: Optional[str]) -> dict:
         """Tuned for loopback chunks: game chat, music/vocals, and video dialogue."""
+        use_fp16 = bool(
+            TORCH_AVAILABLE and torch is not None and torch.cuda.is_available()
+        )
         kwargs: dict = {
             "task": "transcribe",
-            "fp16": False,
+            "fp16": use_fp16,
             "condition_on_previous_text": False,
             "no_speech_threshold": 0.35,
             "compression_ratio_threshold": 2.6,
@@ -108,6 +125,46 @@ class WhisperService:
             )
         return kwargs
 
+    @staticmethod
+    def _is_repetitive_hallucination(text: str) -> bool:
+        """Game SFX/music often makes Whisper repeat one token many times."""
+        trimmed = text.strip()
+        if len(trimmed) > 100:
+            return True
+
+        import re
+
+        phrases = [
+            re.sub(r"[¡¿]", "", p).strip().lower()
+            for p in re.split(r"[!?.…]+", trimmed)
+            if p.strip()
+        ]
+        if len(phrases) >= 4:
+            first = phrases[0]
+            same = sum(1 for p in phrases if p == first)
+            if same >= 4 and same / len(phrases) >= 0.75:
+                return True
+
+        words = [
+            w
+            for w in re.sub(r"[¡¿!?.…,]", " ", trimmed.lower()).split()
+            if w
+        ]
+        if len(words) >= 6:
+            counts: dict[str, int] = {}
+            for w in words:
+                counts[w] = counts.get(w, 0) + 1
+            max_count = max(counts.values())
+            if max_count >= 5 and max_count / len(words) >= 0.6:
+                return True
+
+        noise_phrases = ("ese es un juego", "game of life", "es sonido", "es son", "cítio", "citio")
+        lower = trimmed.lower()
+        if any(p in lower for p in noise_phrases):
+            return True
+
+        return False
+
     def _filter_transcription_text(
         self, text: str, detected_language: str, segments: list, rms_level: float
     ) -> Optional[dict]:
@@ -127,6 +184,20 @@ class WhisperService:
             "amara.org",
         ]
         if any(phrase in text_clean for phrase in hallucination_phrases):
+            return {
+                "text": "",
+                "language": detected_language,
+                "segments": [],
+                "confidence": 0.0,
+                "rms_level": rms_level,
+                "filtered": True,
+            }
+
+        if self._is_repetitive_hallucination(text):
+            print(
+                f"[DEBUG] Filtered repetitive hallucination: {text[:60]!r}",
+                flush=True,
+            )
             return {
                 "text": "",
                 "language": detected_language,
