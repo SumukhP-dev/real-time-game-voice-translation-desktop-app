@@ -147,6 +147,22 @@ def probe_soundcard_capture(
         return effective
 
 
+# Loopback / Bluetooth capture is often very quiet; boost before sending to the UI.
+_CAPTURE_TARGET_PEAK = 0.35
+_CAPTURE_MAX_GAIN = 20.0
+
+
+def boost_quiet_audio(mono: np.ndarray) -> np.ndarray:
+    """Raise peak toward _CAPTURE_TARGET_PEAK without clipping (for quiet loopback)."""
+    if mono.size == 0:
+        return mono
+    peak = float(np.max(np.abs(mono)))
+    if peak <= 0.0 or peak >= _CAPTURE_TARGET_PEAK:
+        return mono
+    gain = min(_CAPTURE_MAX_GAIN, _CAPTURE_TARGET_PEAK / max(peak, 1e-9))
+    return np.clip(mono * gain, -1.0, 1.0).astype(np.float32, copy=False)
+
+
 def _to_mono_float32(data: Any) -> np.ndarray:
     """Normalize soundcard frames to 1-D float32 mono."""
     arr = np.asarray(data, dtype=np.float32)
@@ -271,12 +287,7 @@ class SoundcardCaptureController:
                         if mono.size > MAX_SAMPLES_PER_WS_CHUNK:
                             mono = mono[:MAX_SAMPLES_PER_WS_CHUNK]
 
-                        peak = float(np.max(np.abs(mono))) if mono.size else 0.0
-                        if 0.0 < peak < 0.02:
-                            gain = min(8.0, 0.02 / max(peak, 1e-9))
-                            mono = np.clip(mono * gain, -1.0, 1.0).astype(
-                                np.float32, copy=False
-                            )
+                        mono = boost_quiet_audio(mono)
 
                         try:
                             self._queue.put_nowait((mono.tolist(), effective_rate))
