@@ -16,11 +16,24 @@ except ImportError:
 
 FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 
-DEFAULT_INPUTS = [
+# Gap between callouts — Whisper needs time to finish before the next phrase.
+DEFAULT_GAP_S = 10.0
+
+# Lead-in when app is already running (Start Capture before playback).
+DEFAULT_LEAD_IN_S = 5.0
+
+ALL_INPUTS = [
     "01_rush_b.mp3",
     "02_planting.mp3",
     "03_rotate.mp3",
     "04_last_site.mp3",
+]
+
+# Demo proof — skip Rush B (gaming slang is identical in English/Spanish).
+DEFAULT_INPUTS = [
+    "04_last_site.mp3",
+    "02_planting.mp3",
+    "03_rotate.mp3",
 ]
 
 
@@ -29,6 +42,7 @@ def combine(
     output: Path,
     gap_s: float,
     tail_pad_s: float,
+    lead_in_s: float,
 ) -> None:
     if len(inputs) < 2:
         raise SystemExit("Need at least two input files")
@@ -41,6 +55,13 @@ def combine(
     # insert explicit silence between clips so nothing gets clipped at boundaries.
     filters: list[str] = []
     concat_labels: list[str] = []
+
+    if lead_in_s > 0:
+        filters.append(
+            f"anullsrc=r=44100:cl=mono,atrim=0:{lead_in_s},asetpts=PTS-STARTPTS[lead]"
+        )
+        concat_labels.append("[lead]")
+
     for i in range(len(inputs)):
         clip = f"p{i}"
         filters.append(
@@ -102,10 +123,16 @@ def main() -> None:
         help="Combined output MP3",
     )
     parser.add_argument(
+        "--lead-in",
+        type=float,
+        default=DEFAULT_LEAD_IN_S,
+        help=f"Seconds of silence before the first clip (default: {DEFAULT_LEAD_IN_S})",
+    )
+    parser.add_argument(
         "--gap",
         type=float,
-        default=2.0,
-        help="Seconds of silence between clips (default: 2.0)",
+        default=DEFAULT_GAP_S,
+        help=f"Seconds of silence between clips (default: {DEFAULT_GAP_S})",
     )
     parser.add_argument(
         "--tail-pad",
@@ -113,14 +140,20 @@ def main() -> None:
         default=0.5,
         help="Extra silence after each clip so endings are not clipped (default: 0.5)",
     )
+    parser.add_argument(
+        "--include-rush-b",
+        action="store_true",
+        help="Include 01_rush_b.mp3 (usually skip — same text in EN/ES)",
+    )
     args = parser.parse_args()
 
-    inputs = [args.input_dir / name for name in DEFAULT_INPUTS]
+    names = ALL_INPUTS if args.include_rush_b else DEFAULT_INPUTS
+    inputs = [args.input_dir / name for name in names]
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    combine(inputs, args.output, args.gap, args.tail_pad)
+    combine(inputs, args.output, args.gap, args.tail_pad, args.lead_in)
     print(
-        f"Wrote {args.output} ({len(inputs)} clips, {args.gap}s gap, "
-        f"{args.tail_pad}s tail pad)"
+        f"Wrote {args.output} ({len(inputs)} clips, {args.lead_in}s lead-in, "
+        f"{args.gap}s gap, {args.tail_pad}s tail pad)"
     )
 
 

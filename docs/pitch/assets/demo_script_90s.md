@@ -22,7 +22,7 @@
 
 - [ ] SquadSpeak + ML backend running; subtitles work on a test MP3
 - [ ] Valorant or CS2 in **windowed** mode behind the overlay
-- [ ] 4 Spanish MP3s in a folder, VLC ready (see [Audio files](#audio-files))
+- [ ] `demo_callouts_combined.mp3` ready (**5s lead-in**, **10s gaps** between callouts)
 - [ ] OBS or screen recorder: **1920×1080**, 30fps
 - [ ] Mic for VO (or phone voice memo)
 - [ ] End card image or simple text slide ready
@@ -37,12 +37,13 @@
 |------|------|-----------|-------|
 | **0:00–0:12** | A — Problem | Ranked gameplay, **no** subtitles. Text overlay: *Missed callout. Lost round.* | VO block 1 |
 | **0:12–0:22** | B — App | Launch SquadSpeak; game + overlay visible. Quick flash: Audio settings → loopback device (1–2s). | VO block 2 |
-| **0:22–0:42** | C — Proof | Play `01_rush_b.mp3` then `03_planting.mp3`. Hold each subtitle ~2s. | Silence or *"Spanish in, English on screen."* |
-| **0:42–1:02** | D — Proof | Play `04_rotate.mp3` then `05_last_site.mp3`. Small caption: *Simulated callouts for demo*. | Silence |
-| **1:02–1:15** | E — Credibility | Wide: game + overlay. Bullets: **Offline · local AI** · **Valorant / CS2 / Apex** · **v1.0 shipped** | VO block 3 |
-| **1:15–1:30** | F — End card | Logo, tagline, Windows v1.0.0, contact URL | VO block 4 |
+| **0:22–0:45** | C — Proof | Capture on. Play **`demo_callouts_combined.mp3`** once (3 Spanish callouts — **no Rush B**). Best single test: **`04_last_site.mp3`** (*Último en sitio* → *Last on site*). | *"Spanish in, English on screen."* |
+| **0:55–1:08** | D — Credibility | Wide: game + overlay. Bullets: **Offline · local AI** · **Valorant / CS2 / Apex** · **v1.0 shipped** | VO block 3 |
+| **1:08–1:22** | E — End card | Logo, tagline, Windows v1.0.0, contact URL | VO block 4 |
 
-*VO is ~125 words (~50s). Demo beats fill the rest. Hard cap: cut Proof clip D short if you're over 90s.*
+*Proof audio is ~35s (5s lead-in + ~8s speech + ~21s gaps). Pre-start SquadSpeak before playback. Trim in edit to ~20s if needed.*
+
+*VO is ~125 words (~50s). Hard cap: trim end card or credibility if over 90s.*
 
 ---
 
@@ -54,10 +55,9 @@ Record each as a **separate file** — no need for one continuous take.
 |------|------------|-------------------|
 | **A** | Ranked game running. Play one Spanish MP3 **without** SquadSpeak (or hide overlay). Add text in editor. | ~12s |
 | **B** | Open SquadSpeak from desktop. Show game behind overlay. Open Settings → pick WASAPI loopback → close. | ~10s |
-| **C** | SquadSpeak on. VLC → play `01_rush_b.mp3`, wait for subtitle, hold. Repeat for `03_planting.mp3`. | ~20s |
-| **D** | Same setup. Play `04_rotate.mp3`, then `05_last_site.mp3`. | ~20s |
-| **E** | Static or slow pan: game + overlay + bullet text (add bullets in editor if easier). | ~13s |
-| **F** | End card (Canva, PowerPoint export, or text in editor). | ~15s |
+| **C** | Capture on. VLC → **`demo_callouts_combined.mp3`** once (Last on site → Planting → Rotate). **One-callout cut:** play **`04_last_site.mp3`** only. | ~35s or ~8s |
+| **D** | Wide: game + overlay + bullet text (add bullets in editor if easier). | ~13s |
+| **E** | End card (Canva, PowerPoint export, or text in editor). | ~13s |
 
 **MP3 playback:** VLC → system output → WASAPI loopback → SquadSpeak captures it (same as real in-game voice).
 
@@ -83,60 +83,55 @@ If you queue ranked in mixed-language lobbies, I'd love your feedback. SquadSpea
 
 ## Audio files
 
-You need **one MP3 per callout** — not one file with every line. If you paste all lines into TTS at once, they run together as a single clip.
+### Combined file (use this when recording)
 
-### Option A — script (easiest)
+Play **`demo_callouts_combined.mp3`** once in VLC. **Excludes Rush B** — gaming slang looks the same in both languages.
 
-From the repo root:
+| File | Spanish | English subtitle | Good for demo? |
+|------|---------|------------------|----------------|
+| `02_planting.mp3` | ¡Plantan! | Planting | ✓ |
+| `03_rotate.mp3` | ¡Rotar, rotar! | Rotate | ✓ |
+| `04_last_site.mp3` | ¡Último en sitio! | Last on site | ✓ **best single clip** |
+| `01_rush_b.mp3` | ¡Rush B! | Rush B! | ✗ skip — reads as English |
 
-```powershell
-pip install edge-tts
-python scripts/generate_demo_callouts.py
-```
+| Part | Duration |
+|------|----------|
+| Lead-in | **5s** |
+| 3 callouts | ~6s speech |
+| Gaps (2 × 10s) | **20s** |
+| **Total** | **~32s** |
 
-Outputs to `docs/pitch/assets/demo_audio/` — one file per row below.
+**Single-callout proof (simplest):** `04_last_site.mp3` — clearly Spanish → English.
 
-### Option B — ElevenLabs / edge-tts manually
-
-**One generation per line.** Do not paste the whole list.
-
-| Step | Text to paste (only this) | Save as |
-|------|---------------------------|---------|
-| 1 | `¡Rush B!` | `01_rush_b.mp3` |
-| 2 | `¡Plantan!` | `03_planting.mp3` |
-| 3 | `¡Rotar, rotar!` | `04_rotate.mp3` |
-| 4 | `¡Último en sitio!` | `05_last_site.mp3` |
-
-edge-tts CLI example (run **four times**, change text and filename each time):
+Rebuild:
 
 ```powershell
-edge-tts --text "¡Rush B!" --voice es-MX-DaliaNeural --write-media 01_rush_b.mp3
+python scripts/combine_demo_callouts.py
+# include Rush B (not recommended for pitch):  python scripts/combine_demo_callouts.py --include-rush-b
 ```
 
-### Already have one long MP3? (e.g. ElevenLabs Jorge voice)
-
-If you generated **all lines in one ElevenLabs take**, split automatically:
-
-```powershell
-pip install imageio-ffmpeg
-python scripts/split_elevenlabs_demo.py "ElevenLabs_....mp3"
-```
-
-Writes `01_rush_b.mp3`, `03_planting.mp3`, `04_rotate.mp3`, `05_last_site.mp3` to `docs/pitch/assets/demo_audio/`.
-
-**Check the splits** in VLC — phrase order must match what you pasted into ElevenLabs (Rush B → Plantan → Rotar → Último en sitio). If order differs, rename files or re-generate one line at a time.
-
-Manual option: **Audacity** → select each phrase → **File → Export → Export Selected Audio**.
-### Reference
+### Individual files
 
 | File | Say this | Subtitle should read |
 |------|----------|----------------------|
-| `01_rush_b.mp3` | ¡Rush B! | Rush B! |
-| `03_planting.mp3` | ¡Plantan! | Planting |
-| `04_rotate.mp3` | ¡Rotar, rotar! | Rotate |
-| `05_last_site.mp3` | ¡Último en sitio! | Last on site |
+| `02_planting.mp3` | ¡Plantan! | Planting |
+| `03_rotate.mp3` | ¡Rotar, rotar! | Rotate |
+| `04_last_site.mp3` | ¡Último en sitio! | Last on site |
+| `01_rush_b.mp3` | ¡Rush B! | Rush B! *(spare — poor translation demo)* |
 
-*`02_one_short.mp3` (`¡Uno en corta!`) is optional spare; not in the 90s cut.*
+Generate fresh clips:
+
+```powershell
+pip install edge-tts imageio-ffmpeg
+python scripts/generate_demo_callouts.py
+```
+
+### ElevenLabs one-shot split
+
+```powershell
+python scripts/split_elevenlabs_demo.py "ElevenLabs_....mp3"
+python scripts/combine_demo_callouts.py
+```
 
 ---
 
