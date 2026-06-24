@@ -26,6 +26,16 @@ try:
 except ImportError:
     torch = None
 
+# Short ranked callouts: local opus-mt often garbles these — resolve directly for en.
+_GAMING_CALLOUT_PATTERNS: list[tuple[str, str]] = [
+    (r"rush\s*b", "Rush B!"),
+    (r"^plant", "Planting"),
+    (r"rotat|rotar", "Rotate"),
+    (r"last.*site|último.*sitio|ultimo.*sitio", "Last on site"),
+    (r"one\s+short|uno.*cort", "One short"),
+]
+
+
 class TranslationService:
 
     """Translation service using EasyNMT or transformers"""
@@ -172,6 +182,38 @@ class TranslationService:
         )
         return self._clean_tactical_text(compressed) or text.strip()
 
+    def _resolve_gaming_callout(
+        self, text: str, target_language: Optional[str]
+    ) -> Optional[str]:
+        """Map STT output to standard English callouts when target is English."""
+        if (target_language or "").lower() != "en":
+            return None
+        lower = (text or "").strip().lower()
+        if not lower:
+            return None
+        for pattern, canonical in _GAMING_CALLOUT_PATTERNS:
+            if re.search(pattern, lower, re.IGNORECASE):
+                return canonical
+        return None
+
+    def _is_bad_callout_translation(self, source: str, translated: str) -> bool:
+        """Detect opus-mt garbage on short tactical phrases."""
+        src = (source or "").strip()
+        out = (translated or "").strip()
+        if not out:
+            return True
+        if "_" in out:
+            return True
+        out_lower = out.lower()
+        src_lower = src.lower()
+        if "wheel" in out_lower and "wheel" not in src_lower:
+            return True
+        if "child" in out_lower and "child" not in src_lower:
+            return True
+        if len(src.split()) <= 5 and len(out.split()) > len(src.split()) + 2:
+            return True
+        return False
+
     def _initialize_local_model(self):
 
         """Initialize local translation model"""
@@ -313,6 +355,18 @@ class TranslationService:
         original_text = text.strip()
         normalized_text = self._normalize_tactical_source(original_text) or original_text
 
+        callout = self._resolve_gaming_callout(normalized_text, self.target_language)
+        if callout:
+            result = {
+                "translated_text": callout,
+                "source_language": source_language or "unknown",
+                "target_language": self.target_language,
+            }
+            cache_key = f"{normalized_text}_{source_language}_{self.target_language}"
+            with self.cache_lock:
+                self.translation_cache[cache_key] = result
+            return result
+
         cache_key = f"{normalized_text}_{source_language}_{self.target_language}"
         with self.cache_lock:
             if cache_key in self.translation_cache:
@@ -388,6 +442,20 @@ class TranslationService:
                 translated,
                 self.target_language,
             )
+
+            if self._is_bad_callout_translation(original_text, translated):
+                fallback = (
+                    self._resolve_gaming_callout(original_text, self.target_language)
+                    or self._resolve_gaming_callout(
+                        normalized_text, self.target_language
+                    )
+                    or normalized_text
+                )
+                safe_print(
+                    f"[WARN] Bad callout translation {translated!r} -> {fallback!r}",
+                    flush=True,
+                )
+                translated = fallback
 
             result = {
                 "translated_text": translated,
