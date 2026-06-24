@@ -36,8 +36,8 @@ export const DEFAULT_CONFIG: Config = {
   whisper: {
     model: "base",
     language: null,
-    min_buffer_duration: 1.6,
-    min_transcription_interval: 1.5,
+    min_buffer_duration: 0.85,
+    min_transcription_interval: 0.85,
   },
   translation: {
     target_language: "en",

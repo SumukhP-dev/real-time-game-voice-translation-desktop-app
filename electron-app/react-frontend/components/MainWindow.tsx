@@ -16,10 +16,10 @@ import { TranslationToTeam } from "./TranslationToTeam";
 import { SubtitleSettings } from "./SubtitleSettings";
 import { GameDetectionBadge } from "./GameDetectionBadge";
 import { HelpCenter } from "./HelpCenter";
-import { peakAbs } from "../utils/audioMath";
-import { isLikelyHallucination } from "../utils/transcriptionFilter";
+import { peakAbs, boostQuietAudio, trimSilenceEdges, minTranscribeSeconds, extractLoudestWindow } from "../utils/audioMath";
+import { isLikelyHallucination, normalizeMisheardCallout } from "../utils/transcriptionFilter";
 import { EMPTY_COMMUNICATION_STATS } from "../utils/communicationStats";
-import { isSameLanguagePassthroughTranslation } from "../utils/translationFiltering";
+import { isSameLanguagePassthroughTranslation, fixGamingTranslation } from "../utils/translationFiltering";
 import { OutboundVoicePipeline } from "./OutboundVoicePipeline";
 import { useMLModelLoading } from "../hooks/useMLModelLoading";
 import { SUPPORTED_UI_LANGUAGES } from "../i18n/languages";
@@ -226,13 +226,29 @@ export function MainWindow() {
     let audioBuffer: number[][] = [];
     let bufferStartTime = Date.now();
     const MIN_TRANSCRIBE_SECONDS =
-      configRef.current?.whisper?.min_buffer_duration ?? 1.6;
+      configRef.current?.whisper?.min_buffer_duration ?? 0.85;
     const MIN_BUFFER_DURATION_MS = Math.round(MIN_TRANSCRIBE_SECONDS * 1000);
     const MIN_PROCESS_INTERVAL_MS = Math.round(
-      (configRef.current?.whisper?.min_transcription_interval ?? 1.5) * 1000
+      (configRef.current?.whisper?.min_transcription_interval ?? 1.0) * 1000
     );
-    const MAX_BUFFER_SECONDS = Math.max(MIN_TRANSCRIBE_SECONDS + 0.9, 2.6);
+    const MAX_BUFFER_SECONDS = Math.max(MIN_TRANSCRIBE_SECONDS + 0.9, 2.2);
+    const SPEECH_HANGOVER_MS = 3500;
+    const SILENCE_TAIL_MS = 1200;
     let lastBufferLogTime = Date.now();
+    let lastSpeechTime = 0;
+    let bufferPeak = 0;
+
+    const bufferPeakAbs = (buf: number[][]) => {
+      let peak = 0;
+      for (const chunk of buf) {
+        const p = peakAbs(chunk);
+        if (p > peak) peak = p;
+      }
+      return peak;
+    };
+
+    const minBufferMs = (peak: number, rms: number) =>
+      minTranscribeSeconds(peak, rms) * 1000;
 
     const trimBuffer = (sampleRate: number) => {
       const maxSamples = Math.floor(sampleRate * MAX_BUFFER_SECONDS);
@@ -305,14 +321,14 @@ export function MainWindow() {
       }
 
       // Check if audio data is meaningful (not just silence)
-      // Use a lower threshold for better sensitivity
-      const AUDIO_THRESHOLD = 0.001; // Very low threshold - let Whisper decide if there's speech
+      const chunkSamples = boostQuietAudio(new Float32Array(event.data));
       const audioLevel = Math.sqrt(
-        event.data.reduce((sum: number, val: number) => sum + val * val, 0) / event.data.length
+        chunkSamples.reduce((sum: number, val: number) => sum + val * val, 0) /
+          chunkSamples.length
       );
 
       // Also check peak level (max absolute value) for better detection
-      const peakLevel = peakAbs(event.data);
+      const peakLevel = peakAbs(chunkSamples);
 
       // Keep buffering the newest audio even while a request is in flight.
       // If a request stalls, reset the state and let the latest buffered audio win.
@@ -350,9 +366,7 @@ export function MainWindow() {
       if (now - lastAudioLevelLog > 2000) {
         console.log(
           "Audio levels:",
-          `RMS=${audioLevel.toFixed(6)}, peak=${peakLevel.toFixed(
-            6
-          )}, threshold=${AUDIO_THRESHOLD}`,
+          `RMS=${audioLevel.toFixed(6)}, peak=${peakLevel.toFixed(6)}`,
           "buffer chunks:",
           audioBuffer.length
         );
@@ -360,54 +374,42 @@ export function MainWindow() {
       }
 
       // Use both RMS and peak level for detection
-      // Peak level is often higher and can detect quiet speech better
       const isCompletelySilent = audioLevel === 0 && peakLevel === 0;
+      const isNearSilent = audioLevel < 0.000002 && peakLevel < 0.000004;
+      const hasSpeech = !isCompletelySilent && !isNearSilent;
+      const inSpeechHangover =
+        lastSpeechTime > 0 && now - lastSpeechTime < SPEECH_HANGOVER_MS;
 
-      // Skip completely silent audio entirely - don't even add to buffer
-      if (isCompletelySilent) {
+      if (hasSpeech) {
+        lastSpeechTime = now;
+        bufferPeak = Math.max(bufferPeak, peakLevel);
+        lowAudioCount = 0;
+      } else {
         lowAudioCount++;
-        // Log warning periodically about silent audio
-        if (lowAudioCount % 1000 === 0) {
+        if (lowAudioCount % 1000 === 0 && isCompletelySilent) {
           addLog(
             "⚠ Audio is completely silent (RMS=0). Select your headphones/speakers in Audio Settings and play game or system audio."
           );
         }
-        // Clear buffer if we've been silent for too long
-        if (audioBuffer.length > 0 && now - bufferStartTime > 3000) {
-          console.log("Clearing audio buffer due to extended silence");
+      }
+
+      // Keep buffering through short gaps inside a callout (loopback is often sparse).
+      const shouldBufferChunk = hasSpeech || inSpeechHangover;
+      if (!shouldBufferChunk) {
+        if (audioBuffer.length > 0 && now - lastSpeechTime > SPEECH_HANGOVER_MS) {
           audioBuffer = [];
+          bufferPeak = 0;
         }
         return;
       }
 
-      // Skip near-silence (Bluetooth loopback can be very quiet but still usable)
-      if (audioLevel < 0.000008 && peakLevel < 0.000015) {
-        // Essentially silent - skip but keep buffer for a bit
-        lowAudioCount++;
-        if (lowAudioCount % 50 === 0) {
-          console.log(
-            "Audio essentially silent, skipping. RMS:",
-            audioLevel.toFixed(6),
-            "Peak:",
-            peakLevel.toFixed(6),
-            "Count:",
-            lowAudioCount
-          );
-        }
-        // If we've been silent for too long, clear the buffer
-        if (audioBuffer.length > 0 && now - bufferStartTime > 3000) {
-          console.log("Clearing audio buffer due to extended silence");
-          audioBuffer = [];
-        }
-        return;
-      }
-
-      // Add to buffer (only if audio has some level)
-      audioBuffer.push(event.data);
+      audioBuffer.push(Array.from(chunkSamples));
       trimBuffer(event.sample_rate);
       if (audioBuffer.length === 1) {
         bufferStartTime = now;
       }
+
+      bufferPeak = Math.max(bufferPeak, bufferPeakAbs(audioBuffer));
 
       // Calculate actual audio duration from samples (more accurate than time-based)
       const totalSamples = audioBuffer.reduce(
@@ -426,10 +428,18 @@ export function MainWindow() {
       // So we need: 0.5s at 16kHz = 8000 samples
       // After conversions: 8000 * 3 (resample) * 2 (stereo) = 48000 samples at 48kHz = 1.0s
       // Also process if buffer is getting too large (max 4s) OR if many chunks have accumulated (stall prevention)
-      const minAudioMs = MIN_TRANSCRIBE_SECONDS * 1000;
+      const minAudioMs = minBufferMs(bufferPeak, Math.max(audioLevel, bufferPeak * 0.2));
+      const silenceAfterSpeech =
+        !hasSpeech &&
+        inSpeechHangover &&
+        now - lastSpeechTime >= SILENCE_TAIL_MS &&
+        actualAudioDurationMs >= 650;
       const shouldProcess =
         (actualAudioDurationMs >= minAudioMs &&
           timeSinceLastProcess >= MIN_PROCESS_INTERVAL_MS) ||
+        (silenceAfterSpeech &&
+          actualAudioDurationMs >= 300 &&
+          bufferPeak >= 0.05) ||
         actualAudioDurationMs >= MAX_BUFFER_SECONDS * 1000;
 
       // Log buffer status periodically
@@ -490,7 +500,7 @@ export function MainWindow() {
         const processingAudioDurationMs =
           (processingTotalSamples / event.sample_rate) * 1000;
 
-        const minProcessMs = MIN_TRANSCRIBE_SECONDS * 1000;
+        const minProcessMs = minBufferMs(bufferPeak, bufferPeak * 0.2);
         if (processingAudioDurationMs < minProcessMs) {
           console.log(
             `[DEBUG] Skipping processing: only ${processingAudioDurationMs.toFixed(
@@ -527,16 +537,24 @@ export function MainWindow() {
           combinedAudio.set(new Float32Array(chunk), offset);
           offset += chunk.length;
         }
+        combinedAudio = boostQuietAudio(combinedAudio);
+        combinedAudio = trimSilenceEdges(combinedAudio, event.sample_rate);
+        const bufferedSeconds = combinedAudio.length / event.sample_rate;
+        if (bufferedSeconds > 1.2) {
+          combinedAudio = extractLoudestWindow(combinedAudio, event.sample_rate, 1.2);
+        }
 
         const maxSamples = Math.floor(event.sample_rate * MAX_BUFFER_SECONDS);
         if (combinedAudio.length > maxSamples) {
           combinedAudio = combinedAudio.slice(-maxSamples);
         }
 
-        // Clear buffer
-        audioBuffer = [];
-        lastProcessTimeRef.current = now;
         pipelineStartRef.current = now;
+
+        const finishProcessing = () => {
+          isProcessingRef.current = false;
+          setIsProcessing(false);
+        };
 
         // Processing flag was already set above to prevent concurrent requests
         addLog(
@@ -561,7 +579,22 @@ export function MainWindow() {
             console.log(skipMsg);
             addLog(skipMsg);
             setStatus("Audio is silent - check Windows audio routing");
-            setIsProcessing(false);
+            audioBuffer = [];
+            bufferPeak = 0;
+            finishProcessing();
+            return;
+          }
+
+          if (avgLevel < 0.004 && peakLevel < 0.035) {
+            addLog(
+              `Skipping mostly-silent buffer (RMS=${avgLevel.toFixed(
+                6
+              )}, peak=${peakLevel.toFixed(6)})`
+            );
+            setStatus("No speech in buffer — play callout louder or check routing");
+            audioBuffer = [];
+            bufferPeak = 0;
+            finishProcessing();
             return;
           }
 
@@ -577,7 +610,7 @@ export function MainWindow() {
             console.error(errorMsg);
             addLog(errorMsg);
             setStatus("Error: No audio data to transcribe");
-            setIsProcessing(false);
+            finishProcessing();
             return;
           }
 
@@ -588,29 +621,27 @@ export function MainWindow() {
               "Cannot transcribe: audio contains invalid values (NaN/Inf)"
             );
             setStatus("Error: Invalid audio data");
-            setIsProcessing(false);
+            finishProcessing();
             return;
           }
 
-          // Check minimum duration (at least 1.0 seconds to account for stereo-to-mono and resampling)
-          // After stereo-to-mono (halves) and 48kHz->16kHz resampling (reduces by 3x), we need:
-          // 0.5s at 16kHz = 8000 samples
-          // Original needed: 8000 * 3 * 2 = 48000 samples at 48kHz = 1.0s
-          const minSamples = Math.floor(event.sample_rate * 1.0); // 1.0 second minimum
+          const minDurationSec = minTranscribeSeconds(peakLevel, avgLevel);
+          const minSamples = Math.floor(event.sample_rate * minDurationSec);
           if (combinedAudio.length < minSamples) {
-            console.error(
-              `Cannot transcribe: audio too short (${
-                combinedAudio.length
-              } samples, ${(combinedAudio.length / event.sample_rate).toFixed(
-                3
-              )}s, need at least ${minSamples} samples / ${(
-                minSamples / event.sample_rate
-              ).toFixed(1)}s)`
-            );
-            setStatus("Error: Audio too short - need at least 1.0s");
-            setIsProcessing(false);
+            const shortMsg = `Audio too short (${(
+              combinedAudio.length / event.sample_rate
+            ).toFixed(2)}s, need ${minDurationSec.toFixed(2)}s) — waiting for more speech`;
+            console.warn(shortMsg);
+            addLog(shortMsg);
+            setStatus("Buffering more audio...");
+            finishProcessing();
             return;
           }
+
+          // Committed to transcribe — clear live buffer
+          audioBuffer = [];
+          bufferPeak = 0;
+          lastProcessTimeRef.current = now;
 
           const transcribeLog = `Transcribing: ${
             combinedAudio.length
@@ -642,8 +673,11 @@ export function MainWindow() {
             addLog(`[DEBUG] Creating transcription promise...`);
             const shouldAutoDetectSource =
               configRef.current?.translation?.auto_detect ?? true;
+            const clipSeconds = combinedAudio.length / event.sample_rate;
             const whisperLanguage = shouldAutoDetectSource
-              ? undefined
+              ? clipSeconds <= 1.25
+                ? "es"
+                : undefined
               : configRef.current?.whisper?.language || undefined;
 
             const transcriptionPromise = electronService.transcribeAudio(
@@ -775,6 +809,14 @@ export function MainWindow() {
             return;
           }
 
+          const normalizedText = normalizeMisheardCallout(transcription.text);
+          if (normalizedText !== transcription.text.trim()) {
+            addLog(
+              `[OK] Normalized callout: "${transcription.text.trim()}" → "${normalizedText}"`
+            );
+            transcription = { ...transcription, text: normalizedText };
+          }
+
           if (
             transcription &&
             transcription.text &&
@@ -816,6 +858,19 @@ export function MainWindow() {
               );
 
               console.log("=== TRANSLATION RESULT ===", translation);
+              if (translation?.translated) {
+                const fixed = fixGamingTranslation(
+                  transcription.text,
+                  translation.translated,
+                  translation.targetLanguage ?? targetLanguageRef.current
+                );
+                if (fixed !== translation.translated) {
+                  addLog(
+                    `[OK] Fixed callout translation: "${translation.translated}" → "${fixed}"`
+                  );
+                  translation = { ...translation, translated: fixed };
+                }
+              }
               addLog(
                 `[DEBUG] Translation result: ${JSON.stringify(
                   translation,
@@ -1096,9 +1151,8 @@ export function MainWindow() {
           addLog(errorLog);
           setStatus(`Error: ${errorMessage}`);
         } finally {
-          isProcessingRef.current = false;
-          setIsProcessing(false);
-          lastProcessTimeRef.current = 0; // Reset timestamp when processing completes
+          finishProcessing();
+          lastProcessTimeRef.current = Date.now();
         }
       }
     });
