@@ -97,6 +97,25 @@ function getBundledMLServicePath() {
   return path.join(process.resourcesPath, 'ml-service', getBundledMLServiceBinaryName());
 }
 
+/** Dev ML service Python: prefer GPU venv (CUDA torch), then .venv311, then PATH. */
+function getDevPythonExecutable() {
+  if (process.env.SQUADSPEAK_PYTHON) {
+    return process.env.SQUADSPEAK_PYTHON;
+  }
+  const projectRoot = path.join(__dirname, '..');
+  const candidates = [
+    path.join(projectRoot, '.venv-gpu', 'Scripts', 'python.exe'),
+    path.join(projectRoot, '.venv311', 'Scripts', 'python.exe'),
+    path.join(projectRoot, '.venv', 'Scripts', 'python.exe'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return 'python';
+}
+
 function getReactDevPort() {
   return process.env.REACT_DEV_PORT || '3010';
 }
@@ -320,8 +339,10 @@ async function startMLService() {
 
     if (isDev) {
       const mlServicePath = path.join(__dirname, '../fastapi-backend');
+      const pythonExe = getDevPythonExecutable();
+      logToFile(`[ELECTRON] ML service Python: ${pythonExe}`, 'ml-service.log');
       child = spawn(
-        'python',
+        pythonExe,
         ['-m', 'uvicorn', 'main:app', '--host', ML_SERVICE_HOST, `--port=${ML_SERVICE_PORT}`],
         {
           cwd: mlServicePath,

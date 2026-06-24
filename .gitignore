@@ -25,6 +25,7 @@ venv/
 ENV/
 env/
 .venv311/
+.venv-gpu/
 
 # IDE
 .vscode/
